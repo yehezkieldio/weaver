@@ -60,6 +60,7 @@ export interface RetrievalResult {
     bm25Score: number;
     fusedScore: number;
     retrievalMethod: "vector" | "keyword" | "hybrid";
+    qualityScore?: number; // Chunk quality score for answer quality weighting
     metadata?: {
         pageNumber?: number;
         section?: string;
@@ -96,9 +97,12 @@ export interface HybridRetrievalOptions {
     minScore?: number;
     vectorWeight?: number;
     bm25Weight?: number;
+    qualityWeight?: number; // Weight for chunk quality score boost (0-1, default: 0.15)
     strategy?: "vector" | "keyword" | "hybrid";
     rrfK?: number;
     language?: "en" | "id" | "auto";
+    // Parent-child context expansion
+    useContextExpansion?: boolean; // Expand to parent chunks when available
     // Reranker options
     useReranker?: boolean;
     rerankerStrategy?: RerankerStrategy;
@@ -130,9 +134,11 @@ const DEFAULT_OPTIONS: Required<HybridRetrievalOptions> = {
     minScore: 0.01,
     vectorWeight: 0.6,
     bm25Weight: 0.4,
+    qualityWeight: 0.15, // 15% boost from chunk quality
     strategy: "hybrid",
     rrfK: 60,
     language: "auto",
+    useContextExpansion: true, // Enable parent-child context by default
     useReranker: true,
     rerankerStrategy: "cross_encoder",
     rerankerTopK: 5,
@@ -349,6 +355,7 @@ type ChunkData = {
     metadata: unknown;
     embedding: number[] | null;
     documentTitle: string;
+    qualityScore?: number; // Quality score from chunk metadata
 };
 
 /**
@@ -404,19 +411,26 @@ async function performVectorSearch(
         .orderBy(sql`${documentChunks.embedding} <=> ${queryVector}::vector`)
         .limit(topK * 3); // Fetch more candidates for RRF fusion with BM25
 
-    return results.map((row, idx) => ({
-        id: row.chunkId,
-        rank: idx + 1,
-        score: row.vectorScore ?? 0,
-        chunk: {
-            chunkId: row.chunkId,
-            documentId: row.documentId,
-            content: row.content,
-            metadata: row.metadata,
-            embedding: row.embedding as number[] | null,
-            documentTitle: row.documentTitle,
-        },
-    }));
+    return results.map((row, idx) => {
+        // Extract qualityScore from metadata if available
+        const metadata = row.metadata as { qualityScore?: number } | null;
+        const qualityScore = metadata?.qualityScore ?? 0.5; // Default to 0.5 if not set
+
+        return {
+            id: row.chunkId,
+            rank: idx + 1,
+            score: row.vectorScore ?? 0,
+            chunk: {
+                chunkId: row.chunkId,
+                documentId: row.documentId,
+                content: row.content,
+                metadata: row.metadata,
+                embedding: row.embedding as number[] | null,
+                documentTitle: row.documentTitle,
+                qualityScore,
+            },
+        };
+    });
 }
 
 /**
@@ -502,11 +516,25 @@ function performBM25Search(
 function combineRankings(
     vectorRanking: { id: string; rank: number; score: number }[],
     bm25Ranking: { id: string; rank: number; score: number }[],
-    _chunkMap: Map<string, ChunkData>,
+    chunkMap: Map<string, ChunkData>,
     strategy: "vector" | "keyword" | "hybrid",
-    rrfK: number
-): Map<string, { vectorScore: number; bm25Score: number; fusedScore: number }> {
-    const finalScores = new Map<string, { vectorScore: number; bm25Score: number; fusedScore: number }>();
+    rrfK: number,
+    qualityWeight = 0.15
+): Map<string, { vectorScore: number; bm25Score: number; fusedScore: number; qualityScore: number }> {
+    const finalScores = new Map<
+        string,
+        { vectorScore: number; bm25Score: number; fusedScore: number; qualityScore: number }
+    >();
+
+    /**
+     * Apply quality boost to fused score
+     * Formula: boostedScore = fusedScore * (1 + qualityWeight * (qualityScore - 0.5))
+     * This gives ~7.5% boost for high-quality (1.0) chunks and ~7.5% penalty for low-quality (0.0) chunks
+     */
+    const applyQualityBoost = (fusedScore: number, qualityScore: number): number => {
+        const boost = qualityWeight * (qualityScore - 0.5) * 2; // Normalize to -qualityWeight to +qualityWeight
+        return fusedScore * (1 + boost);
+    };
 
     if (strategy === "hybrid") {
         const fusedScores = reciprocalRankFusion(
@@ -523,28 +551,39 @@ function combineRankings(
         for (const chunkId of allIds) {
             const vectorItem = vectorRanking.find((r) => r.id === chunkId);
             const bm25Item = bm25Ranking.find((r) => r.id === chunkId);
+            const chunkData = chunkMap.get(chunkId);
+            const qualityScore = chunkData?.qualityScore ?? 0.5;
+            const baseFused = fusedScores.get(chunkId) || 0;
 
             finalScores.set(chunkId, {
                 vectorScore: vectorItem?.score || 0,
                 bm25Score: bm25Item?.score || 0,
-                fusedScore: fusedScores.get(chunkId) || 0,
+                fusedScore: applyQualityBoost(baseFused, qualityScore),
+                qualityScore,
             });
         }
     } else if (strategy === "vector") {
         for (const item of vectorRanking) {
+            const chunkData = chunkMap.get(item.id);
+            const qualityScore = chunkData?.qualityScore ?? 0.5;
             finalScores.set(item.id, {
                 vectorScore: item.score,
                 bm25Score: 0,
-                fusedScore: item.score,
+                fusedScore: applyQualityBoost(item.score, qualityScore),
+                qualityScore,
             });
         }
     } else {
         const maxBM25 = Math.max(...bm25Ranking.map((r) => r.score), 1);
         for (const item of bm25Ranking) {
+            const chunkData = chunkMap.get(item.id);
+            const qualityScore = chunkData?.qualityScore ?? 0.5;
+            const normalizedScore = item.score / maxBM25;
             finalScores.set(item.id, {
                 vectorScore: 0,
                 bm25Score: item.score,
-                fusedScore: item.score / maxBM25,
+                fusedScore: applyQualityBoost(normalizedScore, qualityScore),
+                qualityScore,
             });
         }
     }
@@ -554,7 +593,7 @@ function combineRankings(
 
 function buildResults(
     chunkMap: Map<string, ChunkData>,
-    finalScores: Map<string, { vectorScore: number; bm25Score: number; fusedScore: number }>,
+    finalScores: Map<string, { vectorScore: number; bm25Score: number; fusedScore: number; qualityScore: number }>,
     strategy: "vector" | "keyword" | "hybrid"
 ): RetrievalResult[] {
     const results: RetrievalResult[] = [];
@@ -571,12 +610,72 @@ function buildResults(
             vectorScore: scores.vectorScore,
             bm25Score: scores.bm25Score,
             fusedScore: scores.fusedScore,
+            qualityScore: scores.qualityScore,
             retrievalMethod: strategy,
             metadata: chunk.metadata as RetrievalResult["metadata"],
         });
     }
 
     return results;
+}
+
+/**
+ * Expand retrieval results with parent chunk context
+ *
+ * OPTIMIZATION: For hierarchically-chunked documents, child chunks may lack
+ * sufficient context. This function looks up parent chunks and appends their
+ * content as additional context, improving answer quality for structured docs.
+ *
+ * @param results - Initial retrieval results
+ * @returns Results with expanded context from parent chunks
+ */
+async function expandToParentContext(results: RetrievalResult[]): Promise<RetrievalResult[]> {
+    const expandedResults: RetrievalResult[] = [];
+
+    for (const result of results) {
+        // Check if this chunk has a parent via metadata
+        const metadata = result.metadata as { parentChunkId?: string; section?: string } | undefined;
+        const parentChunkId = metadata?.parentChunkId;
+
+        if (parentChunkId) {
+            // Fetch parent chunk content
+            try {
+                const [parentChunk] = await db
+                    .select({
+                        content: documentChunks.content,
+                        metadata: documentChunks.metadata,
+                    })
+                    .from(documentChunks)
+                    .where(sql`${documentChunks.id} = ${parentChunkId}`)
+                    .limit(1);
+
+                if (parentChunk) {
+                    // Prepend parent context to content
+                    const parentContent = parentChunk.content;
+                    const expandedContent = `[Context: ${parentContent.slice(0, 500)}...]
+
+${result.content}`;
+
+                    expandedResults.push({
+                        ...result,
+                        content: expandedContent,
+                        metadata: {
+                            ...result.metadata,
+                            hasParentContext: true,
+                        } as RetrievalResult["metadata"],
+                    });
+                    continue;
+                }
+            } catch (error) {
+                console.warn(`[expandToParentContext] Failed to fetch parent chunk ${parentChunkId}:`, error);
+            }
+        }
+
+        // No parent or failed to fetch - keep original
+        expandedResults.push(result);
+    }
+
+    return expandedResults;
 }
 
 /**
@@ -681,7 +780,14 @@ export async function hybridRetrieve(query: string, options: HybridRetrievalOpti
         console.log(`[hybridRetrieve:${retrievalId}] BM25 search returned ${bm25RankingResults.length} results`);
     }
 
-    const finalScores = combineRankings(vectorRankingResults, bm25RankingResults, chunkMap, opts.strategy, opts.rrfK);
+    const finalScores = combineRankings(
+        vectorRankingResults,
+        bm25RankingResults,
+        chunkMap,
+        opts.strategy,
+        opts.rrfK,
+        opts.qualityWeight
+    );
     console.log(`[hybridRetrieve:${retrievalId}] Combined rankings - total unique results: ${finalScores.size}`);
     const results = buildResults(chunkMap, finalScores, opts.strategy);
 
@@ -714,9 +820,8 @@ export async function hybridRetrieve(query: string, options: HybridRetrievalOpti
         console.log(
             `[hybridRetrieve:${retrievalId}] Reranking complete - results: ${reranked.length}, avg score: ${(reranked.reduce((sum, r) => sum + r.rerankedScore, 0) / reranked.length).toFixed(3)}`
         );
-        console.timeEnd(`hybridRetrieve:${retrievalId}`);
         // Convert reranked results back to RetrievalResult format
-        return reranked.map((r) => ({
+        const rerankedResults: RetrievalResult[] = reranked.map((r) => ({
             chunkId: r.chunkId,
             documentId: r.documentId,
             documentTitle: r.documentTitle,
@@ -724,9 +829,29 @@ export async function hybridRetrieve(query: string, options: HybridRetrievalOpti
             vectorScore: r.vectorScore,
             bm25Score: r.bm25Score,
             fusedScore: r.rerankedScore, // Use reranked score as fused score
+            qualityScore: r.qualityScore,
             retrievalMethod: r.retrievalMethod,
             metadata: r.metadata,
         }));
+
+        // Apply context expansion if enabled
+        if (opts.useContextExpansion) {
+            console.log(`[hybridRetrieve:${retrievalId}] Applying parent-child context expansion`);
+            const expanded = await expandToParentContext(rerankedResults);
+            console.timeEnd(`hybridRetrieve:${retrievalId}`);
+            return expanded;
+        }
+
+        console.timeEnd(`hybridRetrieve:${retrievalId}`);
+        return rerankedResults;
+    }
+
+    // Apply context expansion if enabled (non-reranked path)
+    if (opts.useContextExpansion) {
+        console.log(`[hybridRetrieve:${retrievalId}] Applying parent-child context expansion`);
+        const expanded = await expandToParentContext(finalResults);
+        console.timeEnd(`hybridRetrieve:${retrievalId}`);
+        return expanded;
     }
 
     console.timeEnd(`hybridRetrieve:${retrievalId}`);

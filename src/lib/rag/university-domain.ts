@@ -900,8 +900,177 @@ const ALL_PATTERN_GROUPS: Record<string, Record<string, RegExp>> = {
 };
 
 /**
+ * Result of a pattern match with weight and count information
+ */
+interface PatternMatchResult {
+    documentType: AcademicDocumentType;
+    patternGroup: string;
+    matchCount: number;
+    weight: number;
+}
+
+/**
+ * Confidence score for document type detection
+ */
+interface ConfidenceScore {
+    type: AcademicDocumentType;
+    score: number; // 0.0 - 1.0
+    matchDetails: PatternMatchResult[];
+}
+
+/**
+ * Weights for different document type patterns
+ * Higher weight = more confidence when matched
+ */
+const PATTERN_WEIGHTS: Partial<Record<AcademicDocumentType, number>> = {
+    // Research documents - high confidence needed
+    research_paper: 1.5,
+    thesis: 1.5,
+    skripsi: 1.5,
+    tesis: 1.5,
+    disertasi: 1.5,
+    dissertation: 1.5,
+    // Structured academic documents
+    syllabus: 1.3,
+    rps: 1.3,
+    kurikulum: 1.2,
+    cpl: 1.2,
+    // Administrative documents
+    buku_pedoman_akademik: 1.2,
+    peraturan_rektor: 1.2,
+    sk_akademik: 1.2,
+    // Default weight for other types: 1.0
+};
+
+const DEFAULT_PATTERN_WEIGHT = 1.0;
+
+/**
+ * In-memory cache for document type decisions by content hash
+ * Key: SHA-256 hash of first 5000 chars
+ * Value: Detected document type
+ */
+const documentTypeCache = new Map<string, AcademicDocumentType>();
+
+/**
+ * Generate a stable hash for document content (for caching)
+ */
+function hashDocumentContent(content: string): string {
+    // Simple hash function for in-memory caching
+    const sample = content.slice(0, 5000);
+    let hash = 0;
+    for (let i = 0; i < sample.length; i += 1) {
+        const char = sample.charCodeAt(i);
+        // Use multiplication and modulo for a simple hash
+        hash = (hash * 31 + char) % 2_147_483_647;
+    }
+    return hash.toString(16);
+}
+
+/**
+ * Calculate confidence score from all pattern matches
+ *
+ * OPTIMIZATION: Instead of returning on first match, we analyze all matches
+ * and calculate a weighted confidence score. This allows us to make more
+ * informed decisions and only fallback to LLM when truly ambiguous.
+ *
+ * @param content - Normalized document content
+ * @param _language - Detected language (reserved for future use)
+ * @returns Confidence score with best matching type
+ */
+function calculatePatternConfidence(content: string, _language: "en" | "id"): ConfidenceScore {
+    const matches: PatternMatchResult[] = [];
+    const typeScores = new Map<AcademicDocumentType, number>();
+
+    // Check all pattern groups
+    for (const [groupName, patterns] of Object.entries(ALL_PATTERN_GROUPS)) {
+        for (const [typeName, pattern] of Object.entries(patterns)) {
+            const type = typeName as AcademicDocumentType;
+            pattern.lastIndex = 0; // Reset regex state
+            const matchCount = (content.match(pattern) || []).length;
+
+            if (matchCount > 0) {
+                const weight = PATTERN_WEIGHTS[type] ?? DEFAULT_PATTERN_WEIGHT;
+                matches.push({
+                    documentType: type,
+                    patternGroup: groupName,
+                    matchCount,
+                    weight,
+                });
+
+                // Accumulate weighted score for this type
+                const existingScore = typeScores.get(type) || 0;
+                typeScores.set(type, existingScore + matchCount * weight);
+            }
+        }
+    }
+
+    // Also check traditional patterns
+    const traditionalTypes: { type: AcademicDocumentType; pattern: RegExp }[] = [
+        ...INDONESIAN_DOCUMENT_PATTERNS.map((p, i) => ({
+            type: (
+                [
+                    "rps",
+                    "modul_kuliah",
+                    "skripsi",
+                    "skripsi",
+                    "tesis",
+                    "tesis",
+                    "disertasi",
+                    "disertasi",
+                    "lab_report",
+                    "exam",
+                    "exam",
+                    "assignment",
+                    "assignment",
+                ] as AcademicDocumentType[]
+            )[i],
+            pattern: p,
+        })),
+    ];
+
+    for (const { type, pattern } of traditionalTypes) {
+        if (type) {
+            pattern.lastIndex = 0;
+            const matchCount = (content.match(pattern) || []).length;
+            if (matchCount > 0) {
+                const weight = PATTERN_WEIGHTS[type] ?? DEFAULT_PATTERN_WEIGHT;
+                const existingScore = typeScores.get(type) || 0;
+                typeScores.set(type, existingScore + matchCount * weight * 0.8); // Slightly lower for traditional
+            }
+        }
+    }
+
+    // Find the best type by score
+    let bestType: AcademicDocumentType = "other";
+    let bestScore = 0;
+
+    for (const [type, score] of typeScores) {
+        if (score > bestScore) {
+            bestScore = score;
+            bestType = type;
+        }
+    }
+
+    // Normalize score to 0-1 range
+    // Score of 3+ weighted matches gives high confidence (>= 0.6)
+    const normalizedScore = Math.min(1.0, bestScore / 5);
+
+    return {
+        type: bestType,
+        score: normalizedScore,
+        matchDetails: matches,
+    };
+}
+
+/**
+ * Confidence threshold for pattern-based detection
+ * If confidence >= this threshold, skip LLM fallback
+ */
+const CONFIDENCE_THRESHOLD = 0.6;
+
+/**
  * Helper function to match document type from pattern groups
- * Reduces complexity by centralizing pattern matching logic
+ * @deprecated Use calculatePatternConfidence instead for confidence-aware detection
  */
 function matchDocumentTypeFromPatterns(content: string): AcademicDocumentType | null {
     for (const patterns of Object.values(ALL_PATTERN_GROUPS)) {
@@ -1059,6 +1228,15 @@ const ALL_DOCUMENT_TYPES: AcademicDocumentType[] = [
 
 export async function detectDocumentType(content: string): Promise<AcademicDocumentType> {
     const normalized = normalizePDFText(content);
+
+    // Check cache first (by content hash)
+    const contentHash = hashDocumentContent(normalized);
+    const cached = documentTypeCache.get(contentHash);
+    if (cached) {
+        console.log(`[detectDocumentType] Cache hit for hash ${contentHash}: ${cached}`);
+        return cached;
+    }
+
     const language = detectLanguage(normalized);
 
     // Check for PDF-ified table content (Excel conversions)
@@ -1066,20 +1244,46 @@ export async function detectDocumentType(content: string): Promise<AcademicDocum
         TABLE_STRUCTURE_PATTERNS.tableHeaders.test(normalized) ||
         (normalized.match(TABLE_STRUCTURE_PATTERNS.numericRows)?.length ?? 0) > 5;
 
-    // Try pattern-based detection first (fastest)
-    const patternMatch = matchDocumentTypeFromPatterns(normalized);
-    if (patternMatch) return patternMatch;
+    // Use confidence-based pattern matching (optimized approach)
+    const confidenceResult = calculatePatternConfidence(normalized, language);
+    console.log(
+        `[detectDocumentType] Confidence score: ${confidenceResult.score.toFixed(2)} for type: ${confidenceResult.type} (${confidenceResult.matchDetails.length} pattern matches)`
+    );
 
-    // Try traditional document patterns based on language
+    // If confidence is high enough, use pattern-based result (skip LLM)
+    if (confidenceResult.score >= CONFIDENCE_THRESHOLD) {
+        documentTypeCache.set(contentHash, confidenceResult.type);
+        console.log(`[detectDocumentType] High confidence - using pattern result: ${confidenceResult.type}`);
+        return confidenceResult.type;
+    }
+
+    // Try traditional document patterns as secondary check
     if (language === "id") {
         const indonesianMatch = detectIndonesianTraditionalType(normalized);
-        if (indonesianMatch) return indonesianMatch;
+        if (indonesianMatch) {
+            documentTypeCache.set(contentHash, indonesianMatch);
+            return indonesianMatch;
+        }
     }
 
     const englishMatch = detectEnglishTraditionalType(normalized);
-    if (englishMatch) return englishMatch;
+    if (englishMatch) {
+        documentTypeCache.set(contentHash, englishMatch);
+        return englishMatch;
+    }
 
-    // Fallback to LLM for ambiguous cases
+    // If we have some confidence but below threshold, still prefer pattern result
+    // over LLM for borderline cases (reduces LLM calls further)
+    if (confidenceResult.score >= 0.3 && confidenceResult.type !== "other") {
+        console.log(
+            `[detectDocumentType] Medium confidence (${confidenceResult.score.toFixed(2)}) - using pattern result to avoid LLM`
+        );
+        documentTypeCache.set(contentHash, confidenceResult.type);
+        return confidenceResult.type;
+    }
+
+    // Fallback to LLM only for truly ambiguous cases
+    console.log("[detectDocumentType] Low confidence - falling back to LLM");
     try {
         const { text } = await generateText({
             model: CHAT_MODEL,
@@ -1096,9 +1300,13 @@ Return only the category name, nothing else.`,
         });
 
         const type = text.trim().toLowerCase().replace(/\s+/g, "_") as AcademicDocumentType;
-        return ALL_DOCUMENT_TYPES.includes(type) ? type : "other";
+        const result = ALL_DOCUMENT_TYPES.includes(type) ? type : "other";
+        documentTypeCache.set(contentHash, result);
+        return result;
     } catch {
-        return "other";
+        const fallback = confidenceResult.type !== "other" ? confidenceResult.type : "other";
+        documentTypeCache.set(contentHash, fallback);
+        return fallback;
     }
 }
 

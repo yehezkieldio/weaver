@@ -151,6 +151,15 @@ export interface DocumentChunkMetadata {
     parentChunkId?: string;
     childChunkIds?: string[];
     sentenceWindowContext?: string; // Surrounding sentences for context
+    // Quality scoring for retrieval weighting
+    qualityScore?: number;
+    qualityMetrics?: {
+        informationDensity: number;
+        structuralImportance: number;
+        citationPresence: number;
+        keywordConcentration: number;
+        completeness: number;
+    };
 }
 
 export interface GuardrailLogsDetails {
