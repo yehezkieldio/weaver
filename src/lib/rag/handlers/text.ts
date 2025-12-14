@@ -25,6 +25,7 @@
  */
 
 import { isStructuredAsciiReport, parseAndSerializeReport } from "../parsers/ascii-report";
+import { parseAndCleanNarrative } from "../parsers/narrative-document";
 import type { ExtractionResult } from "./types";
 
 // Regex patterns (defined at module level for performance)
@@ -106,7 +107,20 @@ export function extractText(buffer: ArrayBuffer, fileName: string): ExtractionRe
 
         // Preprocess structured ASCII reports
         const reportResult = isStructuredAsciiReport(rawText) ? parseAndSerializeReport(rawText) : null;
-        const processedText = reportResult?.serializedText ?? rawText;
+
+        // If not a structured report, check if it's a narrative document with delimiters
+        const narrativeResult = reportResult ? null : parseAndCleanNarrative(rawText);
+
+        // Use the appropriate processed text
+        const processedText = reportResult?.serializedText ?? narrativeResult?.cleanedText ?? rawText;
+
+        // Determine extraction method
+        let extractionMethod = "text-decoder";
+        if (reportResult?.isStructuredReport) {
+            extractionMethod = "ascii-report-parser";
+        } else if (narrativeResult?.isNarrative) {
+            extractionMethod = "narrative-document-parser";
+        }
 
         return {
             text: processedText,
@@ -114,7 +128,7 @@ export function extractText(buffer: ArrayBuffer, fileName: string): ExtractionRe
                 encoding,
                 fileSize: buffer.byteLength,
                 wordCount: processedText.split(WORD_SPLIT_PATTERN).filter((w) => w.length > 0).length,
-                extractionMethod: reportResult?.isStructuredReport ? "ascii-report-parser" : "text-decoder",
+                extractionMethod,
             },
         };
     } catch (error) {
