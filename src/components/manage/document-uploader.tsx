@@ -10,6 +10,7 @@ import {
     Layers,
     Loader2,
     RefreshCw,
+    Sparkles,
     Type,
     Upload,
     X,
@@ -25,7 +26,7 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-type ChunkingStrategy = "recursive" | "semantic" | "sentence_window" | "hierarchical";
+type ChunkingStrategy = "auto" | "recursive" | "semantic" | "sentence_window" | "hierarchical";
 type LanguageHint = "auto" | "en" | "id";
 
 interface UploadFile {
@@ -54,7 +55,7 @@ function stageToStatus(stage: string): UploadFile["status"] {
 
 export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
     const [files, setFiles] = useState<UploadFile[]>([]);
-    const [chunkingStrategy, setChunkingStrategy] = useState<ChunkingStrategy>("recursive");
+    const [chunkingStrategy, setChunkingStrategy] = useState<ChunkingStrategy>("auto");
     const [category, setCategory] = useState("");
     const [tags, setTags] = useState("");
     const [documentType, setDocumentType] = useState<string>("auto");
@@ -283,6 +284,7 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
     const pendingCount = files.filter((f) => f.status === "pending").length;
 
     const chunkingDescriptions: Record<ChunkingStrategy, string> = {
+        auto: "Automatically selects optimal strategy based on document structure",
         recursive: "Split by structure (paragraphs, sentences) with overlap",
         semantic: "Split by topic/meaning changes using embeddings",
         sentence_window: "Individual sentences with surrounding context",
@@ -332,6 +334,11 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
+                                <SelectItem value="auto">
+                                    <span className="flex items-center gap-2">
+                                        <Sparkles className="h-3 w-3" /> Adaptive (Auto)
+                                    </span>
+                                </SelectItem>
                                 <SelectItem value="recursive">
                                     <span className="flex items-center gap-2">
                                         <GitBranch className="h-3 w-3" /> Recursive

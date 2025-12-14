@@ -71,7 +71,7 @@ import {
  *
  * @typedef {"recursive" | "semantic" | "sentence_window" | "hierarchical"} ChunkingStrategy
  */
-export type ChunkingStrategy = "recursive" | "semantic" | "sentence_window" | "hierarchical";
+export type ChunkingStrategy = "auto" | "recursive" | "semantic" | "sentence_window" | "hierarchical";
 
 export interface ChunkOptions {
     strategy?: ChunkingStrategy;
