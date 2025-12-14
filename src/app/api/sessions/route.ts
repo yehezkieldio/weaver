@@ -121,14 +121,20 @@ export async function POST(request: Request) {
  */
 export async function DELETE() {
     try {
+        console.log("[API] Deleting all sessions and messages");
+
         // Delete all messages first
-        await db.delete(chatMessages);
+        const deletedMessages = await db.delete(chatMessages);
+        console.log("[API] Deleted messages:", deletedMessages);
 
         // Delete all sessions
-        await db.delete(chatSessions);
+        const deletedSessions = await db.delete(chatSessions);
+        console.log("[API] Deleted sessions:", deletedSessions);
 
+        console.log("[API] Delete all completed successfully");
         return Response.json({ success: true });
     } catch (error) {
+        console.error("[API] Error deleting sessions:", error);
         return Response.json({ error: "Failed to delete all sessions" }, { status: 500 });
     }
 }
