@@ -9,6 +9,7 @@ import {
     Languages,
     Layers,
     Loader2,
+    RefreshCw,
     Type,
     Upload,
     X,
@@ -34,10 +35,21 @@ interface UploadFile {
     status: "pending" | "uploading" | "processing" | "completed" | "error";
     error?: string;
     documentId?: string;
+    progressMessage?: string;
+    estimatedTimeMs?: number;
 }
 
 interface DocumentUploaderProps {
     onUploadComplete?: () => void;
+}
+
+/**
+ * Map SSE stage to UploadFile status
+ */
+function stageToStatus(stage: string): UploadFile["status"] {
+    if (stage === "completed") return "completed";
+    if (stage === "failed") return "error";
+    return "processing";
 }
 
 export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
@@ -103,14 +115,12 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
             if (category) formData.append("category", category);
             if (tags) formData.append("tags", tags);
 
-            setFiles((prev) => prev.map((f, i) => (i === index ? { ...f, progress: 30 } : f)));
+            setFiles((prev) => prev.map((f, i) => (i === index ? { ...f, progress: 20 } : f)));
 
             const response = await fetch("/api/documents/upload", {
                 method: "POST",
                 body: formData,
             });
-
-            setFiles((prev) => prev.map((f, i) => (i === index ? { ...f, progress: 60 } : f)));
 
             if (!response.ok) {
                 const error = await response.json();
@@ -118,6 +128,7 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
             }
 
             const result = await response.json();
+            const documentId = result.document.id;
 
             setFiles((prev) =>
                 prev.map((f, i) =>
@@ -125,19 +136,61 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
                         ? {
                               ...f,
                               status: "processing",
-                              progress: 80,
-                              documentId: result.document.id,
+                              progress: 25,
+                              documentId,
+                              progressMessage: "Starting processing...",
                           }
                         : f
                 )
             );
 
-            setTimeout(() => {
-                setFiles((prev) =>
-                    prev.map((f, i) => (i === index ? { ...f, status: "completed", progress: 100 } : f))
-                );
-                onUploadComplete?.();
-            }, 2000);
+            // Subscribe to SSE for real-time progress
+            const eventSource = new EventSource(`/api/documents/${documentId}/progress`);
+
+            eventSource.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    setFiles((prev) =>
+                        prev.map((f, i) =>
+                            i === index
+                                ? {
+                                      ...f,
+                                      progress: Math.max(25, data.progress),
+                                      progressMessage: data.message,
+                                      estimatedTimeMs: data.estimatedTimeMs,
+                                      status: stageToStatus(data.stage),
+                                      error: data.error,
+                                  }
+                                : f
+                        )
+                    );
+
+                    if (data.stage === "completed" || data.stage === "failed") {
+                        eventSource.close();
+                        if (data.stage === "completed") {
+                            onUploadComplete?.();
+                        }
+                    }
+                } catch {
+                    // Ignore parse errors (heartbeats)
+                }
+            };
+
+            eventSource.onerror = () => {
+                eventSource.close();
+                // Check final status via API
+                fetch(`/api/documents/${documentId}/progress`)
+                    .then((res) => res.json())
+                    .then((data) => {
+                        if (data.stage === "completed") {
+                            setFiles((prev) =>
+                                prev.map((f, i) => (i === index ? { ...f, status: "completed", progress: 100 } : f))
+                            );
+                            onUploadComplete?.();
+                        }
+                    })
+                    .catch(() => {});
+            };
         } catch (error) {
             setFiles((prev) =>
                 prev.map((f, i) =>
@@ -147,6 +200,72 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
                               status: "error",
                               error: error instanceof Error ? error.message : "Upload failed",
                           }
+                        : f
+                )
+            );
+        }
+    };
+
+    const retryDocument = async (fileItem: UploadFile, index: number) => {
+        if (!fileItem.documentId) return;
+
+        setFiles((prev) =>
+            prev.map((f, i) =>
+                i === index
+                    ? { ...f, status: "processing", progress: 10, error: undefined, progressMessage: "Retrying..." }
+                    : f
+            )
+        );
+
+        try {
+            const response = await fetch(`/api/documents/${fileItem.documentId}/retry`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ enableProgressTracking: true }),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || "Retry failed");
+            }
+
+            // Subscribe to progress
+            const eventSource = new EventSource(`/api/documents/${fileItem.documentId}/progress`);
+
+            eventSource.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    setFiles((prev) =>
+                        prev.map((f, i) =>
+                            i === index
+                                ? {
+                                      ...f,
+                                      progress: data.progress,
+                                      progressMessage: data.message,
+                                      status: stageToStatus(data.stage),
+                                      error: data.error,
+                                  }
+                                : f
+                        )
+                    );
+
+                    if (data.stage === "completed" || data.stage === "failed") {
+                        eventSource.close();
+                        if (data.stage === "completed") {
+                            onUploadComplete?.();
+                        }
+                    }
+                } catch {
+                    // Ignore parse errors
+                }
+            };
+
+            eventSource.onerror = () => eventSource.close();
+        } catch (error) {
+            setFiles((prev) =>
+                prev.map((f, i) =>
+                    i === index
+                        ? { ...f, status: "error", error: error instanceof Error ? error.message : "Retry failed" }
                         : f
                 )
             );
@@ -443,7 +562,21 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
                                         </div>
 
                                         {fileItem.status !== "pending" && fileItem.status !== "completed" && (
-                                            <Progress className="mt-2 h-1" value={fileItem.progress} />
+                                            <div className="mt-2">
+                                                <Progress className="h-1" value={fileItem.progress} />
+                                                {fileItem.progressMessage && (
+                                                    <div className="mt-1 flex items-center justify-between">
+                                                        <p className="text-muted-foreground text-xs">
+                                                            {fileItem.progressMessage}
+                                                        </p>
+                                                        {fileItem.estimatedTimeMs && fileItem.estimatedTimeMs > 0 && (
+                                                            <p className="text-muted-foreground text-xs">
+                                                                ~{Math.ceil(fileItem.estimatedTimeMs / 1000)}s remaining
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
                                         )}
 
                                         {fileItem.error && (
@@ -479,6 +612,18 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
 
                                         {fileItem.status === "error" && (
                                             <AlertCircle className="h-5 w-5 text-destructive" />
+                                        )}
+
+                                        {fileItem.status === "error" && fileItem.documentId && (
+                                            <Button
+                                                className="gap-1"
+                                                onClick={() => retryDocument(fileItem, index)}
+                                                size="sm"
+                                                variant="outline"
+                                            >
+                                                <RefreshCw className="h-3 w-3" />
+                                                Retry
+                                            </Button>
                                         )}
 
                                         {(fileItem.status === "pending" || fileItem.status === "error") && (

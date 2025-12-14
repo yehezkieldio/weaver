@@ -159,10 +159,11 @@ export async function POST(request: Request) {
 
         const [insertedDoc] = await db.insert(documents).values(newDoc).returning();
 
-        // Start background processing with proper types
+        // Start background processing with progress tracking enabled
         processDocument(insertedDoc.id, {
             chunkingStrategy,
             language: detectedLanguage,
+            enableProgressTracking: true,
         }).catch((error) => {
             console.error("Background processing error:", error);
         });

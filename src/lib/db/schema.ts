@@ -41,6 +41,8 @@ import type {
     DocumentChunkMetadata,
     DocumentMetadata,
     GuardrailLogsDetails,
+    ProcessingArtifact,
+    ProcessingStage,
     RetrievedChunks,
     StatisticalAnalysisResult,
 } from "@/lib/types";
@@ -68,6 +70,9 @@ export const documents = pgTable("documents", {
     processingError: text("processing_error"),
     useMistralOcr: boolean("use_mistral_ocr").default(false),
     chunkingStrategy: text("chunking_strategy").default("recursive"), // recursive, semantic, sentence_window
+    // Progress tracking for incremental retry
+    lastSuccessfulStage: text("last_successful_stage").$type<ProcessingStage>(),
+    processingArtifacts: jsonb("processing_artifacts").$type<ProcessingArtifact>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -414,6 +419,32 @@ export const statisticalAnalyses = pgTable("statistical_analyses", {
     createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+/**
+ * Document Processing Progress table: Real-time progress tracking for document processing
+ *
+ * WHY this table:
+ * - **User Experience**: Users need visibility into long-running processing tasks
+ * - **Persistence**: Progress survives page refresh (stored in DB, not just memory)
+ * - **Time Estimation**: Historical processing times enable accurate ETA predictions
+ * - **Stage Granularity**: Track each stage separately for detailed progress
+ *
+ * SSE endpoints poll this table to stream progress updates to clients.
+ */
+export const documentProcessingProgress = pgTable("document_processing_progress", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    documentId: uuid("document_id")
+        .references(() => documents.id, { onDelete: "cascade" })
+        .notNull()
+        .unique(),
+    stage: text("stage").$type<ProcessingStage>().notNull().default("pending"),
+    progress: integer("progress").notNull().default(0), // 0-100
+    message: text("message").default(""),
+    estimatedTimeMs: integer("estimated_time_ms"),
+    stageProgress: jsonb("stage_progress").$type<{ current: number; total: number }>(),
+    startedAt: timestamp("started_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export type Document = typeof documents.$inferSelect;
 export type NewDocument = typeof documents.$inferInsert;
 export type DocumentChunk = typeof documentChunks.$inferSelect;
@@ -426,3 +457,5 @@ export type GuardrailLog = typeof guardrailLogs.$inferSelect;
 export type AgentStep = typeof agentSteps.$inferSelect;
 export type AblationStudy = typeof ablationStudies.$inferSelect;
 export type StatisticalAnalysis = typeof statisticalAnalyses.$inferSelect;
+export type DocumentProcessingProgress = typeof documentProcessingProgress.$inferSelect;
+export type NewDocumentProcessingProgress = typeof documentProcessingProgress.$inferInsert;

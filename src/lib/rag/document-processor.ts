@@ -40,6 +40,7 @@ import { extractPdf } from "./handlers/pdf";
 import { extractMarkdown, extractText } from "./handlers/text";
 import type { ExtractionResult } from "./handlers/types";
 import { extractKeywords } from "./hybrid-retrieval";
+import { ProgressTracker } from "./progress-tracker";
 import { extractUniversityMetadata } from "./university-domain";
 import { detectDocumentLanguage } from "./utils/language";
 
@@ -79,7 +80,8 @@ export interface ProcessingOptions {
     chunkingStrategy?: ChunkingStrategy | "auto";
     chunkSize?: number;
     chunkOverlap?: number;
-    language?: "en" | "id" | "auto"; // Added language option
+    language?: "en" | "id" | "auto";
+    enableProgressTracking?: boolean; // Enable real-time progress tracking
 }
 
 /**
@@ -144,6 +146,54 @@ async function createChunkRecords(
             sentenceWindowContext: chunk.metadata?.sentenceWindowContext,
         },
         embedding: embeddings[i].embedding,
+        keywords: extractKeywords(chunk.content, { language: detectedLanguage }),
+    }));
+}
+
+/**
+ * Create chunk records with progress tracking for embedding generation
+ * Generates embeddings in batches and reports progress via tracker
+ */
+async function createChunkRecordsWithProgress(
+    documentId: string,
+    chunks: Chunk[],
+    detectedLanguage: "en" | "id",
+    chunkingStrategy: string,
+    tracker: ProgressTracker
+): Promise<NewDocumentChunk[]> {
+    const enhancedChunks = enhanceForAcademic(chunks, "");
+    const chunkTexts = enhancedChunks.map((c) => c.content);
+    const totalChunks = chunkTexts.length;
+
+    // Generate embeddings in batches with progress updates
+    const batchSize = 20;
+    const allEmbeddings: Array<{ embedding: number[] }> = [];
+
+    for (let i = 0; i < chunkTexts.length; i += batchSize) {
+        const batch = chunkTexts.slice(i, i + batchSize);
+        const batchEmbeddings = await generateEmbeddings(batch);
+        allEmbeddings.push(...batchEmbeddings);
+
+        // Update progress after each batch
+        const completed = Math.min(i + batchSize, totalChunks);
+        await tracker.updateProgress("embedding", completed, totalChunks);
+    }
+
+    return enhancedChunks.map((chunk, i) => ({
+        documentId,
+        content: chunk.content,
+        chunkIndex: chunk.index,
+        startOffset: chunk.startOffset,
+        endOffset: chunk.endOffset,
+        metadata: {
+            headings: chunk.metadata?.headings || extractHeadings(chunk.content),
+            section: chunk.metadata?.section,
+            chunkingStrategy,
+            parentChunkId: chunk.metadata?.parentChunkId,
+            childChunkIds: chunk.metadata?.childChunkIds,
+            sentenceWindowContext: chunk.metadata?.sentenceWindowContext,
+        },
+        embedding: allEmbeddings[i].embedding,
         keywords: extractKeywords(chunk.content, { language: detectedLanguage }),
     }));
 }
@@ -310,6 +360,11 @@ export function selectChunkingStrategy(content: string): ChunkingStrategy {
  * - Prevents "ghost chunks" from failed processing attempts
  * - Safe for retry after failure
  *
+ * When enableProgressTracking is true:
+ * - Creates a ProgressTracker instance for real-time progress updates
+ * - Emits progress events at each stage (extracting, detecting, chunking, embedding, storing)
+ * - Saves intermediate artifacts for partial recovery on failure
+ *
  * @param documentId - The document ID to process
  * @param options - Processing options (chunking strategy, chunk size, etc.)
  * @returns Processing result with success status and chunk count
@@ -320,12 +375,16 @@ export async function processDocument(documentId: string, options: ProcessingOpt
         chunkSize = 1000,
         chunkOverlap = 200,
         language = "auto",
+        enableProgressTracking = false,
     } = options;
 
     console.log(`[processDocument] Starting document processing - documentId: ${documentId}`);
     console.log(
-        `[processDocument] Options: strategy=${requestedStrategy}, chunkSize=${chunkSize}, overlap=${chunkOverlap}, language=${language}`
+        `[processDocument] Options: strategy=${requestedStrategy}, chunkSize=${chunkSize}, overlap=${chunkOverlap}, language=${language}, progress=${enableProgressTracking}`
     );
+
+    // Initialize progress tracker if enabled
+    let tracker: ProgressTracker | null = null;
 
     // Set processing status before transaction (allows visibility of "processing" state)
     await updateDocumentStatus(db, documentId, "processing");
@@ -340,14 +399,37 @@ export async function processDocument(documentId: string, options: ProcessingOpt
             throw new Error(errorMsg);
         }
 
+        // Initialize progress tracker after we have the file size
+        if (enableProgressTracking) {
+            tracker = await ProgressTracker.create(documentId, doc.fileSize);
+            await tracker.updateStage("extracting", "Content already extracted, analyzing document...");
+        }
+
         console.log(`[processDocument] Document found - title: ${doc.title}, contentLength: ${doc.content.length}`);
+
+        // Detect language
+        if (tracker) {
+            await tracker.updateStage("detecting_language");
+        }
         const detectedLanguage = language === "auto" ? detectDocumentLanguage(doc.content) : language;
         console.log(`[processDocument] Detected language: ${detectedLanguage}`);
+
+        // Save language detection artifact
+        if (tracker) {
+            await tracker.saveArtifact({
+                extractedText: doc.content,
+                detectedLanguage,
+            });
+        }
 
         // Auto-select chunking strategy based on document characteristics
         const effectiveStrategy: ChunkingStrategy =
             requestedStrategy === "auto" ? selectChunkingStrategy(doc.content) : requestedStrategy;
 
+        // Chunking stage
+        if (tracker) {
+            await tracker.updateStage("chunking", `Creating chunks using ${effectiveStrategy} strategy...`);
+        }
         console.log(`[processDocument] Starting chunking with strategy: ${effectiveStrategy}`);
         const chunks =
             effectiveStrategy === "semantic"
@@ -368,13 +450,34 @@ export async function processDocument(documentId: string, options: ProcessingOpt
                   });
         console.log(`[processDocument] Chunking complete - chunks created: ${chunks.length}`);
 
-        // Prepare chunk records outside transaction (embedding generation)
+        // Save chunk count artifact
+        if (tracker) {
+            await tracker.saveArtifact({ chunkCount: chunks.length });
+            await tracker.updateProgress("chunking", chunks.length, chunks.length, `Created ${chunks.length} chunks`);
+        }
+
+        // Embedding stage - use progress-aware function if tracker exists
         console.log(`[processDocument] Generating embeddings for ${chunks.length} chunks`);
-        const chunkRecords = await createChunkRecords(documentId, chunks, detectedLanguage, effectiveStrategy);
+        const chunkRecords = tracker
+            ? await createChunkRecordsWithProgress(documentId, chunks, detectedLanguage, effectiveStrategy, tracker)
+            : await createChunkRecords(documentId, chunks, detectedLanguage, effectiveStrategy);
         console.log(`[processDocument] Chunk records prepared - total: ${chunkRecords.length}`);
 
         const universityMetadata = await extractUniversityMetadata(doc.content);
         console.log(`[processDocument] University metadata extracted - type: ${universityMetadata.documentType}`);
+
+        // Save metadata artifact
+        if (tracker) {
+            await tracker.saveArtifact({
+                detectedType: universityMetadata.documentType,
+                metadata: { keywords: universityMetadata.keywords, courseCode: universityMetadata.courseCode },
+            });
+        }
+
+        // Storing stage
+        if (tracker) {
+            await tracker.updateStage("storing", `Storing ${chunkRecords.length} chunks in database...`);
+        }
 
         // Use transaction for chunk insertion and status update
         // This ensures atomicity: either all chunks are inserted AND status is updated,
@@ -407,6 +510,11 @@ export async function processDocument(documentId: string, options: ProcessingOpt
             console.log("[processDocument] Document status updated to 'completed'");
         });
 
+        // Mark progress as complete
+        if (tracker) {
+            await tracker.complete();
+        }
+
         console.log("[processDocument] Document processing completed successfully");
         return {
             success: true,
@@ -418,8 +526,14 @@ export async function processDocument(documentId: string, options: ProcessingOpt
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
         console.error(`[processDocument] Error during processing: ${errorMessage}`);
-        // Update status to failed (outside transaction since main transaction rolled back)
-        await updateDocumentStatus(db, documentId, "failed", { error: errorMessage });
+
+        // Mark progress as failed
+        if (tracker) {
+            await tracker.fail(errorMessage);
+        } else {
+            // Update status to failed (outside transaction since main transaction rolled back)
+            await updateDocumentStatus(db, documentId, "failed", { error: errorMessage });
+        }
         console.log(`[processDocument] Document status set to 'failed' with error: ${errorMessage}`);
 
         return {

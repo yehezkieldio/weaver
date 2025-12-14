@@ -209,3 +209,62 @@ export interface StatisticalAnalysisResult {
     interpretation: string;
     interpretationId: string;
 }
+
+/**
+ * Processing stages for document pipeline
+ * Order matters: represents the sequential processing stages
+ */
+export type ProcessingStage =
+    | "pending"
+    | "extracting"
+    | "detecting_language"
+    | "chunking"
+    | "embedding"
+    | "storing"
+    | "completed"
+    | "failed";
+
+/**
+ * Progress event sent via SSE during document processing
+ */
+export interface ProcessingProgressEvent {
+    documentId: string;
+    stage: ProcessingStage;
+    progress: number; // 0-100
+    message: string; // Human-readable message like "Generating embeddings (60/145)..."
+    estimatedTimeMs?: number; // Estimated time remaining in ms
+    stageProgress?: {
+        current: number; // e.g., 60 embeddings done
+        total: number; // e.g., 145 total embeddings
+    };
+    error?: string;
+}
+
+/**
+ * Intermediate processing artifacts for partial recovery
+ */
+export interface ProcessingArtifact {
+    extractedText?: string;
+    detectedLanguage?: "en" | "id";
+    detectedType?: ExtendedDocumentType;
+    metadata?: DocumentMetadata;
+    chunkCount?: number;
+    successfulChunkIds?: string[];
+    failedChunkIndices?: number[];
+}
+
+/**
+ * Document processing progress stored in database
+ */
+export interface DocumentProcessingProgressData {
+    stage: ProcessingStage;
+    progress: number;
+    message: string;
+    estimatedTimeMs?: number;
+    stageProgress?: {
+        current: number;
+        total: number;
+    };
+    startedAt: string;
+    updatedAt: string;
+}
