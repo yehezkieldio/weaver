@@ -672,7 +672,7 @@ const ChatInput = memo(function ChatInputComponent({
                 <div className="relative">
                     <Textarea
                         className={cn(
-                            "min-h-[60px] resize-none bg-background pr-24",
+                            "min-h-15 resize-none bg-background pr-24",
                             isTooShort && "border-yellow-500 focus-visible:ring-yellow-500",
                             isTooLong && "border-destructive focus-visible:ring-destructive"
                         )}
@@ -1285,6 +1285,19 @@ function useChatLogic() {
     const [liveRetrievedChunks, setLiveRetrievedChunks] = useState<RetrievedChunk[]>([]);
     const [agentProgress, setAgentProgress] = useState<AgentProgressDataPart | null>(null);
 
+    // Refs to track current live state (avoids stale closure in onFinish)
+    const liveAgentStepsRef = useRef<AgentStep[]>([]);
+    const liveRetrievedChunksRef = useRef<RetrievedChunk[]>([]);
+
+    // Sync refs with state
+    useEffect(() => {
+        liveAgentStepsRef.current = liveAgentSteps;
+    }, [liveAgentSteps]);
+
+    useEffect(() => {
+        liveRetrievedChunksRef.current = liveRetrievedChunks;
+    }, [liveRetrievedChunks]);
+
     const {
         messages,
         sendMessage,
@@ -1385,6 +1398,14 @@ function useChatLogic() {
             // Extract metadata from the finished message
             const metadata = message.metadata as ChatMetadata | undefined;
 
+            // Get current live state from refs (avoids stale closure)
+            const currentLiveSteps = liveAgentStepsRef.current;
+            const currentLiveChunks = liveRetrievedChunksRef.current;
+
+            // Determine final steps and chunks to persist on this message
+            let finalSteps: AgentStep[] | undefined;
+            let finalChunks: RetrievedChunk[] | undefined;
+
             if (metadata) {
                 if (metadata.latencyMs) {
                     setLatencyMs(metadata.latencyMs);
@@ -1397,16 +1418,20 @@ function useChatLogic() {
                 if (metadata.type === "agentic") {
                     const agenticMeta = metadata as AgenticMetadata;
                     // Prefer live steps if we have them (they have more detail)
-                    if (liveAgentSteps.length > 0) {
-                        setAgentSteps(liveAgentSteps);
+                    if (currentLiveSteps.length > 0) {
+                        finalSteps = currentLiveSteps;
+                        setAgentSteps(currentLiveSteps);
                     } else if (agenticMeta.steps) {
+                        finalSteps = agenticMeta.steps;
                         setAgentSteps(agenticMeta.steps);
                     }
 
                     // Prefer live chunks if we have them
-                    if (liveRetrievedChunks.length > 0) {
-                        setRetrievedChunks(liveRetrievedChunks);
+                    if (currentLiveChunks.length > 0) {
+                        finalChunks = currentLiveChunks;
+                        setRetrievedChunks(currentLiveChunks);
                     } else if (agenticMeta.retrievedChunks) {
+                        finalChunks = agenticMeta.retrievedChunks;
                         setRetrievedChunks(agenticMeta.retrievedChunks);
                     }
                 }
@@ -1414,10 +1439,30 @@ function useChatLogic() {
                 // Handle standard RAG metadata
                 if (metadata.type === "standard-rag") {
                     const ragMeta = metadata as StandardRagMetadata;
-                    if (ragMeta.retrievedChunks) {
+                    if (currentLiveChunks.length > 0) {
+                        finalChunks = currentLiveChunks;
+                        setRetrievedChunks(currentLiveChunks);
+                    } else if (ragMeta.retrievedChunks) {
+                        finalChunks = ragMeta.retrievedChunks;
                         setRetrievedChunks(ragMeta.retrievedChunks);
                     }
                 }
+            }
+
+            // Update the message with persisted steps/chunks so it survives after live state is cleared
+            // This is critical for keeping collapsibles visible after streaming completes
+            if (finalSteps || finalChunks) {
+                setMessages((prevMessages) =>
+                    prevMessages.map((msg) =>
+                        msg.id === message.id
+                            ? {
+                                  ...msg,
+                                  persistedSteps: finalSteps || (msg as MessageWithMetadata).persistedSteps,
+                                  persistedChunks: finalChunks || (msg as MessageWithMetadata).persistedChunks,
+                              }
+                            : msg
+                    )
+                );
             }
 
             // Clear live state and progress after finish
@@ -1425,6 +1470,8 @@ function useChatLogic() {
             setTimeout(() => {
                 setLiveAgentSteps([]);
                 setLiveRetrievedChunks([]);
+                liveAgentStepsRef.current = [];
+                liveRetrievedChunksRef.current = [];
                 setAgentProgress(null);
             }, 100);
 
