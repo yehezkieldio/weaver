@@ -1289,6 +1289,12 @@ function useChatLogic() {
     const liveAgentStepsRef = useRef<AgentStep[]>([]);
     const liveRetrievedChunksRef = useRef<RetrievedChunk[]>([]);
 
+    // Map to track persisted data for each message (survives useChat state updates)
+    const persistedDataRef = useRef<Map<string, { steps?: AgentStep[]; chunks?: RetrievedChunk[] }>>(new Map());
+
+    // Track which messages have been enriched to avoid infinite loops
+    const enrichedMessagesRef = useRef<Set<string>>(new Set());
+
     // Sync refs with state
     useEffect(() => {
         liveAgentStepsRef.current = liveAgentSteps;
@@ -1449,20 +1455,13 @@ function useChatLogic() {
                 }
             }
 
-            // Update the message with persisted steps/chunks so it survives after live state is cleared
+            // Store persisted data in ref map so it survives useChat state updates
             // This is critical for keeping collapsibles visible after streaming completes
             if (finalSteps || finalChunks) {
-                setMessages((prevMessages) =>
-                    prevMessages.map((msg) =>
-                        msg.id === message.id
-                            ? {
-                                  ...msg,
-                                  persistedSteps: finalSteps || (msg as MessageWithMetadata).persistedSteps,
-                                  persistedChunks: finalChunks || (msg as MessageWithMetadata).persistedChunks,
-                              }
-                            : msg
-                    )
-                );
+                persistedDataRef.current.set(message.id, {
+                    steps: finalSteps,
+                    chunks: finalChunks,
+                });
             }
 
             // Clear live state and progress after finish
@@ -1486,6 +1485,37 @@ function useChatLogic() {
         },
     });
 
+    // Enrich messages with persisted data after useChat updates them
+    // This ensures collapsibles remain visible after streaming completes
+    useEffect(() => {
+        if (persistedDataRef.current.size === 0) return;
+
+        // Check if any message needs enrichment
+        const needsEnrichment = messages.some((msg) => {
+            const persistedData = persistedDataRef.current.get(msg.id);
+            return persistedData && !enrichedMessagesRef.current.has(msg.id);
+        });
+
+        if (!needsEnrichment) return;
+
+        setMessages((prevMessages) =>
+            prevMessages.map((msg) => {
+                const persistedData = persistedDataRef.current.get(msg.id);
+                if (persistedData && !enrichedMessagesRef.current.has(msg.id)) {
+                    // Mark as enriched to avoid re-processing
+                    enrichedMessagesRef.current.add(msg.id);
+
+                    return {
+                        ...msg,
+                        persistedSteps: persistedData.steps,
+                        persistedChunks: persistedData.chunks,
+                    } as MessageWithMetadata;
+                }
+                return msg;
+            })
+        );
+    }, [messages, setMessages]);
+
     const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setInput(e.target.value);
     }, []);
@@ -1507,13 +1537,21 @@ function useChatLogic() {
                             content: string;
                             createdAt: string;
                             retrievedChunks?: RetrievedChunk[];
-                        }) => ({
-                            id: msg.id,
-                            role: msg.role as "user" | "assistant",
-                            parts: [{ type: "text" as const, text: msg.content }],
-                            // Include persisted chunks from DB for sources collapsible
-                            persistedChunks: msg.retrievedChunks || undefined,
-                        })
+                        }) => {
+                            // Also populate the persisted data ref map
+                            if (msg.retrievedChunks) {
+                                persistedDataRef.current.set(msg.id, {
+                                    chunks: msg.retrievedChunks,
+                                });
+                            }
+                            return {
+                                id: msg.id,
+                                role: msg.role as "user" | "assistant",
+                                parts: [{ type: "text" as const, text: msg.content }],
+                                // Include persisted chunks from DB for sources collapsible
+                                persistedChunks: msg.retrievedChunks || undefined,
+                            };
+                        }
                     );
                     setMessages(uiMessages);
                 } else {
@@ -1542,6 +1580,8 @@ function useChatLogic() {
             setLiveAgentSteps([]);
             setLiveRetrievedChunks([]);
             setAgentProgress(null);
+            persistedDataRef.current.clear();
+            enrichedMessagesRef.current.clear();
 
             // If "new" sentinel value, just clear messages without loading
             if (sessionId === "new") {
