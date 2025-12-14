@@ -53,10 +53,17 @@ const TABLE_SEPARATOR_LINE_PATTERN = /^[|+\-\s]+$/;
 const TABLE_CELL_SPLIT_PATTERN = /\s*\|\s*/;
 const KV_SEPARATOR_LINE_PATTERN = /^[-=+]+$/;
 const KV_PATTERN = /^([A-Za-z][A-Za-z0-9\s]*?)\s*:\s*(.+)$/;
-// Support both Unix (\n) and Windows (\r\n) line endings
-const SECTION_SPLIT_PATTERN = /\r?\n[=]{3,}\r?\n|\r?\n[-]{3,}\r?\n/;
 const TITLE_PUNCTUATION_PATTERN = /[.!?]$/;
 const ALL_CAPS_TITLE_PATTERN = /^[A-Z][A-Z\s0-9]+$/;
+// Prerequisite parsing patterns
+const BULLET_POINT_PATTERN = /^[•\-*]\s+/;
+const PREREQ_SECTION_PATTERN = /mata\s+kuliah\s+dengan\s+prasyarat/i;
+const PREREQ_LINE_PATTERN = /prasyarat/i;
+const PREREQ_VALUE_PATTERN = /prasyarat\s*:\s*(.+)/i;
+// Section splitting patterns
+const LINE_SPLIT_PATTERN = /\r?\n/;
+const EQUALS_DELIMITER_PATTERN = /^=+$/;
+const DASH_DELIMITER_PATTERN = /^-+$/;
 
 // ============================================================================
 // Detection Functions
@@ -182,6 +189,46 @@ export function parseAsciiTable(lines: string[], title?: string): ParsedTable | 
 }
 
 /**
+ * Parses prerequisite list structure
+ *
+ * Format:
+ * • COURSE NAME
+ *   Prasyarat: prerequisite1, prerequisite2
+ *
+ * @param text - Text to parse
+ * @returns Array of key-value pairs with course-prerequisite relationships
+ */
+function parsePrerequisiteList(text: string): KeyValuePair[] {
+    const pairs: KeyValuePair[] = [];
+    const lines = text.split("\n");
+
+    let currentCourse: string | null = null;
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+
+        // Check if line starts with bullet point (•, -, *)
+        if (BULLET_POINT_PATTERN.test(trimmed)) {
+            // This is a course name
+            currentCourse = trimmed.replace(BULLET_POINT_PATTERN, "").trim();
+        } else if (currentCourse && PREREQ_LINE_PATTERN.test(trimmed)) {
+            // This is a prerequisite line for the current course
+            const match = PREREQ_VALUE_PATTERN.exec(trimmed);
+            if (match) {
+                const prereq = match[1].trim();
+                pairs.push({
+                    key: `Prasyarat ${currentCourse}`,
+                    value: prereq,
+                });
+            }
+        }
+    }
+
+    return pairs;
+}
+
+/**
  * Extracts key-value pairs from text
  *
  * Patterns matched:
@@ -189,10 +236,19 @@ export function parseAsciiTable(lines: string[], title?: string): ParsedTable | 
  * - "Key : Value"
  * - "Key    :    Value"
  *
+ * WHY Prerequisite Detection:
+ * - Prerequisite sections have special bullet-point list structure
+ * - Need to preserve course-prerequisite associations
+ *
  * @param text - Text to parse
  * @returns Array of key-value pairs
  */
 export function parseKeyValuePairs(text: string): KeyValuePair[] {
+    // Check if this is a prerequisite section
+    if (PREREQ_SECTION_PATTERN.test(text)) {
+        return parsePrerequisiteList(text);
+    }
+
     const pairs: KeyValuePair[] = [];
     const lines = text.split("\n");
 
@@ -220,16 +276,60 @@ export function parseKeyValuePairs(text: string): KeyValuePair[] {
 /**
  * Splits text into sections based on delimiters
  *
+ * WHY Full-Width Delimiter Check:
+ * - Short `----` lines are used as table separators and subsection markers
+ * - Only full-width delimiters (60+ chars) should split major sections
+ * - This prevents over-splitting of prerequisite sections and table internals
+ *
  * Delimiters recognized:
- * - ======= (major section)
- * - ------- (minor section)
+ * - ======= (major section, 60+ chars)
+ * - ------- (minor section, 60+ chars)
  *
  * @param text - Text to split
  * @returns Array of text chunks (sections)
  */
 function splitIntoSections(text: string): string[] {
-    // Split on lines that are purely delimiters
-    return text.split(SECTION_SPLIT_PATTERN).filter((s) => s.trim().length > 0);
+    const lines = text.split(LINE_SPLIT_PATTERN);
+    const sections: string[] = [];
+    let currentSection: string[] = [];
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+
+        // Check if this is a full-width delimiter line
+        // Must be at least 60 characters of = or - to be a section delimiter
+        const isFullDelimiter =
+            (EQUALS_DELIMITER_PATTERN.test(trimmed) && trimmed.length >= 60) ||
+            (DASH_DELIMITER_PATTERN.test(trimmed) && trimmed.length >= 60);
+
+        if (isFullDelimiter) {
+            // Check context: Don't split if previous line is a prerequisite header
+            const prevLine = i > 0 ? lines[i - 1].trim() : "";
+            const isPrereqDelimiter = PREREQ_SECTION_PATTERN.test(prevLine);
+
+            if (isPrereqDelimiter) {
+                // This is a subsection delimiter, not a section delimiter
+                // Keep it in the current section
+                currentSection.push(line);
+            } else if (currentSection.length > 0) {
+                // This is a real section delimiter
+                // Save current section if it has content
+                sections.push(currentSection.join("\n"));
+                currentSection = [];
+                // Skip the delimiter line itself
+            }
+        } else {
+            currentSection.push(line);
+        }
+    }
+
+    // Add final section
+    if (currentSection.length > 0) {
+        sections.push(currentSection.join("\n"));
+    }
+
+    return sections.filter((s) => s.trim().length > 0);
 }
 
 /**
@@ -248,7 +348,12 @@ function extractTablesFromSection(text: string): { tables: ParsedTable[]; remain
     let inTable = false;
 
     for (const line of lines) {
-        const isTableLine = line.includes("|") || TABLE_SEPARATOR_LINE_PATTERN.test(line.trim());
+        // A line is part of a table if:
+        // 1. It contains | (actual table row), OR
+        // 2. It's a separator line AND we're currently in a table
+        const hasPipe = line.includes("|");
+        const isSeparator = TABLE_SEPARATOR_LINE_PATTERN.test(line.trim());
+        const isTableLine = hasPipe || (isSeparator && inTable);
 
         if (isTableLine) {
             if (!inTable) {
