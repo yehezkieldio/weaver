@@ -630,7 +630,7 @@ const ChatInput = memo(function ChatInputComponent({
     onClear: () => void;
     onStop: () => void;
 }) {
-    const MIN_LENGTH = 10;
+    const MIN_LENGTH = 2;
     const MAX_LENGTH = 5000;
     const inputLength = input.length;
     const isTooShort = inputLength > 0 && inputLength < MIN_LENGTH;
