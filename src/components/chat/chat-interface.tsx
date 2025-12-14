@@ -813,7 +813,6 @@ const MessageList = memo(function MessageListComponent({
                 />
             ))}
 
-            {/* Show reasoning steps ABOVE message bubble during streaming */}
             {(isLoading || isStreaming) && settings.useAgenticMode && liveAgentSteps.length > 0 && (
                 <div className="space-y-2">
                     <AgentStepsCollapsible steps={liveAgentSteps} />
