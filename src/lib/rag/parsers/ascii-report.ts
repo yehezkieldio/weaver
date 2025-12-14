@@ -53,7 +53,8 @@ const TABLE_SEPARATOR_LINE_PATTERN = /^[|+\-\s]+$/;
 const TABLE_CELL_SPLIT_PATTERN = /\s*\|\s*/;
 const KV_SEPARATOR_LINE_PATTERN = /^[-=+]+$/;
 const KV_PATTERN = /^([A-Za-z][A-Za-z0-9\s]*?)\s*:\s*(.+)$/;
-const SECTION_SPLIT_PATTERN = /\n[=]{3,}\n|\n[-]{3,}\n/;
+// Support both Unix (\n) and Windows (\r\n) line endings
+const SECTION_SPLIT_PATTERN = /\r?\n[=]{3,}\r?\n|\r?\n[-]{3,}\r?\n/;
 const TITLE_PUNCTUATION_PATTERN = /[.!?]$/;
 const ALL_CAPS_TITLE_PATTERN = /^[A-Z][A-Z\s0-9]+$/;
 
@@ -362,9 +363,15 @@ export function parseReport(text: string): ParsedReport {
  * @param row - Row data (column -> value mapping)
  * @param headers - Column headers
  * @param tableTitle - Optional table title for context
+ * @param sectionContext - Optional section title for hierarchical context (e.g., study program)
  * @returns Natural language sentence describing the row
  */
-function serializeRowToSentence(row: Record<string, string>, headers: string[], tableTitle?: string): string {
+function serializeRowToSentence(
+    row: Record<string, string>,
+    headers: string[],
+    tableTitle?: string,
+    sectionContext?: string
+): string {
     const parts: string[] = [];
 
     for (const header of headers) {
@@ -379,17 +386,34 @@ function serializeRowToSentence(row: Record<string, string>, headers: string[], 
     }
 
     const base = parts.join(", ");
-    return tableTitle ? `[${tableTitle}] ${base}.` : `${base}.`;
+
+    // Build context prefix with section and table title
+    const contextParts: string[] = [];
+    if (sectionContext) {
+        contextParts.push(sectionContext);
+    }
+    if (tableTitle) {
+        contextParts.push(tableTitle);
+    }
+
+    if (contextParts.length > 0) {
+        return `[${contextParts.join(" - ")}] ${base}.`;
+    }
+
+    return `${base}.`;
 }
 
 /**
  * Serializes a table to natural language sentences
  *
  * @param table - Parsed table
+ * @param sectionContext - Optional section title for hierarchical context
  * @returns Array of sentences, one per row
  */
-export function serializeTableToSentences(table: ParsedTable): string[] {
-    return table.rows.map((row) => serializeRowToSentence(row, table.headers, table.title)).filter((s) => s.length > 0);
+export function serializeTableToSentences(table: ParsedTable, sectionContext?: string): string[] {
+    return table.rows
+        .map((row) => serializeRowToSentence(row, table.headers, table.title, sectionContext))
+        .filter((s) => s.length > 0);
 }
 
 /**
@@ -406,9 +430,10 @@ export function serializeKeyValuesToSentences(pairs: KeyValuePair[]): string[] {
  * Serializes a parsed section to natural language
  *
  * @param section - Parsed section
+ * @param effectiveContext - Context from parent/previous sections (for sections without title)
  * @returns Natural language text
  */
-function serializeSection(section: ParsedSection): string {
+function serializeSection(section: ParsedSection, effectiveContext?: string): string {
     const parts: string[] = [];
 
     // Add section title if present
@@ -423,12 +448,14 @@ function serializeSection(section: ParsedSection): string {
         parts.push("");
     }
 
-    // Serialize tables
+    // Serialize tables with effective context (section title or inherited context)
+    const contextForTables = section.title || effectiveContext;
     for (const table of section.tables) {
         if (table.title) {
             parts.push(`### ${table.title}`);
         }
-        parts.push(...serializeTableToSentences(table));
+        // Pass effective context for hierarchical information
+        parts.push(...serializeTableToSentences(table, contextForTables));
         parts.push("");
     }
 
@@ -437,6 +464,11 @@ function serializeSection(section: ParsedSection): string {
 
 /**
  * Serializes a complete parsed report to LLM-ready text
+ *
+ * WHY Context Propagation:
+ * - Section delimiters (====, ----) split study program names from tables
+ * - Tables end up in sections with undefined title
+ * - Need to look back at recent sections for hierarchical context
  *
  * @param report - Parsed report
  * @returns Natural language text suitable for embedding
@@ -452,9 +484,25 @@ export function serializeReport(report: ParsedReport): string {
         parts.push("");
     }
 
-    // Serialize each section
+    // Track the most recent meaningful section title for context propagation
+    // Separate tracking for "major" context (study programs, departments) vs metadata
+    let lastMajorContext: string | undefined;
+
+    // Serialize each section with context propagation
     for (const section of report.sections) {
-        const serialized = serializeSection(section);
+        // Update major context if this section has a meaningful title
+        // Major sections are typically study programs, departments, etc.
+        // Metadata-like titles (containing ":") are not considered major context
+        if (section.title && section.title.trim().length > 0 && !section.title.includes(":")) {
+            lastMajorContext = section.title;
+        }
+
+        // For sections with tables, use major context (not metadata titles)
+        // This ensures "D3 - MANAJEMEN INDUSTRI" is used instead of "Jumlah Dosen: 5"
+        const effectiveContext = section.tables.length > 0 ? lastMajorContext : section.title || lastMajorContext;
+
+        // Serialize section with effective context
+        const serialized = serializeSection(section, effectiveContext);
         if (serialized.length > 0) {
             parts.push(serialized);
             parts.push("");

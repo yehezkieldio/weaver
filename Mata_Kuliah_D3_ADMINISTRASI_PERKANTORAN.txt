@@ -1,0 +1,136 @@
+================================================================================
+MATA KULIAH - PROGRAM STUDI D3 ADMINISTRASI PERKANTORAN
+Universitas Mulia
+================================================================================
+
+Dibuat: 12 December 2025, 07:46 WIB
+Jumlah Semester: 6
+================================================================================
+
+
+================================================================================
+SEMESTER 1
+================================================================================
+Total SKS: 20
+Jumlah Mata Kuliah: 8
+--------------------------------------------------------------------------------
+
+No   | Kode            | Nama Mata Kuliah                              | SKS 
+-----+-----------------+-----------------------------------------------+-----
+   1 | 100             | Bahasa Indonesia                              | 2   
+   2 | 200             | Bahasa Inggris Bisnis                         | 3   
+   3 | 400             | Pancasila                                     | 2   
+   4 | 500             | Pendidikan Agama                              | 2   
+   5 | 230200          | Dokumen Bisnis & Pelaporan                    | 3   
+   6 | 231400          | Matematika Bisnis                             | 3   
+   7 | 231900          | Pengantar Akuntansi                           | 3   
+   8 | 232400          | Sistem Administrasi Perkantoran               | 2   
+
+
+================================================================================
+SEMESTER 2
+================================================================================
+Total SKS: 21
+Jumlah Mata Kuliah: 10
+--------------------------------------------------------------------------------
+
+No   | Kode            | Nama Mata Kuliah                              | SKS 
+-----+-----------------+-----------------------------------------------+-----
+   1 | 600             | Pendidikan Anti Korupsi                       | 2   
+   2 | 700             | Pendidikan Kewarganegaraan                    | 2   
+   3 | 20200           | Manajemen Kesehatan Dan Keselamatan Kerja (K3 | 2   
+   4 | 20400           | Perpajakan 1                                  | 2   
+   5 | 230500          | Kinerja Karyawan                              | 2   
+   6 | 230600          | Korespondensi Bahasa Indonesia                | 2   
+   7 | 231200          | Manajemen Kegiatan 1                          | 2   
+   8 | 231600          | Notulensi & Presentasi                        | 2   
+   9 | 232000          | Pengelolaan Administrasi                      | 3   
+  10 | 232500          | Tata Kelola Organisasi 1                      | 2   
+
+
+================================================================================
+SEMESTER 3
+================================================================================
+Total SKS: 20
+Jumlah Mata Kuliah: 8
+--------------------------------------------------------------------------------
+
+No   | Kode            | Nama Mata Kuliah                              | SKS 
+-----+-----------------+-----------------------------------------------+-----
+   1 | 1000            | Teknologi Informasi                           | 3   
+   2 | 230100          | Bahasa Inggris                                | 2   
+   3 | 230700          | Korespondensi Bahasa Inggris (Lisan & Tulisan | 2   
+   4 | 230800          | Korespondensi Bahasa Inggris (Lisan & Tulisan | 2   
+   5 | 230900          | Layanan Prima 1                               | 3   
+   6 | 231300          | Manajemen Kegiatan 2                          | 3   
+   7 | 232200          | Perpajakan 2                                  | 2   
+   8 | 232600          | Tata Kelola Organisasi 2                      | 3   
+
+
+================================================================================
+SEMESTER 4
+================================================================================
+Total SKS: 29
+Jumlah Mata Kuliah: 11
+--------------------------------------------------------------------------------
+
+No   | Kode            | Nama Mata Kuliah                              | SKS 
+-----+-----------------+-----------------------------------------------+-----
+   1 | 20100           | Ekonomi Kreatif                               | 3   
+   2 | 230300          | Etika Profesi                                 | 2   
+   3 | 230400          | Hubungan Interpersonal                        | 3   
+   4 | 231000          | Layanan Prima 2                               | 2   
+   5 | 231700          | Penanganan Keluhan Pelanggan                  | 3   
+   6 | 231800          | Penganggaran                                  | 3   
+   7 | 232100          | Pengembangan Kepribadian                      | 2   
+   8 | 313100          | Kejahatan Siber                               | 3   
+   9 | 212800          | Perencanaan dan Pengembangan Bisnis           | 2   
+  10 | 122800          | Backup dan Pemulihan Data                     | 3   
+  11 | 141300          | Desain Logo                                   | 3   
+
+
+Mata Kuliah dengan Prasyarat:
+--------------------------------------------------------------------------------
+• Kejahatan Siber
+  Prasyarat: MK  Pilihan Transdisipliner (Max 2 MK)
+
+
+
+================================================================================
+SEMESTER 5
+================================================================================
+Total SKS: 27
+Jumlah Mata Kuliah: 9
+--------------------------------------------------------------------------------
+
+No   | Kode            | Nama Mata Kuliah                              | SKS 
+-----+-----------------+-----------------------------------------------+-----
+   1 | 1200            | Wirausaha Berbasis Teknologi                  | 4   
+   2 | 20300           | Kuliah Kerja Praktik (KKP)                    | 4   
+   3 | 231100          | Manajemen Database                            | 3   
+   4 | 231500          | Metode Penelitian                             | 3   
+   5 | 232300          | Public Speaking                               | 2   
+   6 | 232700          | TOEIC                                         | 2   
+   7 | 320300          | Dasar-dasar Psikologi *                       | 3   
+   8 | 111200          | Perangkat Lunak Aplikasi                      | 3   
+   9 | 141400          | Fotografi                                     | 3   
+
+
+Mata Kuliah dengan Prasyarat:
+--------------------------------------------------------------------------------
+• Dasar-dasar Psikologi *
+  Prasyarat: MK  Pilihan Transdisipliner (Max 2 MK)
+
+
+
+================================================================================
+SEMESTER 6
+================================================================================
+Total SKS: 8
+Jumlah Mata Kuliah: 2
+--------------------------------------------------------------------------------
+
+No   | Kode            | Nama Mata Kuliah                              | SKS 
+-----+-----------------+-----------------------------------------------+-----
+   1 | 800             | Penulisan Publikasi Ilmiah                    | 2   
+   2 | 1100            | Tugas Akhir**                                 | 6   
