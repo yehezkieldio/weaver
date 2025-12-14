@@ -48,6 +48,12 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { type AgentStep, type RetrievedChunk, useChatStore } from "@/lib/stores/chat-stores";
+import type {
+    AgentProgressDataPart,
+    AgentResultDataPart,
+    AgentStepDataPart,
+    RetrievedChunkDataPart,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 // Type definitions
@@ -733,6 +739,9 @@ const MessageList = memo(function MessageListComponent({
     isLoadingMessages,
     settings,
     scrollRef,
+    liveAgentSteps,
+    liveRetrievedChunks,
+    agentProgress,
 }: {
     messages: MessageWithMetadata[];
     agentSteps: AgentStep[];
@@ -742,7 +751,14 @@ const MessageList = memo(function MessageListComponent({
     isLoadingMessages: boolean;
     settings: { useAgenticMode: boolean };
     scrollRef: React.RefObject<HTMLDivElement | null>;
+    liveAgentSteps: AgentStep[];
+    liveRetrievedChunks: RetrievedChunk[];
+    agentProgress: AgentProgressDataPart | null;
 }) {
+    // Use live state during streaming, fallback to persisted state after
+    const displaySteps = isStreaming && liveAgentSteps.length > 0 ? liveAgentSteps : agentSteps;
+    const displayChunks = isStreaming && liveRetrievedChunks.length > 0 ? liveRetrievedChunks : retrievedChunks;
+
     // Skeleton loading for initial message load
     if (isLoadingMessages && messages.length === 0) {
         return (
@@ -779,10 +795,10 @@ const MessageList = memo(function MessageListComponent({
 
             {messages.map((message: MessageWithMetadata, index: number) => (
                 <MessageBubble
-                    agentSteps={getMessageSteps(message, index, messages.length, agentSteps)}
+                    agentSteps={getMessageSteps(message, index, messages.length, displaySteps)}
                     key={message.id}
                     message={message}
-                    retrievedChunks={getMessageChunks(message, index, messages.length, retrievedChunks)}
+                    retrievedChunks={getMessageChunks(message, index, messages.length, displayChunks)}
                 />
             ))}
 
@@ -795,16 +811,76 @@ const MessageList = memo(function MessageListComponent({
                         <div className="space-y-2">
                             <div className="flex items-center gap-2">
                                 <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                                <span className="text-sm">{getLoadingText(isStreaming, settings.useAgenticMode)}</span>
+                                <span className="text-sm">
+                                    {agentProgress?.message || getLoadingText(isStreaming, settings.useAgenticMode)}
+                                </span>
                             </div>
-                            {settings.useAgenticMode && isStreaming && (
-                                <div className="space-y-1">
-                                    <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                                        <span>Agentic reasoning in progress...</span>
-                                    </div>
-                                    <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
-                                        <div className="h-full w-1/3 animate-pulse rounded-full bg-primary" />
-                                    </div>
+                            {settings.useAgenticMode && (isLoading || isStreaming) && (
+                                <div className="space-y-2">
+                                    {/* Progress bar */}
+                                    {agentProgress && (
+                                        <div className="space-y-1">
+                                            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                                                <span>
+                                                    {agentProgress.status === "initializing" && "Memulai..."}
+                                                    {agentProgress.status === "retrieving" && "Mengambil dokumen..."}
+                                                    {agentProgress.status === "reasoning" && "Penalaran..."}
+                                                    {agentProgress.status === "synthesizing" &&
+                                                        "Menyintesis jawaban..."}
+                                                    {agentProgress.status === "completed" && "Selesai"}
+                                                </span>
+                                                <span>
+                                                    Step {agentProgress.currentStep}/{agentProgress.maxSteps}
+                                                </span>
+                                            </div>
+                                            <Progress
+                                                className="h-1.5"
+                                                value={(agentProgress.currentStep / agentProgress.maxSteps) * 100}
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* Live agent steps display */}
+                                    {liveAgentSteps.length > 0 && (
+                                        <div className="space-y-1 border-border border-t pt-2">
+                                            <span className="text-[10px] text-muted-foreground">
+                                                {liveAgentSteps.length} langkah penalaran
+                                            </span>
+                                            <div className="max-h-32 space-y-1 overflow-y-auto">
+                                                {liveAgentSteps.slice(-3).map((step) => (
+                                                    <div
+                                                        className="flex items-center gap-2 text-[10px]"
+                                                        key={`live-step-${step.stepIndex}`}
+                                                    >
+                                                        <div
+                                                            className={cn(
+                                                                "flex h-4 w-4 items-center justify-center rounded-full",
+                                                                getStepColor(step.stepType)
+                                                            )}
+                                                        >
+                                                            {getStepIcon(step.stepType)}
+                                                        </div>
+                                                        <span className="truncate">
+                                                            {step.toolName || step.stepType}
+                                                        </span>
+                                                        {step.durationMs > 0 && (
+                                                            <Badge className="text-[8px]" variant="outline">
+                                                                {step.durationMs}ms
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Live retrieved chunks count */}
+                                    {liveRetrievedChunks.length > 0 && (
+                                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                            <FileText className="h-3 w-3" />
+                                            <span>{liveRetrievedChunks.length} sumber ditemukan</span>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -1010,12 +1086,18 @@ function useChatLogic() {
     const session = activeSession();
     const isEphemeral = session?.isEphemeral ?? false;
 
+    // Final persisted state (from message metadata)
     const [agentSteps, setAgentSteps] = useState<AgentStep[]>([]);
     const [retrievedChunks, setRetrievedChunks] = useState<RetrievedChunk[]>([]);
     const [latencyMs, setLatencyMs] = useState<number | null>(null);
     const [detectedLanguage, setDetectedLanguage] = useState<"id" | null>(null);
     const [input, setInput] = useState("");
     const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+
+    // Live streaming state (real-time updates during agentic RAG)
+    const [liveAgentSteps, setLiveAgentSteps] = useState<AgentStep[]>([]);
+    const [liveRetrievedChunks, setLiveRetrievedChunks] = useState<RetrievedChunk[]>([]);
+    const [agentProgress, setAgentProgress] = useState<AgentProgressDataPart | null>(null);
 
     const {
         messages,
@@ -1039,6 +1121,80 @@ function useChatLogic() {
             },
         }),
         experimental_throttle: 50, // Throttle UI updates for better performance
+        // Handle real-time data parts streamed during agentic RAG
+        onData: (dataPart) => {
+            const partType = dataPart.type as string;
+
+            // Handle agent step start/update
+            if (partType === "data-agent-step") {
+                const data = dataPart.data as AgentStepDataPart;
+                setLiveAgentSteps((prev) => {
+                    // Check if step already exists
+                    const existing = prev.findIndex((s) => s.stepIndex === data.stepIndex);
+                    const newStep: AgentStep = {
+                        stepIndex: data.stepIndex,
+                        stepType: data.stepType,
+                        toolName: data.toolName,
+                        toolInput: data.toolInput,
+                        durationMs: 0,
+                        timestamp: data.timestamp,
+                    };
+                    if (existing >= 0) {
+                        // Update existing step
+                        const updated = [...prev];
+                        updated[existing] = newStep;
+                        return updated;
+                    }
+                    return [...prev, newStep];
+                });
+            }
+
+            // Handle agent result (step complete with output)
+            if (partType === "data-agent-result") {
+                const data = dataPart.data as AgentResultDataPart;
+                setLiveAgentSteps((prev) => {
+                    const updated = [...prev];
+                    const stepIdx = updated.findIndex((s) => s.stepIndex === data.stepIndex);
+                    if (stepIdx >= 0) {
+                        updated[stepIdx] = {
+                            ...updated[stepIdx],
+                            toolOutput: data.output,
+                            durationMs: data.durationMs,
+                        };
+                    }
+                    return updated;
+                });
+            }
+
+            // Handle retrieved chunk
+            if (partType === "data-retrieved-chunk") {
+                const data = dataPart.data as RetrievedChunkDataPart;
+                setLiveRetrievedChunks((prev) => {
+                    // Avoid duplicates
+                    if (prev.some((c) => c.chunkId === data.chunkId)) {
+                        return prev;
+                    }
+                    return [
+                        ...prev,
+                        {
+                            chunkId: data.chunkId,
+                            documentTitle: data.documentTitle,
+                            content: data.content,
+                            similarity: data.similarity,
+                            retrievalMethod: data.retrievalMethod,
+                            vectorScore: data.vectorScore,
+                            bm25Score: data.bm25Score,
+                        },
+                    ];
+                });
+            }
+
+            // Handle progress updates (transient)
+            if (partType === "data-agent-progress") {
+                const data = dataPart.data as AgentProgressDataPart;
+                setAgentProgress(data);
+            }
+        },
         onFinish: ({ message }) => {
             // Extract metadata from the finished message
             const metadata = message.metadata as ChatMetadata | undefined;
@@ -1051,13 +1207,20 @@ function useChatLogic() {
                     setDetectedLanguage(metadata.language);
                 }
 
-                // Handle agentic metadata
+                // Handle agentic metadata - use live steps if available, fallback to metadata
                 if (metadata.type === "agentic") {
                     const agenticMeta = metadata as AgenticMetadata;
-                    if (agenticMeta.steps) {
+                    // Prefer live steps if we have them (they have more detail)
+                    if (liveAgentSteps.length > 0) {
+                        setAgentSteps(liveAgentSteps);
+                    } else if (agenticMeta.steps) {
                         setAgentSteps(agenticMeta.steps);
                     }
-                    if (agenticMeta.retrievedChunks) {
+
+                    // Prefer live chunks if we have them
+                    if (liveRetrievedChunks.length > 0) {
+                        setRetrievedChunks(liveRetrievedChunks);
+                    } else if (agenticMeta.retrievedChunks) {
                         setRetrievedChunks(agenticMeta.retrievedChunks);
                     }
                 }
@@ -1071,12 +1234,17 @@ function useChatLogic() {
                 }
             }
 
+            // Clear live state and progress after finish
+            setAgentProgress(null);
+
             scrollRef.current?.scrollIntoView({ behavior: "smooth" });
             setLoading(false);
         },
         onError: (err: Error) => {
             setError(err.message);
             setLoading(false);
+            // Clear live state on error
+            setAgentProgress(null);
         },
     });
 
@@ -1206,6 +1374,11 @@ function useChatLogic() {
             setLatencyMs(null);
             setError(null);
 
+            // Reset live streaming state
+            setLiveAgentSteps([]);
+            setLiveRetrievedChunks([]);
+            setAgentProgress(null);
+
             const userMessage = input;
             setInput("");
 
@@ -1300,6 +1473,10 @@ function useChatLogic() {
         handleSessionChange,
         handleStop,
         handleSaveSession,
+        // Live streaming state
+        liveAgentSteps,
+        liveRetrievedChunks,
+        agentProgress,
     };
 }
 
@@ -1327,6 +1504,10 @@ export function ChatInterface() {
         handleSessionChange,
         handleStop,
         handleSaveSession,
+        // Live streaming state
+        liveAgentSteps,
+        liveRetrievedChunks,
+        agentProgress,
     } = useChatLogic();
 
     return (
@@ -1367,10 +1548,13 @@ export function ChatInterface() {
                 <ScrollArea className="min-h-0 flex-1">
                     <div className="flex p-4">
                         <MessageList
+                            agentProgress={agentProgress}
                             agentSteps={agentSteps}
                             isLoading={isLoading}
                             isLoadingMessages={isLoadingMessages}
                             isStreaming={isStreaming}
+                            liveAgentSteps={liveAgentSteps}
+                            liveRetrievedChunks={liveRetrievedChunks}
                             messages={messages}
                             retrievedChunks={retrievedChunks}
                             scrollRef={scrollRef}

@@ -24,16 +24,28 @@
  * - Telemetry: Performance monitoring and debugging
  */
 
-import { convertToModelMessages, streamText, type UIMessage } from "ai";
+import {
+    convertToModelMessages,
+    createUIMessageStream,
+    createUIMessageStreamResponse,
+    streamText,
+    type UIMessage,
+} from "ai";
 import { eq } from "drizzle-orm";
 import { CHAT_MODEL, telemetryConfig } from "@/lib/ai";
 import { db } from "@/lib/db";
 import { chatMessages, chatSessions, guardrailLogs } from "@/lib/db/schema";
-import { type AgentStep, streamAgenticRag } from "@/lib/rag/agentic-rag";
+import { type AgentStep, streamAgenticRagWithProgress } from "@/lib/rag/agentic-rag";
 import { buildRagPrompt, retrieveContext, SYSTEM_PROMPTS } from "@/lib/rag/context-builder";
 import { detectNegativeReaction, validateInput, validateOutput } from "@/lib/rag/guardrails";
 import type { RetrievalResult } from "@/lib/rag/hybrid-retrieval";
 import { detectQueryLanguage } from "@/lib/rag/university-domain";
+import type {
+    AgentProgressDataPart,
+    AgentResultDataPart,
+    AgentStepDataPart,
+    RetrievedChunkDataPart,
+} from "@/lib/types";
 
 /**
  * Maximum execution duration for serverless function (in seconds)
@@ -277,71 +289,166 @@ export async function POST(request: Request) {
         }
 
         if (useRag && useAgenticMode) {
-            console.log("[POST] Using agentic RAG mode (streaming)");
+            console.log("[POST] Using agentic RAG mode (streaming with real-time steps)");
 
-            const agentResult = await streamAgenticRag(userMessage, {
-                sessionId,
-                retrievalStrategy,
-                enableGuardrails,
-                useReranker,
-                rerankerStrategy,
-            });
+            // Track accumulated data for final metadata
+            const accumulatedSteps: AgentStep[] = [];
+            const accumulatedChunks: RetrievalResult[] = [];
+            let responseText = "";
 
-            const { stream, steps, retrievedChunks, citations, language: detectedLanguage } = agentResult;
+            const stream = createUIMessageStream({
+                execute: async ({ writer }) => {
+                    // Send initial progress notification (transient - won't persist)
+                    writer.write({
+                        type: "data-agent-progress",
+                        data: {
+                            currentStep: 0,
+                            maxSteps: 5,
+                            status: "initializing",
+                            message: "Memulai proses agentic RAG...",
+                        } satisfies AgentProgressDataPart,
+                        transient: true,
+                    });
 
-            console.log(
-                `[POST] Agentic RAG stream initialized - initial chunks: ${retrievedChunks.length}, citations: ${citations.length}`
-            );
+                    // Get the agentic RAG stream with progress callbacks
+                    const agentResult = await streamAgenticRagWithProgress(userMessage, {
+                        sessionId,
+                        retrievalStrategy,
+                        enableGuardrails,
+                        useReranker,
+                        rerankerStrategy,
+                        // Callback for each agent step (real-time)
+                        onStepStart: (step) => {
+                            writer.write({
+                                type: "data-agent-step",
+                                data: {
+                                    stepIndex: step.stepIndex,
+                                    stepType: step.stepType,
+                                    toolName: step.toolName,
+                                    toolInput: step.toolInput,
+                                    status: "executing",
+                                    timestamp: step.timestamp,
+                                } satisfies AgentStepDataPart,
+                            });
+                            writer.write({
+                                type: "data-agent-progress",
+                                data: {
+                                    currentStep: step.stepIndex + 1,
+                                    maxSteps: 5,
+                                    status: "reasoning",
+                                    message: step.toolName
+                                        ? `Menjalankan: ${step.toolName}...`
+                                        : "Agent sedang berpikir...",
+                                } satisfies AgentProgressDataPart,
+                                transient: true,
+                            });
+                        },
+                        // Callback when step completes with result
+                        onStepComplete: (step) => {
+                            accumulatedSteps.push(step);
+                            writer.write({
+                                type: "data-agent-result",
+                                data: {
+                                    stepIndex: step.stepIndex,
+                                    toolName: step.toolName || "reasoning",
+                                    output: step.toolOutput,
+                                    durationMs: step.durationMs,
+                                    timestamp: Date.now(),
+                                } satisfies AgentResultDataPart,
+                            });
+                        },
+                        // Callback when new chunks are retrieved
+                        onChunksRetrieved: (chunks) => {
+                            for (const chunk of chunks) {
+                                // Avoid duplicates
+                                if (!accumulatedChunks.some((c) => c.chunkId === chunk.chunkId)) {
+                                    accumulatedChunks.push(chunk);
+                                    writer.write({
+                                        type: "data-retrieved-chunk",
+                                        data: {
+                                            chunkId: chunk.chunkId,
+                                            documentTitle: chunk.documentTitle,
+                                            content: chunk.content,
+                                            similarity: chunk.fusedScore,
+                                            retrievalMethod: chunk.retrievalMethod,
+                                            vectorScore: chunk.vectorScore,
+                                            bm25Score: chunk.bm25Score,
+                                        } satisfies RetrievedChunkDataPart,
+                                    });
+                                }
+                            }
+                            writer.write({
+                                type: "data-agent-progress",
+                                data: {
+                                    currentStep: accumulatedSteps.length,
+                                    maxSteps: 5,
+                                    status: "retrieving",
+                                    message: `Ditemukan ${accumulatedChunks.length} sumber...`,
+                                } satisfies AgentProgressDataPart,
+                                transient: true,
+                            });
+                        },
+                    });
 
-            // Prepare metadata for streaming
-            const agenticMetadata: AgenticMetadata = {
-                type: "agentic",
-                retrievedChunks: retrievedChunks.map((c: RetrievalResult) => ({
-                    chunkId: c.chunkId,
-                    documentTitle: c.documentTitle,
-                    content: c.content,
-                    similarity: c.fusedScore,
-                    retrievalMethod: c.retrievalMethod,
-                    vectorScore: c.vectorScore,
-                    bm25Score: c.bm25Score,
-                })),
-                steps,
-                language: detectedLanguage,
-                citations,
-            };
+                    const { llmStream, citations, language: detectedLanguage } = agentResult;
 
-            return stream.toUIMessageStreamResponse({
-                messageMetadata: ({ part }) => {
-                    if (part.type === "finish") {
-                        const latencyMs = Date.now() - startTime;
-                        return {
-                            ...agenticMetadata,
-                            latencyMs,
-                        } as ChatMetadata;
-                    }
-                    // Return partial metadata on start
-                    if (part.type === "start") {
-                        return agenticMetadata as ChatMetadata;
-                    }
-                    return undefined;
+                    // Update progress to synthesizing
+                    writer.write({
+                        type: "data-agent-progress",
+                        data: {
+                            currentStep: accumulatedSteps.length,
+                            maxSteps: 5,
+                            status: "synthesizing",
+                            message: "Menyintesis jawaban...",
+                        } satisfies AgentProgressDataPart,
+                        transient: true,
+                    });
+
+                    // Merge the LLM text stream
+                    writer.merge(
+                        llmStream.toUIMessageStream({
+                            sendStart: false,
+                            onFinish: ({ responseMessage }) => {
+                                // Extract text from response message parts
+                                const textParts = responseMessage.parts.filter(
+                                    (p): p is { type: "text"; text: string } => p.type === "text"
+                                );
+                                responseText = textParts.map((p) => p.text).join("") || "";
+
+                                // Send completion progress
+                                writer.write({
+                                    type: "data-agent-progress",
+                                    data: {
+                                        currentStep: accumulatedSteps.length,
+                                        maxSteps: accumulatedSteps.length,
+                                        status: "completed",
+                                        message: "Selesai",
+                                    } satisfies AgentProgressDataPart,
+                                    transient: true,
+                                });
+                            },
+                        })
+                    );
+
+                    // Store citations and language for later use
+                    const agentMetadata = agentResult as unknown as {
+                        _citations?: typeof citations;
+                        _language?: typeof detectedLanguage;
+                    };
+                    agentMetadata._citations = citations;
+                    agentMetadata._language = detectedLanguage;
                 },
-                onFinish: async ({ responseMessage }) => {
+                onFinish: async () => {
                     const latencyMs = Date.now() - startTime;
-                    // Extract text from responseMessage parts
-                    const responseText =
-                        responseMessage.parts
-                            ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
-                            .map((p) => p.text)
-                            .join("") || "";
 
                     console.log(
-                        `[POST] Agentic RAG stream finished - latency: ${latencyMs}ms, steps: ${steps.length}, chunks: ${retrievedChunks.length}`
+                        `[POST] Agentic RAG stream finished - latency: ${latencyMs}ms, steps: ${accumulatedSteps.length}, chunks: ${accumulatedChunks.length}`
                     );
 
                     // Output validation
                     if (enableGuardrails && responseText) {
                         const outputValidation = await validateOutput(responseText, {
-                            retrievedChunks: retrievedChunks.map((c: RetrievalResult) => c.content),
+                            retrievedChunks: accumulatedChunks.map((c) => c.content),
                             query: userMessage,
                         });
 
@@ -375,8 +482,8 @@ export async function POST(request: Request) {
                                 role: "assistant",
                                 content: responseText,
                                 retrievedChunks:
-                                    retrievedChunks.length > 0
-                                        ? retrievedChunks.map((c: RetrievalResult) => ({
+                                    accumulatedChunks.length > 0
+                                        ? accumulatedChunks.map((c) => ({
                                               chunkId: c.chunkId,
                                               documentTitle: c.documentTitle,
                                               content: c.content,
@@ -388,7 +495,7 @@ export async function POST(request: Request) {
                                         : undefined,
                                 ragEnabled: useRag,
                                 agenticMode: true,
-                                agentStepsCount: steps.length,
+                                agentStepsCount: accumulatedSteps.length,
                                 latencyMs,
                                 createdAt: new Date(),
                             }),
@@ -398,6 +505,13 @@ export async function POST(request: Request) {
                                 .where(eq(chatSessions.id, sessionId)),
                         ]);
                     }
+                },
+            });
+
+            return createUIMessageStreamResponse({
+                stream,
+                headers: {
+                    "X-Chat-Mode": "agentic",
                 },
             });
         }

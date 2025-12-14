@@ -828,3 +828,219 @@ export async function streamAgenticRag(
         language,
     };
 }
+
+// ==================== New Streaming Version with Progress Callbacks ====================
+
+/**
+ * Streaming agentic RAG with real-time progress callbacks.
+ * This function provides callbacks for each step, allowing the caller to
+ * stream progress updates to the client in real-time.
+ */
+export async function streamAgenticRagWithProgress(
+    query: string,
+    options: {
+        sessionId?: string;
+        retrievalStrategy?: "vector" | "keyword" | "hybrid";
+        enableGuardrails?: boolean;
+        maxSteps?: number;
+        useReranker?: boolean;
+        rerankerStrategy?: RerankerStrategy;
+        // Real-time callbacks
+        onStepStart?: (step: AgentStep) => void;
+        onStepComplete?: (step: AgentStep) => void;
+        onChunksRetrieved?: (chunks: RetrievalResult[]) => void;
+    } = {}
+) {
+    const {
+        sessionId = crypto.randomUUID(),
+        retrievalStrategy = "hybrid",
+        enableGuardrails = true,
+        maxSteps = 5,
+        onStepStart,
+        onStepComplete,
+        onChunksRetrieved,
+    } = options;
+
+    const language = "id" as const;
+    const streamingState = getOrCreateStreamingState(sessionId);
+    const steps: AgentStep[] = [];
+
+    console.log(`[streamAgenticRagWithProgress] Starting with sessionId: ${sessionId}`);
+
+    // Input validation
+    if (enableGuardrails) {
+        const inputValidation = await validateInput(query);
+        if (!inputValidation.passed) {
+            throw new Error("Validasi input gagal");
+        }
+    }
+
+    // Initial retrieval for context
+    console.log("[streamAgenticRagWithProgress] Performing initial retrieval...");
+    const initialResults = await hybridRetrieve(query, {
+        strategy: retrievalStrategy,
+        topK: 5,
+        language,
+        useReranker: true,
+        rerankerStrategy: "cross_encoder",
+    });
+
+    // Add to streaming state and notify
+    for (const result of initialResults) {
+        streamingState.retrievedChunks.push(result);
+        streamingState.citationManager.assignCitation(result.chunkId);
+    }
+
+    // Notify about initial chunks
+    if (initialResults.length > 0 && onChunksRetrieved) {
+        onChunksRetrieved(initialResults);
+    }
+
+    console.log(`[streamAgenticRagWithProgress] Initial retrieval found ${initialResults.length} chunks`);
+
+    const context = streamingState.retrievedChunks.map((c) => `[${c.documentTitle}]: ${c.content}`).join("\n\n");
+
+    // Create tools with callbacks for real-time updates
+    const agentTools = createAgentToolsWithCallbacks(language, streamingState, onChunksRetrieved);
+
+    const systemWithLanguage = `${AGENTIC_SYSTEM_PROMPT}\n\n[PENEGAK BAHASA] Selalu jawab HANYA dalam Bahasa Indonesia.`;
+
+    console.log("[streamAgenticRagWithProgress] Starting LLM stream with tools...");
+
+    const llmStream = streamText({
+        model: CHAT_MODEL,
+        system: systemWithLanguage,
+        prompt: `Context:\n${context}\n\nQuestion: ${query}`,
+        tools: agentTools,
+        stopWhen: stepCountIs(maxSteps),
+        temperature: 0.4,
+        experimental_telemetry: {
+            ...telemetryConfig,
+            functionId: "stream-agentic-rag-progress",
+            metadata: {
+                ...telemetryConfig.metadata,
+                language,
+                retrievalStrategy,
+                sessionId,
+            },
+        },
+        onStepFinish: ({ toolCalls, toolResults, usage }) => {
+            if (toolCalls && toolCalls.length > 0) {
+                console.log(`[streamAgenticRagWithProgress] Step finished with ${toolCalls.length} tool calls`);
+
+                for (const call of toolCalls) {
+                    const toolResult = toolResults?.find((r) => r.toolCallId === call.toolCallId);
+                    const stepStartTime = Date.now();
+
+                    // Create step in "executing" state
+                    const step: AgentStep = {
+                        stepIndex: steps.length,
+                        stepType: "tool_call",
+                        toolName: call.toolName,
+                        toolInput: call.input as Record<string, unknown>,
+                        toolOutput: undefined,
+                        durationMs: 0,
+                        timestamp: stepStartTime,
+                        tokenUsage: usage
+                            ? {
+                                  inputTokens: usage.inputTokens ?? 0,
+                                  outputTokens: usage.outputTokens ?? 0,
+                                  totalTokens: usage.totalTokens ?? 0,
+                              }
+                            : undefined,
+                    };
+
+                    // Notify step started
+                    if (onStepStart) {
+                        onStepStart(step);
+                    }
+
+                    // Update with result and duration
+                    step.toolOutput = toolResult?.output;
+                    step.durationMs = Date.now() - stepStartTime;
+
+                    steps.push(step);
+
+                    // Notify step completed
+                    if (onStepComplete) {
+                        onStepComplete(step);
+                    }
+                }
+            }
+        },
+    });
+
+    return {
+        llmStream,
+        steps,
+        retrievedChunks: streamingState.retrievedChunks,
+        citations: streamingState.citationManager.getCitations(),
+        language,
+    };
+}
+
+/**
+ * Create agent tools with callbacks for chunk retrieval notifications
+ */
+function createAgentToolsWithCallbacks(
+    language: "id",
+    streamingState: StreamingState,
+    onChunksRetrieved?: (chunks: RetrievalResult[]) => void
+) {
+    return {
+        search_documents: tool({
+            description:
+                "Cari basis pengetahuan untuk dokumen yang relevan menggunakan pengambilan hibrida (Okapi BM25 + kesamaan vektor). Gunakan untuk setiap sub-pertanyaan setelah dekomposisi.",
+            inputSchema: z.object({
+                query: z.string().describe("The search query"),
+                strategy: z.enum(["vector", "keyword", "hybrid"]).default("hybrid"),
+                topK: z.number().min(1).max(20).default(5),
+            }),
+            execute: async ({ query, strategy, topK }) => {
+                console.log(`[searchTool] Executing search - query: "${query.substring(0, 80)}..."`);
+
+                const results = await hybridRetrieve(query, {
+                    strategy,
+                    topK,
+                    language,
+                    useReranker: true,
+                    rerankerStrategy: "cross_encoder",
+                });
+
+                // Collect new chunks
+                const newChunks: RetrievalResult[] = [];
+                for (const result of results) {
+                    const exists = streamingState.retrievedChunks.some((c) => c.chunkId === result.chunkId);
+                    if (!exists) {
+                        streamingState.retrievedChunks.push(result);
+                        streamingState.citationManager.assignCitation(result.chunkId);
+                        newChunks.push(result);
+                    }
+                }
+
+                // Notify about new chunks
+                if (newChunks.length > 0 && onChunksRetrieved) {
+                    onChunksRetrieved(newChunks);
+                }
+
+                console.log(
+                    `[searchTool] Found ${results.length} results, ${newChunks.length} new (total: ${streamingState.retrievedChunks.length})`
+                );
+
+                return {
+                    found: results.length,
+                    documents: results.map((r) => ({
+                        title: r.documentTitle,
+                        content: r.content.substring(0, 500) + (r.content.length > 500 ? "..." : ""),
+                        score: r.fusedScore.toFixed(3),
+                        method: r.retrievalMethod,
+                    })),
+                };
+            },
+        }),
+        expand_query: createExpandQueryTool(language),
+        decompose_query: createDecomposeQueryTool(language),
+        verify_claim: createVerifyClaimTool(),
+        synthesize_answer: createSynthesizeAnswerTool(),
+    };
+}

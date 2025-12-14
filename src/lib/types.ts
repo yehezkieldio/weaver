@@ -210,6 +210,88 @@ export interface StatisticalAnalysisResult {
     interpretationId: string;
 }
 
+// ==================== Agent Streaming Types ====================
+
+/**
+ * Represents a single step in the agentic workflow for streaming
+ */
+export interface StreamingAgentStep {
+    stepIndex: number;
+    stepType: "reasoning" | "tool_call" | "retrieval" | "synthesis" | "reranking";
+    toolName?: string;
+    toolInput?: Record<string, unknown>;
+    toolOutput?: unknown;
+    reasoning?: string;
+    durationMs: number;
+    timestamp: number;
+    status: "pending" | "executing" | "completed" | "error";
+    tokenUsage?: {
+        inputTokens: number;
+        outputTokens: number;
+        totalTokens: number;
+    };
+}
+
+/**
+ * Retrieved chunk for streaming
+ */
+export interface StreamingRetrievedChunk {
+    chunkId: string;
+    documentTitle: string;
+    content: string;
+    similarity: number;
+    retrievalMethod?: "vector" | "keyword" | "hybrid";
+    vectorScore?: number;
+    bm25Score?: number;
+}
+
+/**
+ * Custom data part types for agent streaming
+ * These are used with createUIMessageStream to send progressive updates
+ */
+export interface AgentStepDataPart {
+    stepIndex: number;
+    stepType: StreamingAgentStep["stepType"];
+    toolName?: string;
+    toolInput?: Record<string, unknown>;
+    status: StreamingAgentStep["status"];
+    timestamp: number;
+}
+
+export interface AgentResultDataPart {
+    stepIndex: number;
+    toolName: string;
+    output: unknown;
+    durationMs: number;
+    timestamp: number;
+}
+
+export interface RetrievedChunkDataPart {
+    chunkId: string;
+    documentTitle: string;
+    content: string;
+    similarity: number;
+    retrievalMethod?: "vector" | "keyword" | "hybrid";
+    vectorScore?: number;
+    bm25Score?: number;
+}
+
+export interface AgentProgressDataPart {
+    currentStep: number;
+    maxSteps: number;
+    status: "initializing" | "retrieving" | "reasoning" | "synthesizing" | "completed";
+    message: string;
+}
+
+/**
+ * Union type for all agent data parts that can be streamed
+ */
+export type AgentStreamDataPart =
+    | { type: "data-agent-step"; data: AgentStepDataPart }
+    | { type: "data-agent-result"; data: AgentResultDataPart }
+    | { type: "data-retrieved-chunk"; data: RetrievedChunkDataPart }
+    | { type: "data-agent-progress"; data: AgentProgressDataPart };
+
 /**
  * Processing stages for document pipeline
  * Order matters: represents the sequential processing stages
