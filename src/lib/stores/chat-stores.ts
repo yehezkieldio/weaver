@@ -113,6 +113,7 @@ export interface ChatSession {
     createdAt: number;
     updatedAt: number;
     settings: ChatSettings;
+    isEphemeral?: boolean;
 }
 
 /**
@@ -153,6 +154,8 @@ interface ChatStore {
     error: string | null;
     streamingContent: string;
     isLoadingSessions: boolean;
+    isSyncing: boolean;
+    isEphemeralMode: boolean;
 
     // Settings
     settings: ChatSettings;
@@ -162,6 +165,8 @@ interface ChatStore {
 
     // Actions
     createSession: (title?: string) => string;
+    createEphemeralSession: (title?: string) => string;
+    saveEphemeralSession: (sessionId: string) => Promise<void>;
     deleteSession: (sessionId: string) => void;
     deleteAllSessions: () => void;
     setActiveSession: (sessionId: string) => void;
@@ -169,7 +174,9 @@ interface ChatStore {
     syncSessionsFromDb: (
         dbSessions: Array<{ id: string; title: string | null; createdAt: Date; updatedAt: Date }>
     ) => void;
+    forceResyncSessions: () => Promise<void>;
     setIsLoadingSessions: (loading: boolean) => void;
+    setEphemeralMode: (enabled: boolean) => void;
 
     addMessage: (message: Omit<ChatMessage, "id" | "createdAt">) => void;
     updateLastMessage: (updates: Partial<ChatMessage>) => void;
@@ -215,6 +222,8 @@ export const useChatStore = create<ChatStore>()(
             streamingContent: "",
             settings: defaultSettings,
             isLoadingSessions: false,
+            isSyncing: false,
+            isEphemeralMode: false,
 
             // Computed
             activeSession: () => {
@@ -226,17 +235,78 @@ export const useChatStore = create<ChatStore>()(
             createSession: (title = "New Chat") => {
                 const sessionId = crypto.randomUUID();
                 set((state) => {
-                    state.sessions.push({
+                    state.sessions.unshift({
                         id: sessionId,
                         title,
                         messages: [],
                         createdAt: Date.now(),
                         updatedAt: Date.now(),
                         settings: { ...state.settings },
+                        isEphemeral: false,
                     });
                     state.activeSessionId = sessionId;
                 });
                 return sessionId;
+            },
+
+            createEphemeralSession: (title = "Unsaved Chat") => {
+                const sessionId = `ephemeral-${crypto.randomUUID()}`;
+                set((state) => {
+                    state.sessions.unshift({
+                        id: sessionId,
+                        title,
+                        messages: [],
+                        createdAt: Date.now(),
+                        updatedAt: Date.now(),
+                        settings: { ...state.settings },
+                        isEphemeral: true,
+                    });
+                    state.activeSessionId = sessionId;
+                    state.isEphemeralMode = true;
+                });
+                return sessionId;
+            },
+
+            saveEphemeralSession: async (sessionId: string) => {
+                const state = get();
+                const session = state.sessions.find((s) => s.id === sessionId);
+                if (!session?.isEphemeral) return;
+
+                try {
+                    // Create session in DB
+                    const response = await fetch("/api/sessions", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            title: session.title,
+                            useRag: session.settings.useRag,
+                            useAgenticMode: session.settings.useAgenticMode,
+                            retrievalStrategy: session.settings.retrievalStrategy,
+                        }),
+                    });
+                    const { session: dbSession } = await response.json();
+
+                    if (dbSession?.id) {
+                        set((draft) => {
+                            const idx = draft.sessions.findIndex((s: ChatSession) => s.id === sessionId);
+                            if (idx !== -1) {
+                                // Update the session with the new DB id and mark as non-ephemeral
+                                const oldSession = draft.sessions[idx];
+                                draft.sessions[idx] = {
+                                    ...oldSession,
+                                    id: dbSession.id,
+                                    isEphemeral: false,
+                                };
+                                if (draft.activeSessionId === sessionId) {
+                                    draft.activeSessionId = dbSession.id;
+                                }
+                            }
+                            draft.isEphemeralMode = false;
+                        });
+                    }
+                } catch (error) {
+                    console.error("Failed to save ephemeral session:", error);
+                }
             },
 
             deleteSession: (sessionId) => {
@@ -307,6 +377,71 @@ export const useChatStore = create<ChatStore>()(
                 set((state) => {
                     state.isLoadingSessions = loading;
                 });
+            },
+
+            setEphemeralMode: (enabled) => {
+                set((state) => {
+                    state.isEphemeralMode = enabled;
+                });
+            },
+
+            forceResyncSessions: async () => {
+                set((state) => {
+                    state.isSyncing = true;
+                });
+
+                try {
+                    const response = await fetch("/api/sessions");
+                    const { sessions: dbSessions } = await response.json();
+
+                    if (dbSessions) {
+                        set((state) => {
+                            // Get IDs of sessions in DB
+                            const dbSessionIds = new Set(dbSessions.map((s: { id: string }) => s.id));
+
+                            // Keep only ephemeral sessions and sessions that exist in DB
+                            state.sessions = state.sessions.filter(
+                                (s: ChatSession) => s.isEphemeral || dbSessionIds.has(s.id)
+                            );
+
+                            // Add/update sessions from DB
+                            for (const dbSession of dbSessions) {
+                                const existing = state.sessions.find((s: ChatSession) => s.id === dbSession.id);
+                                if (existing) {
+                                    existing.title = dbSession.title || existing.title;
+                                    existing.updatedAt = new Date(dbSession.updatedAt).getTime();
+                                } else {
+                                    state.sessions.push({
+                                        id: dbSession.id,
+                                        title: dbSession.title || "Untitled Chat",
+                                        messages: [],
+                                        createdAt: new Date(dbSession.createdAt).getTime(),
+                                        updatedAt: new Date(dbSession.updatedAt).getTime(),
+                                        settings: { ...defaultSettings },
+                                        isEphemeral: false,
+                                    });
+                                }
+                            }
+
+                            // Sort by updatedAt descending
+                            state.sessions.sort((a: ChatSession, b: ChatSession) => b.updatedAt - a.updatedAt);
+
+                            // If active session was removed, select first available
+                            if (
+                                state.activeSessionId &&
+                                !state.sessions.find((s: ChatSession) => s.id === state.activeSessionId)
+                            ) {
+                                state.activeSessionId = state.sessions[0]?.id || null;
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error("Failed to resync sessions:", error);
+                } finally {
+                    set((state) => {
+                        state.isSyncing = false;
+                    });
+                }
             },
 
             addMessage: (message) => {

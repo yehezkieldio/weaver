@@ -1,7 +1,20 @@
 "use client";
 
-import { Check, ChevronDown, Edit2, Loader2, MessageSquare, MoreHorizontal, Plus, Trash2, X } from "lucide-react";
+import {
+    Check,
+    ChevronDown,
+    Cloud,
+    Edit2,
+    Loader2,
+    MessageSquare,
+    MoreHorizontal,
+    Plus,
+    RefreshCw,
+    Trash2,
+    X,
+} from "lucide-react";
 import { memo, useCallback, useEffect, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -32,9 +45,12 @@ export const SessionManager = memo(function SessionManagerComponent({
         deleteAllSessions,
         renameSession,
         syncSessionsFromDb,
+        forceResyncSessions,
+        createEphemeralSession,
         settings,
         isLoadingSessions,
         setIsLoadingSessions,
+        isSyncing,
     } = useChatStore();
 
     const [isCreating, setIsCreating] = useState(false);
@@ -101,6 +117,16 @@ export const SessionManager = memo(function SessionManagerComponent({
             setNewSessionTitle("");
         }
     }, [newSessionTitle, settings, onNewSession]);
+
+    const handleCreateEphemeralSession = useCallback(() => {
+        const sessionId = createEphemeralSession(newSessionTitle.trim() || undefined);
+        setNewSessionTitle("");
+        onNewSession?.(sessionId);
+    }, [newSessionTitle, createEphemeralSession, onNewSession]);
+
+    const handleResync = useCallback(async () => {
+        await forceResyncSessions();
+    }, [forceResyncSessions]);
 
     const handleSwitchSession = useCallback(
         (sessionId: string) => {
@@ -207,8 +233,34 @@ export const SessionManager = memo(function SessionManagerComponent({
                         placeholder="New chat title (optional)"
                         value={newSessionTitle}
                     />
-                    <Button className="h-8 shrink-0" disabled={isCreating} onClick={handleCreateSession} size="sm">
+                    <Button
+                        className="h-8 shrink-0"
+                        disabled={isCreating}
+                        onClick={handleCreateSession}
+                        size="sm"
+                        title="New saved chat"
+                    >
                         {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                    </Button>
+                    <Button
+                        className="h-8 shrink-0"
+                        disabled={isCreating}
+                        onClick={handleCreateEphemeralSession}
+                        size="sm"
+                        title="New unsaved chat (won't be stored)"
+                        variant="outline"
+                    >
+                        <Cloud className="h-4 w-4" />
+                    </Button>
+                    <Button
+                        className="h-8 shrink-0"
+                        disabled={isSyncing}
+                        onClick={handleResync}
+                        size="sm"
+                        title="Sync sessions with server"
+                        variant="ghost"
+                    >
+                        <RefreshCw className={cn("h-4 w-4", isSyncing && "animate-spin")} />
                     </Button>
                 </div>
             </div>
@@ -335,9 +387,17 @@ const SessionItem = memo(function SessionItemComponent({
                     className={cn("h-4 w-4 shrink-0", isActive ? "text-primary" : "text-muted-foreground")}
                 />
                 <div className="min-w-0 flex-1">
-                    <p className={cn("truncate text-sm", isActive ? "font-medium" : "text-foreground")}>
-                        {session.title}
-                    </p>
+                    <div className="flex items-center gap-1.5">
+                        <p className={cn("truncate text-sm", isActive ? "font-medium" : "text-foreground")}>
+                            {session.title}
+                        </p>
+                        {session.isEphemeral && (
+                            <Badge className="h-4 gap-0.5 px-1 text-[10px]" variant="secondary">
+                                <Cloud className="h-2.5 w-2.5" />
+                                Unsaved
+                            </Badge>
+                        )}
+                    </div>
                     <p className="truncate text-muted-foreground text-xs">
                         {formatDate(session.updatedAt)}
                         {session.messages.length > 0 && ` • ${session.messages.length} messages`}
@@ -386,9 +446,13 @@ export const SessionSelector = memo(function SessionSelectorComponent({
         activeSessionId,
         setActiveSession,
         syncSessionsFromDb,
+        forceResyncSessions,
+        createEphemeralSession,
+        deleteAllSessions,
         settings,
         isLoadingSessions,
         setIsLoadingSessions,
+        isSyncing,
     } = useChatStore();
 
     const [isCreating, setIsCreating] = useState(false);
@@ -453,6 +517,27 @@ export const SessionSelector = memo(function SessionSelectorComponent({
         }
     }, [settings, onNewSession]);
 
+    const handleCreateEphemeralSession = useCallback(() => {
+        const sessionId = createEphemeralSession();
+        onNewSession?.(sessionId);
+    }, [createEphemeralSession, onNewSession]);
+
+    const handleResync = useCallback(async () => {
+        await forceResyncSessions();
+    }, [forceResyncSessions]);
+
+    const handleDeleteAllSessions = useCallback(async () => {
+        if (!window.confirm("Delete ALL chat sessions? This cannot be undone.")) {
+            return;
+        }
+        try {
+            await fetch("/api/sessions", { method: "DELETE" });
+            deleteAllSessions();
+        } catch (error) {
+            console.error("Failed to delete all sessions:", error);
+        }
+    }, [deleteAllSessions]);
+
     const handleSwitchSession = useCallback(
         (sessionId: string) => {
             setActiveSession(sessionId);
@@ -504,6 +589,24 @@ export const SessionSelector = memo(function SessionSelectorComponent({
                         )}
                         New Chat
                     </DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer" onClick={handleCreateEphemeralSession}>
+                        <Cloud className="mr-2 h-4 w-4" />
+                        Unsaved Chat
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="cursor-pointer" disabled={isSyncing} onClick={handleResync}>
+                        <RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
+                        Sync Sessions
+                    </DropdownMenuItem>
+                    {sessions.length > 0 && (
+                        <DropdownMenuItem
+                            className="cursor-pointer text-destructive focus:text-destructive"
+                            onClick={handleDeleteAllSessions}
+                        >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete All
+                        </DropdownMenuItem>
+                    )}
                 </DropdownMenuContent>
             </DropdownMenu>
         </div>

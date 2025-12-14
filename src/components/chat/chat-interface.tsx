@@ -3,18 +3,25 @@
 import { useChat } from "@ai-sdk/react";
 import type { UIMessage as AIMessage } from "ai";
 import { DefaultChatTransport } from "ai";
+import { formatDistanceToNow } from "date-fns";
+import { id as idLocale } from "date-fns/locale";
 import {
     AlertTriangle,
     BookOpen,
     Bot,
     Brain,
     ChevronDown,
+    ChevronRight,
     Clock,
+    Cloud,
     Database,
     FileText,
+    HelpCircle,
+    Info,
     Languages,
     Loader2,
     RefreshCw,
+    Save,
     Search,
     Send,
     Shield,
@@ -26,21 +33,25 @@ import {
     Zap,
 } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import { SessionSelector } from "@/components/chat/session-manager";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { type AgentStep, type RetrievedChunk, useChatStore } from "@/lib/stores/chat-stores";
 import { cn } from "@/lib/utils";
 
 // Type definitions
-type Message = AIMessage;
+type Message = AIMessage & { createdAt?: Date | string };
 type MessagePart = Message["parts"][number];
 
 // Metadata types from server
@@ -84,6 +95,7 @@ const MessageBubble = memo(function MessageBubbleComponent({
     retrievedChunks?: RetrievedChunk[];
 }) {
     const isUser = message.role === "user";
+    const timestamp = message.createdAt ? new Date(message.createdAt) : null;
 
     return (
         <div className={cn("flex w-full gap-3", isUser ? "flex-row-reverse" : "justify-start")}>
@@ -98,25 +110,60 @@ const MessageBubble = memo(function MessageBubbleComponent({
 
             <div className={cn("max-w-[85%] space-y-2", isUser && "items-end")}>
                 <Card className={cn("p-4", isUser ? "bg-primary text-primary-foreground" : "bg-card")}>
-                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                    <div
+                        className={cn(
+                            "prose prose-sm dark:prose-invert max-w-none",
+                            isUser && "**:text-primary-foreground"
+                        )}
+                    >
                         {message.parts && message.parts.length > 0
                             ? message.parts.map((part: MessagePart, index: number) => {
                                   switch (part.type) {
                                       case "text":
                                           return (
-                                              <div key={`${message.id}-text-${index}`}>
-                                                  {part.text.split("\n").map((paragraph: string, i: number) => (
-                                                      <p
-                                                          className={cn(
-                                                              "mb-2 last:mb-0",
-                                                              isUser && "text-primary-foreground"
-                                                          )}
-                                                          key={`${message.id}-para-${index}-${i}`}
-                                                      >
-                                                          {paragraph}
-                                                      </p>
-                                                  ))}
-                                              </div>
+                                              <ReactMarkdown
+                                                  components={{
+                                                      p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                                                      strong: ({ children }) => (
+                                                          <strong className="font-semibold">{children}</strong>
+                                                      ),
+                                                      em: ({ children }) => <em className="italic">{children}</em>,
+                                                      ul: ({ children }) => (
+                                                          <ul className="my-2 ml-4 list-disc space-y-1">{children}</ul>
+                                                      ),
+                                                      ol: ({ children }) => (
+                                                          <ol className="my-2 ml-4 list-decimal space-y-1">
+                                                              {children}
+                                                          </ol>
+                                                      ),
+                                                      li: ({ children }) => <li className="pl-1">{children}</li>,
+                                                      code: ({ children, className }) => {
+                                                          const isInline = !className;
+                                                          return isInline ? (
+                                                              <code className="rounded bg-muted/50 px-1 py-0.5 font-mono text-xs">
+                                                                  {children}
+                                                              </code>
+                                                          ) : (
+                                                              <code className="block overflow-x-auto rounded bg-muted/50 p-2 font-mono text-xs">
+                                                                  {children}
+                                                              </code>
+                                                          );
+                                                      },
+                                                      pre: ({ children }) => (
+                                                          <pre className="my-2 overflow-x-auto rounded-md bg-muted/50 p-3">
+                                                              {children}
+                                                          </pre>
+                                                      ),
+                                                      blockquote: ({ children }) => (
+                                                          <blockquote className="my-2 border-primary/50 border-l-2 pl-3 italic">
+                                                              {children}
+                                                          </blockquote>
+                                                      ),
+                                                  }}
+                                                  key={`${message.id}-text-${index}`}
+                                              >
+                                                  {part.text}
+                                              </ReactMarkdown>
                                           );
                                       case "tool-call":
                                           return (
@@ -137,6 +184,17 @@ const MessageBubble = memo(function MessageBubbleComponent({
                               })
                             : null}
                     </div>
+                    {timestamp && (
+                        <div
+                            className={cn(
+                                "mt-2 flex items-center gap-1 text-[10px]",
+                                isUser ? "text-primary-foreground/70" : "text-muted-foreground"
+                            )}
+                        >
+                            <Clock className="h-3 w-3" />
+                            <span>{formatDistanceToNow(timestamp, { addSuffix: true, locale: idLocale })}</span>
+                        </div>
+                    )}
                 </Card>
 
                 {!isUser && agentSteps && agentSteps.length > 0 && <AgentStepsCollapsible steps={agentSteps} />}
@@ -225,51 +283,119 @@ function getMessageChunks(
 }
 
 const AgentStepsCollapsible = memo(function AgentStepsCollapsibleComponent({ steps }: { steps: AgentStep[] }) {
+    const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set());
+    const totalDurationMs = steps.reduce((acc, step) => acc + step.durationMs, 0);
+
+    const toggleStep = (stepIndex: number) => {
+        setExpandedSteps((prev) => {
+            const next = new Set(prev);
+            if (next.has(stepIndex)) {
+                next.delete(stepIndex);
+            } else {
+                next.add(stepIndex);
+            }
+            return next;
+        });
+    };
+
     return (
         <Collapsible>
             <CollapsibleTrigger asChild>
                 <Button className="gap-2 text-xs" size="sm" variant="ghost">
                     <Brain className="h-3 w-3" />
                     {steps.length} reasoning steps
+                    <Badge className="ml-1 text-[10px]" variant="secondary">
+                        {totalDurationMs}ms total
+                    </Badge>
                     <ChevronDown className="h-3 w-3 transition-transform data-[state=open]:rotate-180" />
                 </Button>
             </CollapsibleTrigger>
             <CollapsibleContent>
                 <Card className="mt-2 bg-muted/50 p-3">
-                    <div className="space-y-2">
-                        {steps.map((step) => {
-                            const outputText = step.toolOutput
-                                ? `${(typeof step.toolOutput === "object" ? JSON.stringify(step.toolOutput) : String(step.toolOutput)).substring(0, 100)}...`
-                                : null;
+                    <div className="space-y-3">
+                        {steps.map((step, idx) => {
+                            const isExpanded = expandedSteps.has(step.stepIndex);
+                            const hasDetails = step.toolInput || step.toolOutput;
 
                             return (
                                 <div
-                                    className="flex items-start gap-2 text-xs"
+                                    className="border-border border-b pb-2 last:border-0 last:pb-0"
                                     key={`${step.stepIndex}-${step.timestamp}`}
                                 >
-                                    <div
-                                        className={cn(
-                                            "flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
-                                            getStepColor(step.stepType)
-                                        )}
-                                    >
-                                        {getStepIcon(step.stepType)}
-                                    </div>
-                                    <div className="flex-1">
-                                        <span className="font-medium">{step.toolName || step.stepType}</span>
-                                        {step.reasoning && (
-                                            <p className="mt-0.5 text-muted-foreground">{step.reasoning}</p>
-                                        )}
-                                        {outputText && (
-                                            <p className="mt-0.5 max-w-md truncate text-muted-foreground">
-                                                Result: {outputText}
-                                            </p>
-                                        )}
-                                    </div>
-                                    <div className="flex flex-col items-end gap-1">
-                                        <Badge className="text-[10px]" variant="outline">
-                                            {step.durationMs}ms
-                                        </Badge>
+                                    <div className="flex items-start gap-2 text-xs">
+                                        <div className="flex flex-col items-center gap-1">
+                                            <Badge className="h-5 w-5 justify-center p-0 text-[10px]" variant="outline">
+                                                {idx + 1}
+                                            </Badge>
+                                            <div
+                                                className={cn(
+                                                    "flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
+                                                    getStepColor(step.stepType)
+                                                )}
+                                            >
+                                                {getStepIcon(step.stepType)}
+                                            </div>
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-medium">{step.toolName || step.stepType}</span>
+                                                <Badge className="text-[10px]" variant="outline">
+                                                    {step.durationMs}ms
+                                                </Badge>
+                                            </div>
+                                            {step.reasoning && (
+                                                <p className="mt-0.5 text-muted-foreground">{step.reasoning}</p>
+                                            )}
+                                            {hasDetails ? (
+                                                <Button
+                                                    className="mt-1 h-auto gap-1 p-0 text-[10px]"
+                                                    onClick={() => toggleStep(step.stepIndex)}
+                                                    size="sm"
+                                                    variant="link"
+                                                >
+                                                    {isExpanded ? (
+                                                        <ChevronDown className="h-3 w-3" />
+                                                    ) : (
+                                                        <ChevronRight className="h-3 w-3" />
+                                                    )}
+                                                    {isExpanded ? "Hide details" : "Show details"}
+                                                </Button>
+                                            ) : null}
+                                            {isExpanded && hasDetails ? (
+                                                <div className="mt-2 space-y-2">
+                                                    {step.toolInput ? (
+                                                        <div className="rounded bg-background/50 p-2">
+                                                            <span className="font-medium text-[10px] text-muted-foreground">
+                                                                Input:
+                                                            </span>
+                                                            <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap text-[10px]">
+                                                                {JSON.stringify(
+                                                                    step.toolInput as Record<string, unknown>,
+                                                                    null,
+                                                                    2
+                                                                )}
+                                                            </pre>
+                                                        </div>
+                                                    ) : null}
+                                                    {step.toolOutput ? (
+                                                        <div className="rounded bg-background/50 p-2">
+                                                            <span className="font-medium text-[10px] text-muted-foreground">
+                                                                Output:
+                                                            </span>
+                                                            <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap text-[10px]">
+                                                                {typeof step.toolOutput === "object"
+                                                                    ? JSON.stringify(
+                                                                          step.toolOutput as Record<string, unknown>,
+                                                                          null,
+                                                                          2
+                                                                      )
+                                                                    : String(step.toolOutput)}
+                                                            </pre>
+                                                        </div>
+                                                    ) : null}
+                                                </div>
+                                            ) : null}
+                                        </div>
                                     </div>
                                 </div>
                             );
@@ -282,6 +408,32 @@ const AgentStepsCollapsible = memo(function AgentStepsCollapsibleComponent({ ste
 });
 
 const SourcesCollapsible = memo(function SourcesCollapsibleComponent({ chunks }: { chunks: RetrievedChunk[] }) {
+    const [expandedChunks, setExpandedChunks] = useState<Set<number>>(new Set());
+
+    const toggleChunk = (idx: number) => {
+        setExpandedChunks((prev) => {
+            const next = new Set(prev);
+            if (next.has(idx)) {
+                next.delete(idx);
+            } else {
+                next.add(idx);
+            }
+            return next;
+        });
+    };
+
+    const getRelevanceColor = (score: number): string => {
+        if (score >= 0.8) return "text-green-600";
+        if (score >= 0.5) return "text-yellow-600";
+        return "text-orange-600";
+    };
+
+    const getRelevanceLabel = (score: number): string => {
+        if (score >= 0.8) return "High";
+        if (score >= 0.5) return "Medium";
+        return "Low";
+    };
+
     return (
         <Collapsible>
             <CollapsibleTrigger asChild>
@@ -293,46 +445,115 @@ const SourcesCollapsible = memo(function SourcesCollapsibleComponent({ chunks }:
             </CollapsibleTrigger>
             <CollapsibleContent>
                 <Card className="mt-2 bg-muted/50 p-3">
-                    <div className="space-y-2">
-                        {chunks.map((chunk, idx) => (
-                            <div
-                                className="border-border border-b pb-2 text-xs last:border-0 last:pb-0"
-                                key={`chunk-${chunk.documentTitle}-${idx}`}
-                            >
-                                <div className="mb-1 flex items-center justify-between">
-                                    <span className="font-medium">
-                                        [{idx + 1}] {chunk.documentTitle}
-                                    </span>
-                                    <div className="flex gap-1">
-                                        <Badge className="text-[10px]" variant="outline">
-                                            {(chunk.similarity * 100).toFixed(0)}% fused
-                                        </Badge>
-                                        {chunk.retrievalMethod && (
-                                            <Badge className="text-[10px]" variant="secondary">
-                                                {chunk.retrievalMethod}
+                    <div className="space-y-3">
+                        {chunks.map((chunk, idx) => {
+                            const isExpanded = expandedChunks.has(idx);
+
+                            return (
+                                <div
+                                    className="border-border border-b pb-3 text-xs last:border-0 last:pb-0"
+                                    key={`chunk-${chunk.documentTitle}-${idx}`}
+                                >
+                                    <div className="mb-2 flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Badge
+                                                className="h-5 w-5 shrink-0 justify-center p-0 text-[10px]"
+                                                variant="default"
+                                            >
+                                                {idx + 1}
                                             </Badge>
+                                            <span className="font-medium">{chunk.documentTitle}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span
+                                                className={cn(
+                                                    "font-medium text-[10px]",
+                                                    getRelevanceColor(chunk.similarity)
+                                                )}
+                                            >
+                                                {getRelevanceLabel(chunk.similarity)}
+                                            </span>
+                                            {chunk.retrievalMethod && (
+                                                <Badge className="text-[10px]" variant="secondary">
+                                                    {chunk.retrievalMethod}
+                                                </Badge>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Relevance Score Bar */}
+                                    <div className="mb-2 space-y-1">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[10px] text-muted-foreground">Fused Relevance</span>
+                                            <span className="font-medium text-[10px]">
+                                                {(chunk.similarity * 100).toFixed(0)}%
+                                            </span>
+                                        </div>
+                                        <Progress className="h-1.5" value={chunk.similarity * 100} />
+                                    </div>
+
+                                    {/* Individual scores if available */}
+                                    {(chunk.vectorScore !== undefined || chunk.bm25Score !== undefined) && (
+                                        <div className="mb-2 grid grid-cols-2 gap-2">
+                                            {chunk.vectorScore !== undefined && (
+                                                <div className="space-y-0.5">
+                                                    <div className="flex justify-between">
+                                                        <span className="text-[10px] text-muted-foreground">
+                                                            Vector
+                                                        </span>
+                                                        <span className="text-[10px]">
+                                                            {(chunk.vectorScore * 100).toFixed(0)}%
+                                                        </span>
+                                                    </div>
+                                                    <Progress className="h-1" value={chunk.vectorScore * 100} />
+                                                </div>
+                                            )}
+                                            {chunk.bm25Score !== undefined && (
+                                                <div className="space-y-0.5">
+                                                    <div className="flex justify-between">
+                                                        <span className="text-[10px] text-muted-foreground">BM25</span>
+                                                        <span className="text-[10px]">
+                                                            {chunk.bm25Score.toFixed(2)}
+                                                        </span>
+                                                    </div>
+                                                    <Progress
+                                                        className="h-1"
+                                                        value={Math.min(chunk.bm25Score * 10, 100)}
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Content Preview */}
+                                    <div className="rounded bg-background/50 p-2">
+                                        <p className={cn("text-muted-foreground", !isExpanded && "line-clamp-2")}>
+                                            {isExpanded ? chunk.content : `${chunk.content.substring(0, 150)}...`}
+                                        </p>
+                                        {chunk.content.length > 150 && (
+                                            <Button
+                                                className="mt-1 h-auto gap-1 p-0 text-[10px]"
+                                                onClick={() => toggleChunk(idx)}
+                                                size="sm"
+                                                variant="link"
+                                            >
+                                                {isExpanded ? (
+                                                    <>
+                                                        <ChevronDown className="h-3 w-3" />
+                                                        Show less
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <ChevronRight className="h-3 w-3" />
+                                                        Show more
+                                                    </>
+                                                )}
+                                            </Button>
                                         )}
                                     </div>
                                 </div>
-                                {(chunk.vectorScore !== undefined || chunk.bm25Score !== undefined) && (
-                                    <div className="mb-1 flex gap-2">
-                                        {chunk.vectorScore !== undefined && (
-                                            <span className="text-[10px] text-muted-foreground">
-                                                Vec: {(chunk.vectorScore * 100).toFixed(0)}%
-                                            </span>
-                                        )}
-                                        {chunk.bm25Score !== undefined && (
-                                            <span className="text-[10px] text-muted-foreground">
-                                                BM25: {chunk.bm25Score.toFixed(2)}
-                                            </span>
-                                        )}
-                                    </div>
-                                )}
-                                <p className="line-clamp-2 text-muted-foreground">
-                                    {chunk.content.substring(0, 150)}...
-                                </p>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </Card>
             </CollapsibleContent>
@@ -403,12 +624,23 @@ const ChatInput = memo(function ChatInputComponent({
     onClear: () => void;
     onStop: () => void;
 }) {
+    const MIN_LENGTH = 10;
+    const MAX_LENGTH = 5000;
+    const inputLength = input.length;
+    const isTooShort = inputLength > 0 && inputLength < MIN_LENGTH;
+    const isTooLong = inputLength > MAX_LENGTH;
+    const isNearLimit = inputLength > MAX_LENGTH * 0.9;
+
     return (
         <div className="border-border border-t bg-card p-4">
             <form className="mx-auto max-w-4xl" onSubmit={onSubmit}>
                 <div className="relative">
                     <Textarea
-                        className="min-h-[60px] resize-none bg-background pr-24"
+                        className={cn(
+                            "min-h-[60px] resize-none bg-background pr-24",
+                            isTooShort && "border-yellow-500 focus-visible:ring-yellow-500",
+                            isTooLong && "border-destructive focus-visible:ring-destructive"
+                        )}
                         disabled={isLoading || isStreaming}
                         onChange={onInputChange}
                         onKeyDown={(e) => {
@@ -457,15 +689,36 @@ const ChatInput = memo(function ChatInputComponent({
                             </>
                         )}
                         {!isStreaming && (
-                            <Button disabled={isLoading || !input.trim()} size="icon" type="submit">
+                            <Button
+                                disabled={isLoading || !input.trim() || isTooShort || isTooLong}
+                                size="icon"
+                                type="submit"
+                            >
                                 <Send className="h-4 w-4" />
                             </Button>
                         )}
                     </div>
                 </div>
-                <p className="mt-2 text-center text-muted-foreground text-xs">
-                    Tekan Enter untuk mengirim • Shift+Enter untuk baris baru
-                </p>
+                <div className="mt-2 flex items-center justify-between">
+                    <p className="text-muted-foreground text-xs">
+                        Tekan Enter untuk mengirim • Shift+Enter untuk baris baru
+                    </p>
+                    <div className="flex items-center gap-2">
+                        {isTooShort && <span className="text-[10px] text-yellow-600">Min. {MIN_LENGTH} karakter</span>}
+                        {isTooLong && <span className="text-[10px] text-destructive">Melebihi batas!</span>}
+                        <span
+                            className={cn(
+                                "text-[10px]",
+                                isTooShort && "text-yellow-600",
+                                isTooLong && "text-destructive",
+                                isNearLimit && !isTooLong && "text-yellow-600",
+                                !(isTooShort || isTooLong || isNearLimit) && "text-muted-foreground"
+                            )}
+                        >
+                            {inputLength}/{MAX_LENGTH}
+                        </span>
+                    </div>
+                </div>
             </form>
         </div>
     );
@@ -477,6 +730,7 @@ const MessageList = memo(function MessageListComponent({
     retrievedChunks,
     isLoading,
     isStreaming,
+    isLoadingMessages,
     settings,
     scrollRef,
 }: {
@@ -485,12 +739,43 @@ const MessageList = memo(function MessageListComponent({
     retrievedChunks: RetrievedChunk[];
     isLoading: boolean;
     isStreaming: boolean;
+    isLoadingMessages: boolean;
     settings: { useAgenticMode: boolean };
     scrollRef: React.RefObject<HTMLDivElement | null>;
 }) {
+    // Skeleton loading for initial message load
+    if (isLoadingMessages && messages.length === 0) {
+        return (
+            <div className="mx-auto max-w-4xl space-y-4 pb-4">
+                {/* User message skeleton */}
+                <div className="flex w-full flex-row-reverse gap-3">
+                    <Skeleton className="h-8 w-8 rounded-full" />
+                    <div className="max-w-[85%] space-y-2">
+                        <Skeleton className="h-16 w-64 rounded-lg" />
+                    </div>
+                </div>
+                {/* Assistant message skeleton */}
+                <div className="flex w-full justify-start gap-3">
+                    <Skeleton className="h-8 w-8 rounded-full" />
+                    <div className="max-w-[85%] space-y-2">
+                        <Skeleton className="h-24 w-96 rounded-lg" />
+                        <Skeleton className="h-4 w-24" />
+                    </div>
+                </div>
+                {/* Another user skeleton */}
+                <div className="flex w-full flex-row-reverse gap-3">
+                    <Skeleton className="h-8 w-8 rounded-full" />
+                    <div className="max-w-[85%] space-y-2">
+                        <Skeleton className="h-12 w-48 rounded-lg" />
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="mx-auto max-w-4xl space-y-4 pb-4">
-            {messages.length === 0 && <EmptyState />}
+            {messages.length === 0 && !isLoadingMessages && <EmptyState />}
 
             {messages.map((message: MessageWithMetadata, index: number) => (
                 <MessageBubble
@@ -502,9 +787,28 @@ const MessageList = memo(function MessageListComponent({
             ))}
 
             {(isLoading || isStreaming) && (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="text-sm">{getLoadingText(isStreaming, settings.useAgenticMode)}</span>
+                <div className="flex w-full justify-start gap-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                        <Brain className="h-4 w-4" />
+                    </div>
+                    <Card className="max-w-[85%] bg-card p-4">
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                <span className="text-sm">{getLoadingText(isStreaming, settings.useAgenticMode)}</span>
+                            </div>
+                            {settings.useAgenticMode && isStreaming && (
+                                <div className="space-y-1">
+                                    <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                                        <span>Agentic reasoning in progress...</span>
+                                    </div>
+                                    <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
+                                        <div className="h-full w-1/3 animate-pulse rounded-full bg-primary" />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </Card>
                 </div>
             )}
 
@@ -526,98 +830,163 @@ const SettingsPanel = memo(function SettingsPanelComponent({
     setSettings: (s: Partial<typeof settings>) => void;
 }) {
     return (
-        <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-2">
-                <Switch checked={settings.useRag} id="rag-mode" onCheckedChange={(v) => setSettings({ useRag: v })} />
-                <Label className="flex cursor-pointer items-center gap-1.5 text-sm" htmlFor="rag-mode">
-                    <Database className="h-4 w-4" />
-                    RAG
-                </Label>
-            </div>
+        <TooltipProvider>
+            <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-2">
+                    <Switch
+                        checked={settings.useRag}
+                        id="rag-mode"
+                        onCheckedChange={(v) => setSettings({ useRag: v })}
+                    />
+                    <Label className="flex cursor-pointer items-center gap-1.5 text-sm" htmlFor="rag-mode">
+                        <Database className="h-4 w-4" />
+                        RAG
+                    </Label>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <HelpCircle className="h-3.5 w-3.5 cursor-help text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p className="font-medium">Retrieval-Augmented Generation</p>
+                            <p className="mt-1 text-primary-foreground/80">
+                                Menggunakan dokumen yang telah Anda unggah untuk menjawab pertanyaan dengan konteks yang
+                                relevan.
+                            </p>
+                        </TooltipContent>
+                    </Tooltip>
+                </div>
 
-            <div className="flex items-center gap-2">
-                <Switch
-                    checked={settings.useAgenticMode}
-                    disabled={!settings.useRag}
-                    id="agentic-mode"
-                    onCheckedChange={(v) => setSettings({ useAgenticMode: v })}
-                />
-                <Label className="flex cursor-pointer items-center gap-1.5 text-sm" htmlFor="agentic-mode">
-                    <Brain className="h-4 w-4" />
-                    Agentic
-                </Label>
-            </div>
+                <div className="flex items-center gap-2">
+                    <Switch
+                        checked={settings.useAgenticMode}
+                        disabled={!settings.useRag}
+                        id="agentic-mode"
+                        onCheckedChange={(v) => setSettings({ useAgenticMode: v })}
+                    />
+                    <Label className="flex cursor-pointer items-center gap-1.5 text-sm" htmlFor="agentic-mode">
+                        <Brain className="h-4 w-4" />
+                        Agentic
+                    </Label>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <HelpCircle className="h-3.5 w-3.5 cursor-help text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p className="font-medium">Penalaran Multi-Langkah</p>
+                            <p className="mt-1 text-primary-foreground/80">
+                                Menggunakan tool untuk menjalankan penalaran kompleks dengan langkah-langkah yang dapat
+                                dilacak.
+                            </p>
+                        </TooltipContent>
+                    </Tooltip>
+                </div>
 
-            <div className="flex items-center gap-2">
-                <Switch
-                    checked={settings.enableGuardrails}
-                    id="guardrails"
-                    onCheckedChange={(v) => setSettings({ enableGuardrails: v })}
-                />
-                <Label className="flex cursor-pointer items-center gap-1.5 text-sm" htmlFor="guardrails">
-                    <Shield className="h-4 w-4" />
-                    Guardrails
-                </Label>
-            </div>
+                <div className="flex items-center gap-2">
+                    <Switch
+                        checked={settings.enableGuardrails}
+                        id="guardrails"
+                        onCheckedChange={(v) => setSettings({ enableGuardrails: v })}
+                    />
+                    <Label className="flex cursor-pointer items-center gap-1.5 text-sm" htmlFor="guardrails">
+                        <Shield className="h-4 w-4" />
+                        Guardrails
+                    </Label>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <HelpCircle className="h-3.5 w-3.5 cursor-help text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p className="font-medium">Keamanan Konten</p>
+                            <p className="mt-1 text-primary-foreground/80">
+                                Pemeriksaan keamanan dan validasi input (10-5000 karakter). Memfilter konten berbahaya.
+                            </p>
+                        </TooltipContent>
+                    </Tooltip>
+                </div>
 
-            {settings.useRag && (
-                <Select
-                    onValueChange={(v: "vector" | "keyword" | "hybrid") => setSettings({ retrievalStrategy: v })}
-                    value={settings.retrievalStrategy}
+                {settings.useRag && (
+                    <div className="flex items-center gap-2">
+                        <Select
+                            onValueChange={(v: "vector" | "keyword" | "hybrid") =>
+                                setSettings({ retrievalStrategy: v })
+                            }
+                            value={settings.retrievalStrategy}
+                        >
+                            <SelectTrigger className="h-8 w-40">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="hybrid">
+                                    <span className="flex items-center gap-1.5">
+                                        <Zap className="h-3 w-3" /> Hybrid (RRF)
+                                    </span>
+                                </SelectItem>
+                                <SelectItem value="vector">
+                                    <span className="flex items-center gap-1.5">
+                                        <Target className="h-3 w-3" /> Vector Only
+                                    </span>
+                                </SelectItem>
+                                <SelectItem value="keyword">
+                                    <span className="flex items-center gap-1.5">
+                                        <Search className="h-3 w-3" /> Okapi BM25
+                                    </span>
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Info className="h-3.5 w-3.5 cursor-help text-muted-foreground" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                                <p className="font-medium">Strategi Retrieval</p>
+                                <ul className="mt-1 space-y-1 text-primary-foreground/80">
+                                    <li>
+                                        <strong>Hybrid (RRF):</strong> Menggabungkan pencarian semantik dan kata kunci
+                                        dengan Reciprocal Rank Fusion
+                                    </li>
+                                    <li>
+                                        <strong>Vector:</strong> Pencarian berbasis kemiripan semantik
+                                    </li>
+                                    <li>
+                                        <strong>BM25:</strong> Pencarian berbasis pencocokan kata kunci
+                                    </li>
+                                </ul>
+                            </TooltipContent>
+                        </Tooltip>
+                    </div>
+                )}
+
+                <Badge
+                    className="ml-auto gap-1"
+                    variant={settings.useAgenticMode && settings.useRag ? "default" : "secondary"}
                 >
-                    <SelectTrigger className="h-8 w-40">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="hybrid">
-                            <span className="flex items-center gap-1.5">
-                                <Zap className="h-3 w-3" /> Hybrid (RRF)
-                            </span>
-                        </SelectItem>
-                        <SelectItem value="vector">
-                            <span className="flex items-center gap-1.5">
-                                <Target className="h-3 w-3" /> Vector Only
-                            </span>
-                        </SelectItem>
-                        <SelectItem value="keyword">
-                            <span className="flex items-center gap-1.5">
-                                <Search className="h-3 w-3" /> Okapi BM25
-                            </span>
-                        </SelectItem>
-                    </SelectContent>
-                </Select>
-            )}
-
-            <Badge
-                className="ml-auto gap-1"
-                variant={settings.useAgenticMode && settings.useRag ? "default" : "secondary"}
-            >
-                {(() => {
-                    if (settings.useAgenticMode && settings.useRag) {
+                    {(() => {
+                        if (settings.useAgenticMode && settings.useRag) {
+                            return (
+                                <>
+                                    <Brain className="h-3 w-3" />
+                                    Agentic RAG
+                                </>
+                            );
+                        }
+                        if (settings.useRag) {
+                            return (
+                                <>
+                                    <Sparkles className="h-3 w-3" />
+                                    Standard RAG
+                                </>
+                            );
+                        }
                         return (
                             <>
-                                <Brain className="h-3 w-3" />
-                                Agentic RAG
+                                <Bot className="h-3 w-3" />
+                                Direct
                             </>
                         );
-                    }
-                    if (settings.useRag) {
-                        return (
-                            <>
-                                <Sparkles className="h-3 w-3" />
-                                Standard RAG
-                            </>
-                        );
-                    }
-                    return (
-                        <>
-                            <Bot className="h-3 w-3" />
-                            Direct
-                        </>
-                    );
-                })()}
-            </Badge>
-        </div>
+                    })()}
+                </Badge>
+            </div>
+        </TooltipProvider>
     );
 });
 
@@ -632,12 +1001,14 @@ function useChatLogic() {
         activeSession,
         createSession,
         deleteSession,
+        saveEphemeralSession,
         sessions,
         activeSessionId,
     } = useChatStore();
 
     const scrollRef = useRef<HTMLDivElement>(null);
     const session = activeSession();
+    const isEphemeral = session?.isEphemeral ?? false;
 
     const [agentSteps, setAgentSteps] = useState<AgentStep[]>([]);
     const [retrievedChunks, setRetrievedChunks] = useState<RetrievedChunk[]>([]);
@@ -901,6 +1272,11 @@ function useChatLogic() {
         })();
     }, [deleteSession, loadMessagesFromDb, session?.id, setError, setLoading, setMessages]);
 
+    const handleSaveSession = useCallback(async () => {
+        if (!(session?.id && session.isEphemeral)) return;
+        await saveEphemeralSession(session.id);
+    }, [session?.id, session?.isEphemeral, saveEphemeralSession]);
+
     return {
         settings,
         setSettings,
@@ -913,6 +1289,8 @@ function useChatLogic() {
         detectedLanguage,
         isLoading,
         isStreaming,
+        isLoadingMessages,
+        isEphemeral,
         input,
         scrollRef,
         handleInputChange,
@@ -921,6 +1299,7 @@ function useChatLogic() {
         handleClear,
         handleSessionChange,
         handleStop,
+        handleSaveSession,
     };
 }
 
@@ -937,6 +1316,8 @@ export function ChatInterface() {
         detectedLanguage,
         isLoading,
         isStreaming,
+        isLoadingMessages,
+        isEphemeral,
         input,
         scrollRef,
         handleInputChange,
@@ -945,6 +1326,7 @@ export function ChatInterface() {
         handleClear,
         handleSessionChange,
         handleStop,
+        handleSaveSession,
     } = useChatLogic();
 
     return (
@@ -960,6 +1342,21 @@ export function ChatInterface() {
             </div>
 
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                {isEphemeral && (
+                    <div className="mx-4 mt-4 flex shrink-0 items-center justify-between gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3">
+                        <div className="flex items-center gap-2">
+                            <Cloud className="h-4 w-4 text-amber-600" />
+                            <span className="text-amber-700 text-sm dark:text-amber-400">
+                                Unsaved Session — This chat won't be stored
+                            </span>
+                        </div>
+                        <Button className="gap-1.5" onClick={handleSaveSession} size="sm" variant="outline">
+                            <Save className="h-3.5 w-3.5" />
+                            Save Session
+                        </Button>
+                    </div>
+                )}
+
                 {(error || chatError) && (
                     <div className="mx-4 mt-4 flex shrink-0 items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/10 p-3">
                         <AlertTriangle className="h-4 w-4 text-destructive" />
@@ -972,6 +1369,7 @@ export function ChatInterface() {
                         <MessageList
                             agentSteps={agentSteps}
                             isLoading={isLoading}
+                            isLoadingMessages={isLoadingMessages}
                             isStreaming={isStreaming}
                             messages={messages}
                             retrievedChunks={retrievedChunks}
