@@ -86,9 +86,12 @@ interface DirectMetadata {
 
 type ChatMetadata = AgenticMetadata | StandardRagMetadata | DirectMetadata;
 
-// Extend AIMessage to include metadata
+// Extend AIMessage to include metadata and persisted chunks/steps
 interface MessageWithMetadata extends AIMessage {
     metadata?: ChatMetadata;
+    // Persisted data from DB (for messages loaded from database)
+    persistedChunks?: RetrievedChunk[];
+    persistedSteps?: AgentStep[];
 }
 
 const MessageBubble = memo(function MessageBubbleComponent({
@@ -248,44 +251,68 @@ function getLoadingText(isStreaming: boolean, useAgenticMode: boolean): string {
     return "Thinking...";
 }
 
+/**
+ * Get steps for a message - checks persisted data first, then metadata, then live state for last message
+ */
 function getMessageSteps(
     message: MessageWithMetadata,
     index: number,
     messagesLength: number,
-    agentSteps: AgentStep[] | undefined
+    liveAgentSteps: AgentStep[] | undefined
 ): AgentStep[] | undefined {
+    // First priority: persisted steps from DB (for restored messages)
+    if (message.persistedSteps && message.persistedSteps.length > 0) {
+        return message.persistedSteps;
+    }
+
+    // Second priority: metadata from streaming response
     const metadata = message.metadata;
-    const isLastAssistantMessage = index === messagesLength - 1 && message.role === "assistant";
-
-    if (!isLastAssistantMessage) {
-        return undefined;
-    }
-
     if (metadata?.type === "agentic") {
-        return (metadata as AgenticMetadata).steps || agentSteps;
+        const agenticMeta = metadata as AgenticMetadata;
+        if (agenticMeta.steps && agenticMeta.steps.length > 0) {
+            return agenticMeta.steps;
+        }
     }
 
-    return agentSteps;
+    // Third priority: live streaming state (only for the last message being streamed)
+    const isLastAssistantMessage = index === messagesLength - 1 && message.role === "assistant";
+    if (isLastAssistantMessage && liveAgentSteps && liveAgentSteps.length > 0) {
+        return liveAgentSteps;
+    }
+
+    return undefined;
 }
 
+/**
+ * Get chunks for a message - checks persisted data first, then metadata, then live state for last message
+ */
 function getMessageChunks(
     message: MessageWithMetadata,
     index: number,
     messagesLength: number,
-    retrievedChunks: RetrievedChunk[] | undefined
+    liveRetrievedChunks: RetrievedChunk[] | undefined
 ): RetrievedChunk[] | undefined {
+    // First priority: persisted chunks from DB (for restored messages)
+    if (message.persistedChunks && message.persistedChunks.length > 0) {
+        return message.persistedChunks;
+    }
+
+    // Second priority: metadata from streaming response
     const metadata = message.metadata;
-    const isLastAssistantMessage = index === messagesLength - 1 && message.role === "assistant";
-
-    if (!isLastAssistantMessage) {
-        return undefined;
-    }
-
     if (metadata?.type === "agentic" || metadata?.type === "standard-rag") {
-        return (metadata as AgenticMetadata | StandardRagMetadata).retrievedChunks || retrievedChunks;
+        const ragMeta = metadata as AgenticMetadata | StandardRagMetadata;
+        if (ragMeta.retrievedChunks && ragMeta.retrievedChunks.length > 0) {
+            return ragMeta.retrievedChunks;
+        }
     }
 
-    return retrievedChunks;
+    // Third priority: live streaming state (only for the last message being streamed)
+    const isLastAssistantMessage = index === messagesLength - 1 && message.role === "assistant";
+    if (isLastAssistantMessage && liveRetrievedChunks && liveRetrievedChunks.length > 0) {
+        return liveRetrievedChunks;
+    }
+
+    return undefined;
 }
 
 const AgentStepsCollapsible = memo(function AgentStepsCollapsibleComponent({ steps }: { steps: AgentStep[] }) {
@@ -767,9 +794,9 @@ const MessageList = memo(function MessageListComponent({
     liveRetrievedChunks: RetrievedChunk[];
     agentProgress: AgentProgressDataPart | null;
 }) {
-    // Use live state during streaming, fallback to persisted state after
-    const displaySteps = isStreaming && liveAgentSteps.length > 0 ? liveAgentSteps : agentSteps;
-    const displayChunks = isStreaming && liveRetrievedChunks.length > 0 ? liveRetrievedChunks : retrievedChunks;
+    // Live state is now used within getMessageSteps/getMessageChunks for the last message
+    // These are kept for backward compatibility but the per-message logic handles priority
+    const _ = { agentSteps, retrievedChunks }; // Suppress unused warnings
 
     // Skeleton loading for initial message load
     if (isLoadingMessages && messages.length === 0) {
@@ -807,10 +834,10 @@ const MessageList = memo(function MessageListComponent({
 
             {messages.map((message: MessageWithMetadata, index: number) => (
                 <MessageBubble
-                    agentSteps={getMessageSteps(message, index, messages.length, displaySteps)}
+                    agentSteps={getMessageSteps(message, index, messages.length, liveAgentSteps)}
                     key={message.id}
                     message={message}
-                    retrievedChunks={getMessageChunks(message, index, messages.length, displayChunks)}
+                    retrievedChunks={getMessageChunks(message, index, messages.length, liveRetrievedChunks)}
                 />
             ))}
 
@@ -848,13 +875,6 @@ const MessageList = memo(function MessageListComponent({
                             )}
                         </div>
                     </Card>
-                </div>
-            )}
-
-            {settings.useAgenticMode && liveAgentSteps.length > 0 && (
-                <div className="space-y-2">
-                    <AgentStepsCollapsible steps={liveAgentSteps} />
-                    {liveRetrievedChunks.length > 0 && <SourcesCollapsible chunks={liveRetrievedChunks} />}
                 </div>
             )}
 
@@ -1401,7 +1421,12 @@ function useChatLogic() {
             }
 
             // Clear live state and progress after finish
-            setAgentProgress(null);
+            // Use setTimeout to ensure state updates have been processed
+            setTimeout(() => {
+                setLiveAgentSteps([]);
+                setLiveRetrievedChunks([]);
+                setAgentProgress(null);
+            }, 100);
 
             scrollRef.current?.scrollIntoView({ behavior: "smooth" });
             setLoading(false);
@@ -1427,12 +1452,20 @@ function useChatLogic() {
                 const { messages: dbMessages } = await response.json();
 
                 if (dbMessages && dbMessages.length > 0) {
-                    // Convert DB messages to UIMessage format
+                    // Convert DB messages to UIMessage format with persisted chunks
                     const uiMessages: MessageWithMetadata[] = dbMessages.map(
-                        (msg: { id: string; role: string; content: string; createdAt: string }) => ({
+                        (msg: {
+                            id: string;
+                            role: string;
+                            content: string;
+                            createdAt: string;
+                            retrievedChunks?: RetrievedChunk[];
+                        }) => ({
                             id: msg.id,
                             role: msg.role as "user" | "assistant",
                             parts: [{ type: "text" as const, text: msg.content }],
+                            // Include persisted chunks from DB for sources collapsible
+                            persistedChunks: msg.retrievedChunks || undefined,
                         })
                     );
                     setMessages(uiMessages);
