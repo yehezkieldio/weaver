@@ -160,10 +160,12 @@ export const SessionManager = memo(function SessionManagerComponent({
         try {
             await fetch("/api/sessions", { method: "DELETE" });
             deleteAllSessions();
+            // Trigger session change callback to reset chat UI
+            onSessionChange?.("new");
         } catch (error) {
             console.error("Failed to delete all sessions:", error);
         }
-    }, [deleteAllSessions]);
+    }, [deleteAllSessions, onSessionChange]);
 
     const handleStartRename = useCallback((session: ChatSession) => {
         setEditingSessionId(session.id);
@@ -533,10 +535,12 @@ export const SessionSelector = memo(function SessionSelectorComponent({
         try {
             await fetch("/api/sessions", { method: "DELETE" });
             deleteAllSessions();
+            // Trigger session change callback to reset chat UI
+            onSessionChange?.("new");
         } catch (error) {
             console.error("Failed to delete all sessions:", error);
         }
-    }, [deleteAllSessions]);
+    }, [deleteAllSessions, onSessionChange]);
 
     const handleSwitchSession = useCallback(
         (sessionId: string) => {

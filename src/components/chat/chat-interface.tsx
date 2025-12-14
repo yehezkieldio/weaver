@@ -7,7 +7,6 @@ import { formatDistanceToNow } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import {
     AlertTriangle,
-    BookOpen,
     Bot,
     Brain,
     ChevronDown,
@@ -114,8 +113,8 @@ const MessageBubble = memo(function MessageBubbleComponent({
                 {isUser ? <User className="h-4 w-4" /> : <Brain className="h-4 w-4" />}
             </div>
 
-            <div className={cn("max-w-[85%] space-y-2", isUser && "items-end")}>
-                <Card className={cn("p-4", isUser ? "bg-primary text-primary-foreground" : "bg-card")}>
+            <div className={cn("flex max-w-[85%] flex-col space-y-2", isUser && "items-end")}>
+                <Card className={cn("w-fit p-4", isUser ? "bg-primary text-primary-foreground" : "bg-card")}>
                     <div
                         className={cn(
                             "prose prose-sm dark:prose-invert max-w-none",
@@ -598,9 +597,9 @@ const ChatHeader = memo(function ChatHeaderComponent({
 const EmptyState = memo(function EmptyStateComponent() {
     return (
         <div className="py-12 text-center">
-            <div className="mx-auto mb-4 w-fit rounded-full bg-primary/10 p-4 pt-0">
+            {/* <div className="mx-auto mb-4 w-fit rounded-full bg-primary/10 p-4 pt-0">
                 <BookOpen className="h-8 w-8 text-primary" />
-            </div>
+            </div> */}
             <h3 className="mb-2 font-medium text-foreground text-lg">Selamat Datang di MuliaChat</h3>
             <p className="mx-auto mb-4 max-w-md text-muted-foreground text-sm">
                 Ajukan pertanyaan tentang dokumen yang telah Anda unggah dalam Bahasa Indonesia.
@@ -618,6 +617,7 @@ const ChatInput = memo(function ChatInputComponent({
     onSubmit,
     onReload,
     onClear,
+    onClearMessages,
     onStop,
 }: {
     input: string;
@@ -628,6 +628,7 @@ const ChatInput = memo(function ChatInputComponent({
     onSubmit: (e: React.FormEvent) => void;
     onReload: () => void;
     onClear: () => void;
+    onClearMessages: () => void;
     onStop: () => void;
 }) {
     const MIN_LENGTH = 2;
@@ -672,6 +673,16 @@ const ChatInput = memo(function ChatInputComponent({
                         )}
                         {messagesExist && !isStreaming && (
                             <>
+                                <Button
+                                    disabled={isLoading}
+                                    onClick={onClearMessages}
+                                    size="icon"
+                                    title="Clear all messages"
+                                    type="button"
+                                    variant="ghost"
+                                >
+                                    <FileText className="h-4 w-4" />
+                                </Button>
                                 <Button
                                     disabled={isLoading}
                                     onClick={onClear}
@@ -802,6 +813,15 @@ const MessageList = memo(function MessageListComponent({
                 />
             ))}
 
+            {/* Show reasoning steps ABOVE message bubble during streaming */}
+            {(isLoading || isStreaming) && settings.useAgenticMode && liveAgentSteps.length > 0 && (
+                <div className="space-y-2">
+                    <AgentStepsCollapsible steps={liveAgentSteps} />
+                    {liveRetrievedChunks.length > 0 && <SourcesCollapsible chunks={liveRetrievedChunks} />}
+                </div>
+            )}
+
+            {/* Loading indicator (only show when streaming text or not in agentic mode) */}
             {(isLoading || isStreaming) && (
                 <div className="flex w-full justify-start gap-3">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
@@ -815,72 +835,24 @@ const MessageList = memo(function MessageListComponent({
                                     {agentProgress?.message || getLoadingText(isStreaming, settings.useAgenticMode)}
                                 </span>
                             </div>
-                            {settings.useAgenticMode && (isLoading || isStreaming) && (
-                                <div className="space-y-2">
-                                    {/* Progress bar */}
-                                    {agentProgress && (
-                                        <div className="space-y-1">
-                                            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                                                <span>
-                                                    {agentProgress.status === "initializing" && "Memulai..."}
-                                                    {agentProgress.status === "retrieving" && "Mengambil dokumen..."}
-                                                    {agentProgress.status === "reasoning" && "Penalaran..."}
-                                                    {agentProgress.status === "synthesizing" &&
-                                                        "Menyintesis jawaban..."}
-                                                    {agentProgress.status === "completed" && "Selesai"}
-                                                </span>
-                                                <span>
-                                                    Step {agentProgress.currentStep}/{agentProgress.maxSteps}
-                                                </span>
-                                            </div>
-                                            <Progress
-                                                className="h-1.5"
-                                                value={(agentProgress.currentStep / agentProgress.maxSteps) * 100}
-                                            />
-                                        </div>
-                                    )}
-
-                                    {/* Live agent steps display */}
-                                    {liveAgentSteps.length > 0 && (
-                                        <div className="space-y-1 border-border border-t pt-2">
-                                            <span className="text-[10px] text-muted-foreground">
-                                                {liveAgentSteps.length} langkah penalaran
-                                            </span>
-                                            <div className="max-h-32 space-y-1 overflow-y-auto">
-                                                {liveAgentSteps.slice(-3).map((step) => (
-                                                    <div
-                                                        className="flex items-center gap-2 text-[10px]"
-                                                        key={`live-step-${step.stepIndex}`}
-                                                    >
-                                                        <div
-                                                            className={cn(
-                                                                "flex h-4 w-4 items-center justify-center rounded-full",
-                                                                getStepColor(step.stepType)
-                                                            )}
-                                                        >
-                                                            {getStepIcon(step.stepType)}
-                                                        </div>
-                                                        <span className="truncate">
-                                                            {step.toolName || step.stepType}
-                                                        </span>
-                                                        {step.durationMs > 0 && (
-                                                            <Badge className="text-[8px]" variant="outline">
-                                                                {step.durationMs}ms
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Live retrieved chunks count */}
-                                    {liveRetrievedChunks.length > 0 && (
-                                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                                            <FileText className="h-3 w-3" />
-                                            <span>{liveRetrievedChunks.length} sumber ditemukan</span>
-                                        </div>
-                                    )}
+                            {settings.useAgenticMode && agentProgress && (
+                                <div className="space-y-1">
+                                    <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                                        <span>
+                                            {agentProgress.status === "initializing" && "Memulai..."}
+                                            {agentProgress.status === "retrieving" && "Mengambil dokumen..."}
+                                            {agentProgress.status === "reasoning" && "Penalaran..."}
+                                            {agentProgress.status === "synthesizing" && "Menyintesis jawaban..."}
+                                            {agentProgress.status === "completed" && "Selesai"}
+                                        </span>
+                                        <span>
+                                            Step {agentProgress.currentStep}/{agentProgress.maxSteps}
+                                        </span>
+                                    </div>
+                                    <Progress
+                                        className="h-1.5"
+                                        value={(agentProgress.currentStep / agentProgress.maxSteps) * 100}
+                                    />
                                 </div>
                             )}
                         </div>
@@ -1293,11 +1265,20 @@ function useChatLogic() {
             setDetectedLanguage(null);
             setError(null);
             setInput("");
+            setLiveAgentSteps([]);
+            setLiveRetrievedChunks([]);
+            setAgentProgress(null);
+
+            // If "new" sentinel value, just clear messages without loading
+            if (sessionId === "new") {
+                setMessages([]);
+                return;
+            }
 
             // Load messages from database
             loadMessagesFromDb(sessionId);
         },
-        [loadMessagesFromDb, setError]
+        [loadMessagesFromDb, setError, setMessages]
     );
 
     // Initialize: wait for sessions to load, then set active session or create new one
@@ -1431,6 +1412,9 @@ function useChatLogic() {
                 setDetectedLanguage(null);
                 setInput("");
                 setError(null);
+                setLiveAgentSteps([]);
+                setLiveRetrievedChunks([]);
+                setAgentProgress(null);
 
                 const nextActiveSessionId = useChatStore.getState().activeSessionId;
                 if (nextActiveSessionId) {
@@ -1444,6 +1428,42 @@ function useChatLogic() {
             }
         })();
     }, [deleteSession, loadMessagesFromDb, session?.id, setError, setLoading, setMessages]);
+
+    const handleClearCurrentSession = useCallback(async () => {
+        if (!session?.id) {
+            return;
+        }
+
+        if (!window.confirm("Clear all messages in this session? This cannot be undone.")) {
+            return;
+        }
+
+        setLoading(true);
+        try {
+            // Delete all messages for this session
+            const response = await fetch(`/api/sessions/${session.id}/messages`, { method: "DELETE" });
+            if (!response.ok) {
+                throw new Error("Failed to clear messages");
+            }
+
+            // Clear local state
+            setMessages([]);
+            setAgentSteps([]);
+            setRetrievedChunks([]);
+            setLatencyMs(null);
+            setDetectedLanguage(null);
+            setInput("");
+            setError(null);
+            setLiveAgentSteps([]);
+            setLiveRetrievedChunks([]);
+            setAgentProgress(null);
+        } catch (err) {
+            const message = err instanceof Error ? err.message : "Failed to clear messages";
+            setError(message);
+        } finally {
+            setLoading(false);
+        }
+    }, [session?.id, setError, setLoading, setMessages]);
 
     const handleSaveSession = useCallback(async () => {
         if (!(session?.id && session.isEphemeral)) return;
@@ -1470,6 +1490,7 @@ function useChatLogic() {
         onSubmit,
         handleReload,
         handleClear,
+        handleClearCurrentSession,
         handleSessionChange,
         handleStop,
         handleSaveSession,
@@ -1501,6 +1522,7 @@ export function ChatInterface() {
         onSubmit,
         handleReload,
         handleClear,
+        handleClearCurrentSession,
         handleSessionChange,
         handleStop,
         handleSaveSession,
@@ -1571,6 +1593,7 @@ export function ChatInterface() {
                     isStreaming={isStreaming}
                     messagesExist={messages.length > 0}
                     onClear={handleClear}
+                    onClearMessages={handleClearCurrentSession}
                     onInputChange={handleInputChange}
                     onReload={handleReload}
                     onStop={handleStop}

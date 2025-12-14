@@ -57,3 +57,34 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         return Response.json({ error: "Failed to fetch messages" }, { status: 500 });
     }
 }
+
+/**
+ * DELETE /api/sessions/[id]/messages
+ *
+ * WHY Clear Messages:
+ * - Allows user to reset conversation while keeping session
+ * - Maintains session settings and configuration
+ * - Useful for starting fresh conversation in same context
+ *
+ * Path Parameters:
+ * - id: string - Session ID
+ *
+ * Response:
+ * - Success (200): { success: true, deletedCount: number }
+ * - Error (500): { error: string }
+ *
+ * @param _request - Next.js request object (unused)
+ * @param params - Route parameters with session ID
+ * @returns JSON response confirming deletion
+ */
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const { id } = await params;
+
+        await db.delete(chatMessages).where(eq(chatMessages.sessionId, id));
+
+        return Response.json({ success: true });
+    } catch (error) {
+        return Response.json({ error: "Failed to clear messages" }, { status: 500 });
+    }
+}
