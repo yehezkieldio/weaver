@@ -580,12 +580,12 @@ const ChatHeader = memo(function ChatHeaderComponent({
         <div className="flex items-center justify-between">
             <SessionSelector onSessionChange={onSessionChange} />
             <div className="flex items-center gap-2">
-                <Badge className="gap-1" variant="outline">
+                <Badge className="ml-2 gap-1 border-0" variant="outline">
                     <Languages className="h-3 w-3" />
                     Bahasa Indonesia
                 </Badge>
                 {latencyMs && (
-                    <Badge className="gap-1" variant="outline">
+                    <Badge className="ml-2 gap-1 border-0" variant="outline">
                         <Clock className="h-3 w-3" />
                         {latencyMs}ms
                     </Badge>
@@ -641,7 +641,7 @@ const ChatInput = memo(function ChatInputComponent({
 
     return (
         <div className="border-border border-t bg-card p-4">
-            <form className="mx-auto max-w-4xl" onSubmit={onSubmit}>
+            <form className="w-full" onSubmit={onSubmit}>
                 <div className="relative">
                     <Textarea
                         className={cn(
@@ -774,7 +774,7 @@ const MessageList = memo(function MessageListComponent({
     // Skeleton loading for initial message load
     if (isLoadingMessages && messages.length === 0) {
         return (
-            <div className="mx-auto max-w-4xl space-y-4 pb-4">
+            <div className="w-full space-y-4 px-4 pb-4">
                 {/* User message skeleton */}
                 <div className="flex w-full flex-row-reverse gap-3">
                     <Skeleton className="h-8 w-8 rounded-full" />
@@ -802,7 +802,7 @@ const MessageList = memo(function MessageListComponent({
     }
 
     return (
-        <div className="mx-auto max-w-4xl space-y-4 pb-4">
+        <div className="w-full max-w-full space-y-4 px-4 pb-4">
             {messages.length === 0 && !isLoadingMessages && <EmptyState />}
 
             {messages.map((message: MessageWithMetadata, index: number) => (
@@ -814,20 +814,12 @@ const MessageList = memo(function MessageListComponent({
                 />
             ))}
 
-            {(isLoading || isStreaming) && settings.useAgenticMode && liveAgentSteps.length > 0 && (
-                <div className="space-y-2">
-                    <AgentStepsCollapsible steps={liveAgentSteps} />
-                    {liveRetrievedChunks.length > 0 && <SourcesCollapsible chunks={liveRetrievedChunks} />}
-                </div>
-            )}
-
-            {/* Loading indicator (only show when streaming text or not in agentic mode) */}
             {(isLoading || isStreaming) && (
                 <div className="flex w-full justify-start gap-3">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
                         <Brain className="h-4 w-4" />
                     </div>
-                    <Card className="max-w-[85%] bg-card p-4">
+                    <Card className="max-w-[85%] border-none bg-card p-4">
                         <div className="space-y-2">
                             <div className="flex items-center gap-2">
                                 <Loader2 className="h-4 w-4 animate-spin text-primary" />
@@ -835,7 +827,7 @@ const MessageList = memo(function MessageListComponent({
                                     {agentProgress?.message || getLoadingText(isStreaming, settings.useAgenticMode)}
                                 </span>
                             </div>
-                            {settings.useAgenticMode && agentProgress && (
+                            {settings.useAgenticMode && agentProgress && agentProgress.status !== "completed" && (
                                 <div className="space-y-1">
                                     <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                                         <span>
@@ -843,7 +835,6 @@ const MessageList = memo(function MessageListComponent({
                                             {agentProgress.status === "retrieving" && "Mengambil dokumen..."}
                                             {agentProgress.status === "reasoning" && "Penalaran..."}
                                             {agentProgress.status === "synthesizing" && "Menyintesis jawaban..."}
-                                            {agentProgress.status === "completed" && "Selesai"}
                                         </span>
                                         <span>
                                             Step {agentProgress.currentStep}/{agentProgress.maxSteps}
@@ -857,6 +848,13 @@ const MessageList = memo(function MessageListComponent({
                             )}
                         </div>
                     </Card>
+                </div>
+            )}
+
+            {settings.useAgenticMode && liveAgentSteps.length > 0 && (
+                <div className="space-y-2">
+                    <AgentStepsCollapsible steps={liveAgentSteps} />
+                    {liveRetrievedChunks.length > 0 && <SourcesCollapsible chunks={liveRetrievedChunks} />}
                 </div>
             )}
 
@@ -1612,9 +1610,33 @@ function useChatLogic() {
                 setLiveRetrievedChunks([]);
                 setAgentProgress(null);
 
-                const nextActiveSessionId = useChatStore.getState().activeSessionId;
-                if (nextActiveSessionId) {
-                    await loadMessagesFromDb(nextActiveSessionId);
+                // Create a new session immediately
+                const createResponse = await fetch("/api/sessions", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        useRag: settings.useRag,
+                        useAgenticMode: settings.useAgenticMode,
+                        retrievalStrategy: settings.retrievalStrategy,
+                    }),
+                });
+                const { session: newSession } = await createResponse.json();
+
+                if (newSession?.id) {
+                    useChatStore.setState((state) => ({
+                        sessions: [
+                            {
+                                id: newSession.id,
+                                title: newSession.title || "New Chat",
+                                messages: [],
+                                createdAt: Date.now(),
+                                updatedAt: Date.now(),
+                                settings: { ...settings },
+                            },
+                            ...state.sessions,
+                        ],
+                        activeSessionId: newSession.id,
+                    }));
                 }
             } catch (err) {
                 const message = err instanceof Error ? err.message : "Failed to delete session";
@@ -1623,7 +1645,7 @@ function useChatLogic() {
                 setLoading(false);
             }
         })();
-    }, [deleteSession, loadMessagesFromDb, session?.id, setError, setLoading, setMessages]);
+    }, [deleteSession, session?.id, settings, setError, setLoading, setMessages]);
 
     const handleClearCurrentSession = useCallback(async () => {
         if (!session?.id) {
@@ -1761,14 +1783,14 @@ export function ChatInterface() {
                         onSessionChange={handleSessionChange}
                         settings={settings}
                     />
-                    <Button
+                    {/* <Button
                         onClick={() => setDebugMode(!debugMode)}
                         size="sm"
                         title="Toggle debug mode"
                         variant={debugMode ? "default" : "ghost"}
                     >
                         <Bug className="h-4 w-4" />
-                    </Button>
+                    </Button> */}
                 </div>
                 <SettingsPanel setSettings={setSettings} settings={settings} />
                 {debugMode && <DebugPanel onAddDummyMessage={handleAddDummyMessage} />}

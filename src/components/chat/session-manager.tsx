@@ -145,11 +145,41 @@ export const SessionManager = memo(function SessionManagerComponent({
             try {
                 await fetch(`/api/sessions/${sessionId}`, { method: "DELETE" });
                 deleteSession(sessionId);
+
+                // Create a new session immediately
+                const response = await fetch("/api/sessions", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        useRag: settings.useRag,
+                        useAgenticMode: settings.useAgenticMode,
+                        retrievalStrategy: settings.retrievalStrategy,
+                    }),
+                });
+                const { session: newSession } = await response.json();
+
+                if (newSession?.id) {
+                    useChatStore.setState((state) => ({
+                        sessions: [
+                            {
+                                id: newSession.id,
+                                title: newSession.title || "New Chat",
+                                messages: [],
+                                createdAt: Date.now(),
+                                updatedAt: Date.now(),
+                                settings: { ...settings },
+                            },
+                            ...state.sessions,
+                        ],
+                        activeSessionId: newSession.id,
+                    }));
+                    onSessionChange?.(newSession.id);
+                }
             } catch (error) {
                 console.error("Failed to delete session:", error);
             }
         },
-        [deleteSession]
+        [deleteSession, settings, onSessionChange]
     );
 
     const handleDeleteAllSessions = useCallback(async () => {
@@ -160,12 +190,39 @@ export const SessionManager = memo(function SessionManagerComponent({
         try {
             await fetch("/api/sessions", { method: "DELETE" });
             deleteAllSessions();
-            // Trigger session change callback to reset chat UI
-            onSessionChange?.("new");
+
+            // Create a new session immediately
+            const response = await fetch("/api/sessions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    useRag: settings.useRag,
+                    useAgenticMode: settings.useAgenticMode,
+                    retrievalStrategy: settings.retrievalStrategy,
+                }),
+            });
+            const { session: newSession } = await response.json();
+
+            if (newSession?.id) {
+                useChatStore.setState((_state) => ({
+                    sessions: [
+                        {
+                            id: newSession.id,
+                            title: newSession.title || "New Chat",
+                            messages: [],
+                            createdAt: Date.now(),
+                            updatedAt: Date.now(),
+                            settings: { ...settings },
+                        },
+                    ],
+                    activeSessionId: newSession.id,
+                }));
+                onSessionChange?.(newSession.id);
+            }
         } catch (error) {
             console.error("Failed to delete all sessions:", error);
         }
-    }, [deleteAllSessions, onSessionChange]);
+    }, [deleteAllSessions, settings, onSessionChange]);
 
     const handleStartRename = useCallback((session: ChatSession) => {
         setEditingSessionId(session.id);
@@ -535,12 +592,39 @@ export const SessionSelector = memo(function SessionSelectorComponent({
         try {
             await fetch("/api/sessions", { method: "DELETE" });
             deleteAllSessions();
-            // Trigger session change callback to reset chat UI
-            onSessionChange?.("new");
+
+            // Create a new session immediately
+            const response = await fetch("/api/sessions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    useRag: settings.useRag,
+                    useAgenticMode: settings.useAgenticMode,
+                    retrievalStrategy: settings.retrievalStrategy,
+                }),
+            });
+            const { session: newSession } = await response.json();
+
+            if (newSession?.id) {
+                useChatStore.setState((_state) => ({
+                    sessions: [
+                        {
+                            id: newSession.id,
+                            title: newSession.title || "New Chat",
+                            messages: [],
+                            createdAt: Date.now(),
+                            updatedAt: Date.now(),
+                            settings: { ...settings },
+                        },
+                    ],
+                    activeSessionId: newSession.id,
+                }));
+                onSessionChange?.(newSession.id);
+            }
         } catch (error) {
             console.error("Failed to delete all sessions:", error);
         }
-    }, [deleteAllSessions, onSessionChange]);
+    }, [deleteAllSessions, settings, onSessionChange]);
 
     const handleSwitchSession = useCallback(
         (sessionId: string) => {
