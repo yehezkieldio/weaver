@@ -41,3 +41,11 @@ Evaluasi dilakukan menggunakan pendekatan LLM-as-a-Judge (RAGAS) dengan model ya
 
 Penelitian ini menggunakan model dan layanan Microsoft Azure OpenAI karena lingkungan cloud menyediakan konsistensi kinerja, skalabilitas, serta konfigurasi model yang terstandarisasi untuk keperluan eksperimen terkontrol. Penggunaan model-model melalui Azure memungkinkan replikasi hasil karena versi model, parameter, dan pipeline inferensi berada pada lingkungan eksekusi yang stabil dan terdokumentasi. Pendekatan ini juga menghilangkan variasi performa yang dapat muncul pada deployment lokal, seperti perbedaan hardware atau optimisasi runtime, sehingga seluruh perbandingan antar konfigurasi pada Studi Ablasi dapat berjalan secara adil dan bebas bias teknis.
 
+
+---
+
+index these too
+
+[docs/masterreport/](docs/masterreport/)
+[docs/academic/](docs/academic/)
+[docs/imrad](docs/imrad/])
