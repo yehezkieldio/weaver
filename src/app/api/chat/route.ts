@@ -34,7 +34,7 @@ import {
 import { eq } from "drizzle-orm";
 import { CHAT_MODEL, telemetryConfig } from "@/lib/ai";
 import { db } from "@/lib/db";
-import { chatMessages, chatSessions, guardrailLogs } from "@/lib/db/schema";
+import { agentSteps, chatMessages, chatSessions, guardrailLogs } from "@/lib/db/schema";
 import { type AgentStep, streamAgenticRagWithProgress } from "@/lib/rag/agentic-rag";
 import { buildRagPrompt, retrieveContext, SYSTEM_PROMPTS } from "@/lib/rag/context-builder";
 import { detectNegativeReaction, validateInput, validateOutput } from "@/lib/rag/guardrails";
@@ -210,6 +210,7 @@ export async function POST(request: Request) {
         console.log(`[POST] User message: "${userMessage.substring(0, 100)}...", length: ${userMessage.length}`);
 
         const language = detectQueryLanguage(userMessage);
+        const triggeredGuardrails: string[] = [];
 
         console.log(`[POST] Detected language: ${language}`);
 
@@ -236,6 +237,14 @@ export async function POST(request: Request) {
                         matchedContent: negativeReaction.detected ? String(negativeReaction.type) : undefined,
                     },
                 });
+            }
+
+            // Track triggered guardrails
+            if (!inputValidation.passed) {
+                triggeredGuardrails.push("input_validation");
+            }
+            if (negativeReaction.detected) {
+                triggeredGuardrails.push("negative_reaction");
             }
 
             // Handle negative reactions with empathetic response (streamed)
@@ -295,6 +304,7 @@ export async function POST(request: Request) {
             const accumulatedSteps: AgentStep[] = [];
             const accumulatedChunks: RetrievalResult[] = [];
             let responseText = "";
+            let totalTokens = 0;
 
             const stream = createUIMessageStream({
                 execute: async ({ writer }) => {
@@ -464,20 +474,35 @@ export async function POST(request: Request) {
                                 },
                             });
                         }
+
+                        if (!outputValidation.passed) {
+                            triggeredGuardrails.push("output_validation");
+                        }
                     }
 
-                    // Save messages to database
+                    // Save messages and agent steps to database
                     if (sessionId) {
-                        await Promise.all([
-                            db.insert(chatMessages).values({
-                                sessionId,
-                                role: "user",
-                                content: userMessage,
-                                ragEnabled: useRag,
-                                agenticMode: true,
-                                createdAt: new Date(),
-                            }),
-                            db.insert(chatMessages).values({
+                        // Calculate total tokens from agent steps
+                        totalTokens = accumulatedSteps.reduce(
+                            (sum, step) => sum + (step.tokenUsage?.totalTokens ?? 0),
+                            0
+                        );
+
+                        // Insert user message
+                        await db.insert(chatMessages).values({
+                            sessionId,
+                            role: "user",
+                            content: userMessage,
+                            ragEnabled: useRag,
+                            agenticMode: true,
+                            guardrailsTriggered: triggeredGuardrails.length > 0 ? triggeredGuardrails : undefined,
+                            createdAt: new Date(),
+                        });
+
+                        // Insert assistant message and get its ID for linking agent steps
+                        const [assistantMessage] = await db
+                            .insert(chatMessages)
+                            .values({
                                 sessionId,
                                 role: "assistant",
                                 content: responseText,
@@ -497,13 +522,35 @@ export async function POST(request: Request) {
                                 agenticMode: true,
                                 agentStepsCount: accumulatedSteps.length,
                                 latencyMs,
+                                tokenCount: totalTokens > 0 ? totalTokens : undefined,
+                                guardrailsTriggered: triggeredGuardrails.length > 0 ? triggeredGuardrails : undefined,
                                 createdAt: new Date(),
-                            }),
-                            db
-                                .update(chatSessions)
-                                .set({ updatedAt: new Date() })
-                                .where(eq(chatSessions.id, sessionId)),
-                        ]);
+                            })
+                            .returning({ id: chatMessages.id });
+
+                        // Insert agent steps linked to the assistant message
+                        if (accumulatedSteps.length > 0 && assistantMessage?.id) {
+                            await db.insert(agentSteps).values(
+                                accumulatedSteps.map((step) => ({
+                                    sessionId,
+                                    messageId: assistantMessage.id,
+                                    stepIndex: step.stepIndex,
+                                    stepType: step.stepType,
+                                    toolName: step.toolName,
+                                    toolInput: step.toolInput as Record<string, unknown> | undefined,
+                                    toolOutput: step.toolOutput as Record<string, unknown> | undefined,
+                                    reasoning: step.reasoning,
+                                    durationMs: step.durationMs,
+                                    createdAt: new Date(step.timestamp),
+                                }))
+                            );
+                        }
+
+                        // Update session timestamp
+                        await db
+                            .update(chatSessions)
+                            .set({ updatedAt: new Date() })
+                            .where(eq(chatSessions.id, sessionId));
                     }
                 },
             });
@@ -553,6 +600,7 @@ export async function POST(request: Request) {
                 retrievedChunks,
                 language,
             };
+            let standardRagTotalTokens = 0;
 
             const result = streamText({
                 model: CHAT_MODEL,
@@ -574,6 +622,10 @@ export async function POST(request: Request) {
                 messageMetadata: ({ part }) => {
                     if (part.type === "finish") {
                         const latencyMs = Date.now() - startTime;
+                        // Capture token usage
+                        if (part.totalUsage?.totalTokens) {
+                            standardRagTotalTokens = part.totalUsage.totalTokens;
+                        }
                         return {
                             ...standardRagMetadata,
                             latencyMs,
@@ -634,6 +686,8 @@ export async function POST(request: Request) {
                                 ragEnabled: useRag,
                                 agenticMode: false,
                                 latencyMs,
+                                tokenCount: standardRagTotalTokens > 0 ? standardRagTotalTokens : undefined,
+                                guardrailsTriggered: triggeredGuardrails.length > 0 ? triggeredGuardrails : undefined,
                                 createdAt: new Date(),
                             }),
                             db
@@ -652,6 +706,7 @@ export async function POST(request: Request) {
             type: "direct",
             language,
         };
+        let directModeTotalTokens = 0;
 
         const result = streamText({
             model: CHAT_MODEL,
@@ -672,6 +727,10 @@ export async function POST(request: Request) {
             messageMetadata: ({ part }) => {
                 if (part.type === "finish") {
                     const latencyMs = Date.now() - startTime;
+                    // Capture token usage
+                    if (part.totalUsage?.totalTokens) {
+                        directModeTotalTokens = part.totalUsage.totalTokens;
+                    }
                     return {
                         ...directMetadata,
                         latencyMs,
@@ -702,6 +761,7 @@ export async function POST(request: Request) {
                             content: userMessage,
                             ragEnabled: false,
                             agenticMode: false,
+                            guardrailsTriggered: triggeredGuardrails.length > 0 ? triggeredGuardrails : undefined,
                             createdAt: new Date(),
                         }),
                         db.insert(chatMessages).values({
@@ -711,6 +771,8 @@ export async function POST(request: Request) {
                             ragEnabled: false,
                             agenticMode: false,
                             latencyMs,
+                            tokenCount: directModeTotalTokens > 0 ? directModeTotalTokens : undefined,
+                            guardrailsTriggered: triggeredGuardrails.length > 0 ? triggeredGuardrails : undefined,
                             createdAt: new Date(),
                         }),
                         db.update(chatSessions).set({ updatedAt: new Date() }).where(eq(chatSessions.id, sessionId)),

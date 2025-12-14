@@ -54,6 +54,8 @@ export async function GET() {
     try {
         const sessions = await db.select().from(chatSessions).orderBy(desc(chatSessions.updatedAt));
 
+        console.log(`[API] Fetched ${sessions.length} sessions`);
+
         return Response.json({ sessions });
     } catch (error) {
         return Response.json({ error: "Failed to fetch sessions" }, { status: 500 });
