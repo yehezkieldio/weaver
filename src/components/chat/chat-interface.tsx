@@ -1412,6 +1412,21 @@ function useChatLogic() {
             let finalSteps: AgentStep[] | undefined;
             let finalChunks: RetrievedChunk[] | undefined;
 
+            // **CRITICAL FIX**: For agentic mode, metadata may be undefined because
+            // chunks/steps are sent via custom data parts (data-retrieved-chunk, data-agent-step)
+            // not via messageMetadata. We MUST capture live data regardless of metadata presence.
+
+            // First, capture live data if we have it (this works for agentic mode)
+            if (currentLiveSteps.length > 0) {
+                finalSteps = [...currentLiveSteps];
+                setAgentSteps(currentLiveSteps);
+            }
+            if (currentLiveChunks.length > 0) {
+                finalChunks = [...currentLiveChunks];
+                setRetrievedChunks(currentLiveChunks);
+            }
+
+            // Then, if we have metadata, extract additional info and fallback to metadata values
             if (metadata) {
                 if (metadata.latencyMs) {
                     setLatencyMs(metadata.latencyMs);
@@ -1420,35 +1435,23 @@ function useChatLogic() {
                     setDetectedLanguage(metadata.language);
                 }
 
-                // Handle agentic metadata - use live steps if available, fallback to metadata
+                // Handle agentic metadata - fallback to metadata if no live data
                 if (metadata.type === "agentic") {
                     const agenticMeta = metadata as AgenticMetadata;
-                    // Prefer live steps if we have them (they have more detail)
-                    if (currentLiveSteps.length > 0) {
-                        finalSteps = currentLiveSteps;
-                        setAgentSteps(currentLiveSteps);
-                    } else if (agenticMeta.steps) {
+                    if (!finalSteps && agenticMeta.steps && agenticMeta.steps.length > 0) {
                         finalSteps = agenticMeta.steps;
                         setAgentSteps(agenticMeta.steps);
                     }
-
-                    // Prefer live chunks if we have them
-                    if (currentLiveChunks.length > 0) {
-                        finalChunks = currentLiveChunks;
-                        setRetrievedChunks(currentLiveChunks);
-                    } else if (agenticMeta.retrievedChunks) {
+                    if (!finalChunks && agenticMeta.retrievedChunks && agenticMeta.retrievedChunks.length > 0) {
                         finalChunks = agenticMeta.retrievedChunks;
                         setRetrievedChunks(agenticMeta.retrievedChunks);
                     }
                 }
 
-                // Handle standard RAG metadata
+                // Handle standard RAG metadata - fallback to metadata if no live data
                 if (metadata.type === "standard-rag") {
                     const ragMeta = metadata as StandardRagMetadata;
-                    if (currentLiveChunks.length > 0) {
-                        finalChunks = currentLiveChunks;
-                        setRetrievedChunks(currentLiveChunks);
-                    } else if (ragMeta.retrievedChunks) {
+                    if (!finalChunks && ragMeta.retrievedChunks && ragMeta.retrievedChunks.length > 0) {
                         finalChunks = ragMeta.retrievedChunks;
                         setRetrievedChunks(ragMeta.retrievedChunks);
                     }
@@ -1462,6 +1465,24 @@ function useChatLogic() {
                     steps: finalSteps,
                     chunks: finalChunks,
                 });
+
+                // **FIX**: Immediately update the messages array with persisted data
+                // This ensures the UI switches seamlessly from live→persisted data
+                // without any downtime where both are undefined
+                setMessages((prevMessages) =>
+                    prevMessages.map((msg) => {
+                        if (msg.id === message.id) {
+                            // Mark as enriched to avoid re-processing in useEffect
+                            enrichedMessagesRef.current.add(message.id);
+                            return {
+                                ...msg,
+                                persistedSteps: finalSteps,
+                                persistedChunks: finalChunks,
+                            } as MessageWithMetadata;
+                        }
+                        return msg;
+                    })
+                );
             }
 
             // Clear live state and progress after finish
