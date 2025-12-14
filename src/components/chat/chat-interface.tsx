@@ -9,6 +9,7 @@ import {
     AlertTriangle,
     Bot,
     Brain,
+    Bug,
     ChevronDown,
     ChevronRight,
     Clock,
@@ -864,6 +865,201 @@ const MessageList = memo(function MessageListComponent({
     );
 });
 
+function generateDummyMessage(
+    type: "user" | "assistant" | "agentic-streaming" | "rag" | "error",
+    messages: MessageWithMetadata[],
+    callbacks: {
+        setMessages: (msgs: MessageWithMetadata[]) => void;
+        setRetrievedChunks: (chunks: RetrievedChunk[]) => void;
+        setLiveAgentSteps: (steps: AgentStep[]) => void;
+        setLiveRetrievedChunks: (chunks: RetrievedChunk[]) => void;
+        setAgentProgress: (progress: AgentProgressDataPart | null) => void;
+        setAgentSteps: (steps: AgentStep[]) => void;
+        setError: (error: string | null) => void;
+    }
+) {
+    const messageId = `debug-${Date.now()}-${Math.random()}`;
+
+    switch (type) {
+        case "user": {
+            callbacks.setMessages([
+                ...messages,
+                {
+                    id: messageId,
+                    role: "user",
+                    parts: [{ type: "text", text: "This is a debug user message for testing UI." }],
+                },
+            ]);
+            break;
+        }
+
+        case "assistant": {
+            callbacks.setMessages([
+                ...messages,
+                {
+                    id: messageId,
+                    role: "assistant",
+                    parts: [
+                        {
+                            type: "text",
+                            text: "This is a **debug assistant message** with *markdown* formatting.\n\n- Bullet point 1\n- Bullet point 2\n\nAnd a code block:\n\n```typescript\nconst x = 42;\n```",
+                        },
+                    ],
+                },
+            ]);
+            break;
+        }
+
+        case "rag": {
+            const ragChunks: RetrievedChunk[] = [
+                {
+                    chunkId: "debug-chunk-1",
+                    documentTitle: "Debug Document A.pdf",
+                    content: "This is debug content from document A for testing RAG display.",
+                    similarity: 0.92,
+                    retrievalMethod: "hybrid",
+                    vectorScore: 0.89,
+                    bm25Score: 0.95,
+                },
+                {
+                    chunkId: "debug-chunk-2",
+                    documentTitle: "Debug Document B.pdf",
+                    content: "This is debug content from document B with medium relevance.",
+                    similarity: 0.67,
+                    retrievalMethod: "vector",
+                    vectorScore: 0.67,
+                },
+            ];
+            callbacks.setMessages([
+                ...messages,
+                {
+                    id: messageId,
+                    role: "assistant",
+                    parts: [
+                        {
+                            type: "text",
+                            text: "This is a debug RAG response that includes retrieved chunks from documents.",
+                        },
+                    ],
+                },
+            ]);
+            callbacks.setRetrievedChunks(ragChunks);
+            break;
+        }
+
+        case "agentic-streaming": {
+            const dummySteps: AgentStep[] = [
+                {
+                    stepIndex: 0,
+                    stepType: "retrieval",
+                    toolName: "search_documents",
+                    toolInput: { query: "debug query" },
+                    durationMs: 234,
+                    timestamp: Date.now() - 3000,
+                },
+                {
+                    stepIndex: 1,
+                    stepType: "tool_call",
+                    toolName: "analyze_context",
+                    toolInput: { context: "debug context" },
+                    toolOutput: "Analysis complete",
+                    durationMs: 456,
+                    timestamp: Date.now() - 2000,
+                },
+                {
+                    stepIndex: 2,
+                    stepType: "synthesis",
+                    toolName: "synthesize_response",
+                    durationMs: 678,
+                    timestamp: Date.now() - 1000,
+                },
+            ];
+            const dummyChunks: RetrievedChunk[] = [
+                {
+                    chunkId: "debug-stream-chunk-1",
+                    documentTitle: "Streaming Debug Doc.pdf",
+                    content: "Debug streaming chunk content.",
+                    similarity: 0.85,
+                    retrievalMethod: "hybrid",
+                    vectorScore: 0.82,
+                    bm25Score: 0.88,
+                },
+            ];
+            callbacks.setLiveAgentSteps(dummySteps);
+            callbacks.setLiveRetrievedChunks(dummyChunks);
+            callbacks.setAgentProgress({
+                status: "reasoning",
+                currentStep: 2,
+                maxSteps: 3,
+                message: "Debug: Processing agent reasoning...",
+            });
+            // Simulate streaming state
+            setTimeout(() => {
+                callbacks.setMessages([
+                    ...messages,
+                    {
+                        id: messageId,
+                        role: "assistant",
+                        parts: [
+                            {
+                                type: "text",
+                                text: "This is a debug agentic response after simulated streaming.",
+                            },
+                        ],
+                    },
+                ]);
+                callbacks.setAgentSteps(dummySteps);
+                callbacks.setRetrievedChunks(dummyChunks);
+                callbacks.setLiveAgentSteps([]);
+                callbacks.setLiveRetrievedChunks([]);
+                callbacks.setAgentProgress(null);
+            }, 3000);
+            break;
+        }
+
+        case "error": {
+            callbacks.setError("Debug error: This is a simulated error message for testing error display.");
+            setTimeout(() => callbacks.setError(null), 5000);
+            break;
+        }
+
+        default:
+            break;
+    }
+}
+
+const DebugPanel = memo(function DebugPanelComponent({
+    onAddDummyMessage,
+}: {
+    onAddDummyMessage: (type: "user" | "assistant" | "agentic-streaming" | "rag" | "error") => void;
+}) {
+    return (
+        <Card className="border-amber-500/50 bg-amber-500/5 p-3">
+            <div className="mb-2 flex items-center gap-2">
+                <Bug className="h-4 w-4 text-amber-600" />
+                <span className="font-medium text-amber-700 text-sm dark:text-amber-400">Debug Mode</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+                <Button onClick={() => onAddDummyMessage("user")} size="sm" variant="outline">
+                    Add User Message
+                </Button>
+                <Button onClick={() => onAddDummyMessage("assistant")} size="sm" variant="outline">
+                    Add Assistant Message
+                </Button>
+                <Button onClick={() => onAddDummyMessage("rag")} size="sm" variant="outline">
+                    Add RAG Message
+                </Button>
+                <Button onClick={() => onAddDummyMessage("agentic-streaming")} size="sm" variant="outline">
+                    Simulate Agentic Streaming
+                </Button>
+                <Button onClick={() => onAddDummyMessage("error")} size="sm" variant="outline">
+                    Trigger Error State
+                </Button>
+            </div>
+        </Card>
+    );
+});
+
 const SettingsPanel = memo(function SettingsPanelComponent({
     settings,
     setSettings,
@@ -1064,6 +1260,7 @@ function useChatLogic() {
     const [detectedLanguage, setDetectedLanguage] = useState<"id" | null>(null);
     const [input, setInput] = useState("");
     const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+    const [debugMode, setDebugMode] = useState(false);
 
     // Live streaming state (real-time updates during agentic RAG)
     const [liveAgentSteps, setLiveAgentSteps] = useState<AgentStep[]>([]);
@@ -1469,6 +1666,21 @@ function useChatLogic() {
         await saveEphemeralSession(session.id);
     }, [session?.id, session?.isEphemeral, saveEphemeralSession]);
 
+    const handleAddDummyMessage = useCallback(
+        (type: "user" | "assistant" | "agentic-streaming" | "rag" | "error") => {
+            generateDummyMessage(type, messages, {
+                setMessages,
+                setRetrievedChunks,
+                setLiveAgentSteps,
+                setLiveRetrievedChunks,
+                setAgentProgress,
+                setAgentSteps,
+                setError,
+            });
+        },
+        [messages, setMessages, setError]
+    );
+
     return {
         settings,
         setSettings,
@@ -1497,6 +1709,10 @@ function useChatLogic() {
         liveAgentSteps,
         liveRetrievedChunks,
         agentProgress,
+        // Debug mode
+        debugMode,
+        setDebugMode,
+        handleAddDummyMessage,
     };
 }
 
@@ -1529,18 +1745,33 @@ export function ChatInterface() {
         liveAgentSteps,
         liveRetrievedChunks,
         agentProgress,
+        // Debug mode
+        debugMode,
+        setDebugMode,
+        handleAddDummyMessage,
     } = useChatLogic();
 
     return (
         <div className="flex h-full flex-col overflow-hidden">
             <div className="flex shrink-0 flex-col gap-3 border-border border-b bg-card p-4">
-                <ChatHeader
-                    detectedLanguage={detectedLanguage}
-                    latencyMs={latencyMs}
-                    onSessionChange={handleSessionChange}
-                    settings={settings}
-                />
+                <div className="flex items-center justify-between">
+                    <ChatHeader
+                        detectedLanguage={detectedLanguage}
+                        latencyMs={latencyMs}
+                        onSessionChange={handleSessionChange}
+                        settings={settings}
+                    />
+                    <Button
+                        onClick={() => setDebugMode(!debugMode)}
+                        size="sm"
+                        title="Toggle debug mode"
+                        variant={debugMode ? "default" : "ghost"}
+                    >
+                        <Bug className="h-4 w-4" />
+                    </Button>
+                </div>
                 <SettingsPanel setSettings={setSettings} settings={settings} />
+                {debugMode && <DebugPanel onAddDummyMessage={handleAddDummyMessage} />}
             </div>
 
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
