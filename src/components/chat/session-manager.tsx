@@ -614,7 +614,7 @@ export const SessionSelector = memo(function SessionSelectorComponent({
                 <DropdownMenuTrigger asChild>
                     <Button className="gap-2" size="sm" variant="outline">
                         <MessageSquare className="h-4 w-4" />
-                        <span className="max-w-[150px] truncate">
+                        <span className="max-w-37.5 truncate">
                             {isLoadingSessions ? "Memuat..." : activeSession?.title || "Pilih Obrolan"}
                         </span>
                         <ChevronDown className="h-3 w-3" />
