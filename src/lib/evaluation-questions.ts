@@ -17,6 +17,7 @@
 export type EvaluationQuestion = {
     question: string;
     groundTruth: string;
+    relevantChunkIds?: string[]; // Ground truth chunk IDs for retrieval metrics
     category?: EvaluationCategory;
     difficulty?: "easy" | "medium" | "hard";
     language?: "id" | "en";

@@ -133,7 +133,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
                     contextResult.chunks.map((c) => c.content),
                     question.groundTruth,
                     contextResult.chunks.map((c) => c.chunkId), // retrievedIds
-                    undefined, // relevantIds - would need ground truth labels
+                    question.relevantChunkIds ? new Set(question.relevantChunkIds) : undefined, // relevantIds from ground truth labels
                     "akademik/universitas",
                     latencyTracker
                 );
@@ -150,6 +150,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
                         ragAnswer: ragResponse.text,
                         nonRagAnswer: nonRagResponse.text,
                         retrievedContexts: contextResult.chunks.map((c) => c.content),
+                        relevantChunkIds: question.relevantChunkIds || null,
                         // Core RAGAS metrics
                         ragFaithfulness: ragMetrics.faithfulness,
                         ragAnswerRelevancy: ragMetrics.answerRelevancy,

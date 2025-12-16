@@ -298,6 +298,7 @@ export const evaluationQuestions = pgTable("evaluation_questions", {
     ragAnswer: text("rag_answer"),
     nonRagAnswer: text("non_rag_answer"),
     retrievedContexts: jsonb("retrieved_contexts").$type<string[]>(),
+    relevantChunkIds: jsonb("relevant_chunk_ids").$type<string[]>(),
 
     // Core RAGAS metrics
     ragFaithfulness: real("rag_faithfulness"),
