@@ -620,11 +620,29 @@ function buildResults(
 }
 
 /**
+ * UUID v4 validation regex pattern
+ * Matches standard UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+ */
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Check if a string is a valid UUID format
+ * Prevents PostgreSQL "invalid input syntax for type uuid" errors
+ */
+function isValidUUID(value: string): boolean {
+    return UUID_REGEX.test(value);
+}
+
+/**
  * Expand retrieval results with parent chunk context
  *
  * OPTIMIZATION: For hierarchically-chunked documents, child chunks may lack
  * sufficient context. This function looks up parent chunks and appends their
  * content as additional context, improving answer quality for structured docs.
+ *
+ * NOTE: Parent chunk IDs from hierarchical chunking may be internal references
+ * (like "parent_123") rather than actual database UUIDs. These are skipped
+ * since they don't correspond to actual database records.
  *
  * @param results - Initial retrieval results
  * @returns Results with expanded context from parent chunks
@@ -638,6 +656,15 @@ async function expandToParentContext(results: RetrievalResult[]): Promise<Retrie
         const parentChunkId = metadata?.parentChunkId;
 
         if (parentChunkId) {
+            // Validate that parentChunkId is a valid UUID before querying database
+            // Hierarchical chunking creates internal references like "parent_123" which
+            // are NOT valid UUIDs and would cause PostgreSQL errors
+            if (!isValidUUID(parentChunkId)) {
+                // Skip database lookup for non-UUID parent references
+                expandedResults.push(result);
+                continue;
+            }
+
             // Fetch parent chunk content
             try {
                 const [parentChunk] = await db
