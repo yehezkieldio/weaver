@@ -1,5 +1,5 @@
 /**
- * @fileoverview Document Chunking Strategies for Academic Content
+ * @fileoverview Document Chunking Strategies for University Content
  *
  * WHY Chunking Matters:
  * - LLMs have token limits (can't process full documents)

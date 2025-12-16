@@ -1,18 +1,27 @@
 /**
- * @fileoverview University Domain-Specific Processing for Indonesian University Information
+ * @fileoverview University Domain-Specific Processing for Indonesian University Information System
  *
  * WHY This Module:
- * - PRIMARY DOMAIN: General university information (guides, regulations, procedures, faculty, programs, facilities)
- * - SECONDARY: Academic documents (thesis, RPS) are part of the broader university information ecosystem
- * - Indonesian university documents have unique structure and terminology
- * - Domain-specific processing improves retrieval accuracy for university-specific queries
- * - Document type detection enables specialized chunking strategies
+ * This is the core domain intelligence layer for an Indonesian university information chatbot.
+ * It enables accurate understanding and processing of the full spectrum of university content,
+ * from administrative procedures to academic regulations to research documents.
+ *
+ * - PRIMARY DOMAIN: Comprehensive university information ecosystem
+ *   - Administrative guides, regulations, and procedures
+ *   - Academic policies, curriculum, and course information
+ *   - Student services, facilities, and campus resources
+ *   - Faculty information, research, and publications
+ * - SECONDARY: Traditional academic documents (thesis, dissertations, RPS) as specialized subset
+ * - Domain-specific processing significantly improves retrieval accuracy for Indonesian university queries
+ * - Document type detection enables specialized chunking and retrieval strategies
  *
  * WHY Indonesian-Specific:
+ * Indonesian university documents have unique structural and linguistic patterns:
  * - Numbered chapters use Roman numerals: "BAB I PENDAHULUAN"
  * - Unique document types: RPS (Rencana Pembelajaran Semester), buku pedoman, peraturan
- * - Indonesian synonym patterns (prosedur ≈ tata cara ≈ mekanisme)
- * - Administrative codes and patterns (NIM, NIP, SK, UKT)
+ * - Indonesian synonym patterns (prosedur ≈ tata cara ≈ mekanisme ≈ alur)
+ * - Administrative codes and patterns (NIM, NIP, SK, UKT, SNBP, SNBT)
+ * - Mixed Indonesian-English academic terminology
  *
  * Supported Document Categories (12 domains, 50+ document types):
  * 1. Informasi Akademik: CPL, kurikulum, kalender akademik, KRS/KHS, IP/IPK

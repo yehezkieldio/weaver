@@ -45,7 +45,7 @@ import type { RerankerStrategy } from "./reranker";
  *
  * Metric Categories:
  * 1. **Core RAGAS** (standard RAG evaluation)
- * 2. **Domain-Specific** (Indonesian academic context)
+ * 2. **Domain-Specific** (Indonesian university context)
  * 3. **Hallucination Detection** (critical for academic trust)
  * 4. **Retrieval Quality** (how good is document selection?)
  * 5. **Efficiency** (latency, throughput, cost)
@@ -85,7 +85,7 @@ export interface EvaluationMetrics {
     contextPrecision: number;
     contextRecall: number;
     answerCorrectness: number;
-    // Domain-specific metrics (Indonesian academic)
+    // Domain-specific metrics (Indonesian university information)
     academicRigor: number;
     citationAccuracy: number;
     terminologyCorrectness: number;

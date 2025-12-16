@@ -2,19 +2,25 @@
  * @fileoverview Agentic RAG (Retrieval-Augmented Generation) Pipeline
  *
  * WHY Agentic Mode:
- * - Multi-step reasoning: Breaks down complex academic queries into manageable sub-questions
+ * - Multi-step reasoning: Breaks down complex university queries into manageable sub-questions
  * - Tool-based retrieval: Uses specialized tools (search, query expansion, decomposition, verification)
  * - Self-correcting: Can refine searches and verify claims against sources
- * - Better for complex queries: Research questions, multi-part questions, fact-checking scenarios
+ * - Better for complex queries: Procedural questions, multi-part inquiries, fact-checking scenarios
  *
  * WHY vs Standard RAG:
  * - Standard RAG: Single retrieval → generation (fast, good for simple queries)
  * - Agentic RAG: Planning → Multi-step retrieval → Tool execution → Synthesis (thorough, better accuracy)
  *
  * Research Context:
- * This implementation is designed for Indonesian academic content (skripsi, tesis, lecture notes).
+ * This implementation is designed for Indonesian university information systems, covering:
+ * - Administrative procedures and regulations
+ * - Academic policies, curriculum, and course information
+ * - Student services, facilities, and campus resources
+ * - Research documents (thesis, dissertations, papers) as a specialized subset
+ *
  * The agentic approach significantly improves answer quality for multi-hop questions common in
- * academic research while maintaining citation accuracy and reducing hallucinations.
+ * university contexts (e.g., "What are the steps to apply for cuti akademik and what documents
+ * are needed?") while maintaining citation accuracy and reducing hallucinations.
  *
  * Key Features:
  * - Parallel tool execution for efficiency (avoid sequential bottleneck)

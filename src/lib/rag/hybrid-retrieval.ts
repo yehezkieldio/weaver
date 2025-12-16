@@ -77,16 +77,20 @@ export interface RetrievalResult {
  * - strategy: Allows ablation testing (vector-only vs keyword-only vs hybrid)
  * - rrfK: RRF hyperparameter (k=60 is standard from literature, lower = more aggressive fusion)
  * - vectorWeight/bm25Weight: Weighted fusion alternative to RRF (for manual tuning)
+ * - qualityWeight: Boost high-quality chunks in ranking (structural importance, citations)
  * - language: Indonesian stemming and stopwords significantly improve BM25 accuracy
+ * - useContextExpansion: Fetch parent chunks for deeper context in hierarchical docs
  * - reranker*: Second-stage reranking improves precision with minimal latency cost
  *
  * @property topK - Number of results to return (default: 10)
  * @property minScore - Minimum fused score threshold (default: 0.01)
  * @property vectorWeight - Weight for vector similarity in fusion (default: 0.6)
  * @property bm25Weight - Weight for BM25 score in fusion (default: 0.4)
+ * @property qualityWeight - Weight for chunk quality score boost, 0-1 (default: 0.15)
  * @property strategy - Retrieval strategy: "vector", "keyword", or "hybrid" (default: "hybrid")
  * @property rrfK - RRF k parameter for rank fusion (default: 60)
  * @property language - Language for tokenization: "en", "id", or "auto" (default: "auto")
+ * @property useContextExpansion - Expand to parent chunks when available (default: true)
  * @property useReranker - Enable second-stage reranking (default: true)
  * @property rerankerStrategy - Reranking method (default: "cross_encoder")
  * @property rerankerTopK - Number of results to rerank (default: 5)
@@ -115,19 +119,21 @@ export interface ExtractKeywordsOptions {
 }
 
 /**
- * Default retrieval configuration optimized for Indonesian academic content
+ * Default retrieval configuration optimized for Indonesian university information
  *
  * WHY These Defaults:
- * - topK=10: Empirically optimal for academic queries (balances recall vs precision)
+ * - topK=10: Empirically optimal for university queries (balances recall vs precision)
  * - minScore=0.01: Very permissive threshold (filtering happens in reranking)
  * - vectorWeight=0.6, bm25Weight=0.4: Vector preferred for semantic understanding
+ * - qualityWeight=0.15: 15% boost for high-quality chunks (citations, key sections)
  * - strategy="hybrid": Best performance across query types (factual + conceptual)
  * - rrfK=60: Standard RRF constant from "Reciprocal Rank Fusion" paper
  * - language="auto": Automatic detection works well for mixed-language corpora
+ * - useContextExpansion=true: Enable hierarchical parent-child context by default
  * - useReranker=true: Cross-encoder reranking adds 15-20% accuracy for <100ms latency
  * - rerankerStrategy="cross_encoder": Fast TinyBERT model (100ms) vs LLM (3-5s)
  * - rerankerTopK=5: Rerank top candidates only (computational efficiency)
- * - rerankerMinScore=0.3: Empirical threshold for academic relevance
+ * - rerankerMinScore=0.3: Empirical threshold for relevance
  */
 const DEFAULT_OPTIONS: Required<HybridRetrievalOptions> = {
     topK: 10,

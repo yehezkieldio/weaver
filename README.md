@@ -1,51 +1,205 @@
-Codebase ini adalah bagian dari proyek yang akan jadi publikasi ilmiah kami dengan rincian sebagai berikut:
+Dibawah adalah diagram Entity-Relationship Diagram (ERD) untuk skema database yang digunakan dalam proyek ini. Ia mengilustrasikan hubungan antara entitas berbeda, atribut mereka, dan bagaimana mereka berinteraksi satu sama lain.
 
-Judul Publikasi:
+```mermaid
+erDiagram
+    chat_sessions ||--o{ chat_messages : "has"
+    chat_sessions ||--o{ agent_steps : "contains"
+    chat_sessions ||--o{ guardrail_logs : "tracks"
 
-"Implementasi Agentic Retrieval-Augmented Generation (RAG) untuk Otomatisasi Layanan Mahasiswa di Universitas Mulia"
+    documents ||--o{ document_chunks : "split into"
+    documents ||--|| document_processing_progress : "has"
 
-Jenis Penelitian:
+    evaluation_runs ||--o{ evaluation_questions : "contains"
+    evaluation_runs ||--o{ statistical_analyses : "analyzed by"
 
-Penelitian Eksperimental Terapan
+    evaluation_questions ||--o{ human_annotations : "annotated by"
 
-Keterbatasan Solusi Lama:
+    ablation_studies ||--o{ statistical_analyses : "analyzed by"
 
-Retrieval-Augmented Generation (RAG) standar sering melewatkan kata kunci spesifik, sementara pencarian keyword biasa gagal memahami konteks semantik.
+    chat_sessions {
+        uuid id PK
+        text title
+        boolean use_rag
+        boolean use_agentic_mode
+        text retrieval_strategy
+        timestamp created_at
+        timestamp updated_at
+    }
 
-Metodologi Penelitian:
+    chat_messages {
+        uuid id PK
+        uuid session_id FK
+        text role
+        text content
+        jsonb retrieved_chunks
+        boolean rag_enabled
+        boolean agentic_mode
+        integer agent_steps_count
+        jsonb guardrails_triggered
+        integer latency_ms
+        integer token_count
+        timestamp created_at
+    }
 
-Penelitian ini adalah penelitian Research and Development (R&D) dan Rapid Application Development
+    agent_steps {
+        uuid id PK
+        uuid session_id FK
+        uuid message_id
+        integer step_index
+        text step_type
+        text tool_name
+        jsonb tool_input
+        jsonb tool_output
+        text reasoning
+        integer duration_ms
+        timestamp created_at
+    }
 
-Penelitian ini menggunakan pendekatan kuantitatif melalui Ablation Study (Studi Ablasi) otomatis. Studi Ablasi itu metode untuk memahami kinerja sistem dengan menghapus atau memodifikasi komponen tertentu secara sistematis untuk melihat dampaknya terhadap kinerja keseluruhan.
+    documents {
+        uuid id PK
+        text title
+        text file_name
+        text file_type
+        integer file_size
+        text content
+        jsonb metadata
+        text processing_status
+        text processing_error
+        text chunking_strategy
+        text last_successful_stage
+        jsonb processing_artifacts
+        timestamp created_at
+        timestamp updated_at
+    }
 
-Penelitian ini menerapkan metode Research and Development (R&D) dengan pendekatan pengembangan perangkat lunak Rapid Application Development (RAD). Pemilihan RAD didasari oleh kebutuhan iterasi cepat dalam menyempurnakan pipeline retrieval dan prompt engineering pada arsitektur Agentic RAG.
+    document_chunks {
+        uuid id PK
+        uuid document_id FK
+        text content
+        integer chunk_index
+        integer start_offset
+        integer end_offset
+        jsonb metadata
+        vector embedding
+        text[] keywords
+        timestamp created_at
+    }
 
-Isu Utama:
+    document_processing_progress {
+        uuid id PK
+        uuid document_id FK
+        text stage
+        integer progress
+        text message
+        integer estimated_time_ms
+        jsonb stage_progress
+        timestamp started_at
+        timestamp updated_at
+    }
 
-Chatbot domain spesifik seperti akademik tradisional dan LLM standar sering mengalami halusinasi dan gagal menjawab pertanyaan spesifik konteks lokal domain seperti aturan KRS, dll.
+    evaluation_runs {
+        uuid id PK
+        text name
+        text description
+        text status
+        integer total_questions
+        integer completed_questions
+        text retrieval_strategy
+        text chunking_strategy
+        boolean use_agentic_mode
+        timestamp created_at
+        timestamp completed_at
+    }
 
-Model Hosting: Microsoft Azure OpenAI
+    evaluation_questions {
+        uuid id PK
+        uuid run_id FK
+        text question
+        text ground_truth
+        text rag_answer
+        text non_rag_answer
+        jsonb retrieved_contexts
+        jsonb relevant_chunk_ids
+        real rag_faithfulness
+        real rag_answer_relevancy
+        real rag_context_precision
+        real rag_context_recall
+        real rag_answer_correctness
+        real non_rag_answer_relevancy
+        real non_rag_answer_correctness
+        real rag_academic_rigor
+        real rag_citation_accuracy
+        real rag_terminology_correctness
+        real rag_hallucination_rate
+        real rag_factual_consistency
+        real rag_source_attribution
+        real rag_contradiction_score
+        real non_rag_hallucination_rate
+        real retrieval_ndcg
+        real retrieval_mrr
+        real retrieval_precision
+        text retrieval_method
+        text reranker_strategy
+        integer agent_steps_used
+        integer guardrails_triggered
+        integer rag_latency_ms
+        integer non_rag_latency_ms
+        integer rag_retrieval_latency_ms
+        integer rag_reranking_latency_ms
+        integer rag_generation_latency_ms
+        integer rag_agent_reasoning_latency_ms
+        integer rag_tool_call_latency_ms
+        real rag_tokens_per_second
+        timestamp created_at
+    }
 
-Model Chat: gpt-4.1-mini
+    human_annotations {
+        uuid id PK
+        uuid evaluation_question_id FK
+        text annotator_id
+        integer faithfulness_rating
+        integer relevancy_rating
+        integer correctness_rating
+        boolean has_hallucination
+        text hallucination_notes
+        integer overall_quality
+        integer annotation_time_ms
+        text notes
+        timestamp created_at
+    }
 
-Model Evaluasi: gpt-4.1-mini
+    guardrail_logs {
+        uuid id PK
+        uuid session_id FK
+        uuid message_id
+        text guardrail_type
+        boolean triggered
+        text severity
+        jsonb details
+        timestamp created_at
+    }
 
-Model Embedding: text-embedding-3-small
+    ablation_studies {
+        uuid id PK
+        text name
+        text description
+        text status
+        jsonb configurations
+        jsonb results
+        text report
+        timestamp created_at
+        timestamp completed_at
+    }
 
-Penelitian ini menggunakan model Microsoft Azure OpenAI GPT-4.1-mini baik sebagai mesin inferensi utama (Chatbot) maupun sebagai evaluator (LLM-as-a-Judge). Pemilihan model ini didasarkan pada dua faktor utama:
-
-1. Kapabilitas Model: GPT-4.1-mini memiliki kemampuan penalaran dan 'instruction following' yang setara atau melebihi model generasi sebelumnya (GPT-4o), menjadikannya evaluator yang kompeten untuk domain akademik.
-2. Konsistensi Eksperimen: Menggunakan model yang sama untuk generasi dan evaluasi meminimalisir variabilitas arsitektur, sehingga metrik yang dihasilkan (seperti Faithfulness dan Answer Relevancy) secara akurat mencerminkan peningkatan kinerja yang dihasilkan oleh arsitektur Agentic RAG, bukan perbedaan kemampuan model.
-
-Evaluasi dilakukan menggunakan pendekatan LLM-as-a-Judge (RAGAS) dengan model yang sama untuk sistem dan evaluator. Pendekatan ini dipilih untuk menjaga konsistensi lingkungan eksperimen dan efisiensi komputasi. Untuk memitigasi bias preferensi diri (Self-Preference Bias), penelitian ini berfokus pada pengukuran peningkatan relatif (relative gain) antar konfigurasi ablasi (misalnya: dampak penambahan komponen Agentic terhadap baseline), daripada berfokus pada nilai absolut skor metrik.
-
-Penelitian ini menggunakan model dan layanan Microsoft Azure OpenAI karena lingkungan cloud menyediakan konsistensi kinerja, skalabilitas, serta konfigurasi model yang terstandarisasi untuk keperluan eksperimen terkontrol. Penggunaan model-model melalui Azure memungkinkan replikasi hasil karena versi model, parameter, dan pipeline inferensi berada pada lingkungan eksekusi yang stabil dan terdokumentasi. Pendekatan ini juga menghilangkan variasi performa yang dapat muncul pada deployment lokal, seperti perbedaan hardware atau optimisasi runtime, sehingga seluruh perbandingan antar konfigurasi pada Studi Ablasi dapat berjalan secara adil dan bebas bias teknis.
-
-
----
-
-index these too
-
-[docs/masterreport/](docs/masterreport/)
-[docs/academic/](docs/academic/)
-[docs/imrad](docs/imrad/])
+    statistical_analyses {
+        uuid id PK
+        uuid evaluation_run_id FK
+        uuid ablation_study_id FK
+        text analysis_type
+        text metric_name
+        jsonb results
+        text report_en
+        text report_id
+        timestamp created_at
+    }
+```

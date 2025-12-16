@@ -4,14 +4,14 @@
  * WHY This Module:
  * - Bridges retrieval and generation stages
  * - Accurate token counting prevents context overflow
- * - Domain-specific prompt engineering (Indonesian academic)
+ * - Domain-specific prompt engineering (Indonesian university information)
  * - Structured context formatting for better LLM comprehension
  *
  * WHY Prompt Engineering Matters:
  * - Research shows prompt quality impacts answer accuracy by 20-40%
  * - System prompts guide LLM behavior (citation style, depth, language)
  * - Context formatting affects how well LLM uses retrieved information
- * - Indonesian academic context requires specific instructions
+ * - Indonesian university context requires specific instructions
  *
  * Key Features:
  * - Accurate token counting with gpt-tokenizer (not naive whitespace split)
