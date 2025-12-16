@@ -240,7 +240,7 @@ export interface AblationConfig {
     description: string;
     useRag: boolean;
     useReranker: boolean;
-    rerankerStrategy?: string;
+    rerankerStrategy?: RerankerStrategy;
     retrievalStrategy: "vector" | "keyword" | "hybrid";
     chunkingStrategy: "recursive" | "semantic" | "sentence_window" | "hierarchical";
     useAgenticMode: boolean;
@@ -889,45 +889,6 @@ export const ABLATION_CONFIGS: AblationConfig[] = [
         rerankerStrategy: "ensemble",
         retrievalStrategy: "hybrid",
         chunkingStrategy: "recursive",
-        useAgenticMode: false,
-        useGuardrails: false,
-        topK: 5,
-        language: "auto",
-    },
-    {
-        name: "semantic_chunking",
-        description: "Semantic chunking strategy",
-        useRag: true,
-        useReranker: true,
-        rerankerStrategy: "ensemble",
-        retrievalStrategy: "hybrid",
-        chunkingStrategy: "semantic",
-        useAgenticMode: false,
-        useGuardrails: false,
-        topK: 5,
-        language: "auto",
-    },
-    {
-        name: "sentence_window",
-        description: "Sentence window chunking",
-        useRag: true,
-        useReranker: true,
-        rerankerStrategy: "ensemble",
-        retrievalStrategy: "hybrid",
-        chunkingStrategy: "sentence_window",
-        useAgenticMode: false,
-        useGuardrails: false,
-        topK: 5,
-        language: "auto",
-    },
-    {
-        name: "hierarchical_chunking",
-        description: "Hierarchical parent-child chunking",
-        useRag: true,
-        useReranker: true,
-        rerankerStrategy: "ensemble",
-        retrievalStrategy: "hybrid",
-        chunkingStrategy: "hierarchical",
         useAgenticMode: false,
         useGuardrails: false,
         topK: 5,
