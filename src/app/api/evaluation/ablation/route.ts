@@ -80,24 +80,30 @@ export async function POST(request: Request) {
     try {
         const body = await request.json().catch(() => ({}));
         const {
-            questions: providedQuestions = [],
             configs: providedConfigs,
             name: studyName,
             description: studyDescription,
+            evaluationMode = "quick" as "quick" | "production",
         } = body;
+
+        // Determine question count based on mode
+        // QUICK MODE: 5 questions for fast iteration and development testing
+        // PRODUCTION MODE: 50 questions for statistical significance and academic publication
+        const questionCount = evaluationMode === "quick" ? 5 : 50;
 
         // Parse configs - use provided or default to first 5 for faster testing
         const configs: AblationConfig[] = providedConfigs || ABLATION_CONFIGS.slice(0, 5);
 
-        // Always use predefined questions for statistical significance (force 50-question bank)
-        // Ignoring provided questions or DB fallback — predefined `ACADEMIC_QUESTIONS` is the single source of truth for experiments
-        const testQuestions: { question: string; groundTruth: string }[] = ACADEMIC_QUESTIONS.map((q) => ({
+        // Use predefined questions based on evaluation mode
+        // predefined `ACADEMIC_QUESTIONS` is the single source of truth for experiments
+        const selectedQuestions = ACADEMIC_QUESTIONS.slice(0, questionCount);
+        const testQuestions: { question: string; groundTruth: string }[] = selectedQuestions.map((q) => ({
             question: q.question,
             groundTruth: q.groundTruth,
         }));
 
         console.log(
-            `[POST /api/evaluation/ablation] Forced to use ${testQuestions.length} predefined questions for ablation study`
+            `[POST /api/evaluation/ablation] Using ${testQuestions.length} predefined questions for ablation study (${evaluationMode} mode)`
         );
 
         console.log(

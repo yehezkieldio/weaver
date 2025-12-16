@@ -17,6 +17,7 @@ import {
     Play,
     Plus,
     RefreshCw,
+    Rocket,
     Shield,
     Target,
     TrendingDown,
@@ -134,13 +135,21 @@ export function EvaluationDashboard() {
 
     const runs: EvaluationRun[] = Array.isArray(runsData) ? runsData : [];
 
-    const runEvaluation = async (id: string) => {
-        await fetch(`/api/evaluation/${id}/run`, { method: "POST" });
+    const runEvaluation = async (id: string, mode: "quick" | "production" = "quick") => {
+        await fetch(`/api/evaluation/${id}/run`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ evaluationMode: mode }),
+        });
         mutateRuns();
     };
 
-    const runAblationStudy = async () => {
-        await fetch("/api/evaluation/ablation", { method: "POST" });
+    const runAblationStudy = async (mode: "quick" | "production" = "quick") => {
+        await fetch("/api/evaluation/ablation", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ evaluationMode: mode }),
+        });
         mutateAblation();
     };
 
@@ -416,9 +425,16 @@ interface AblationData {
     }>;
 }
 
-function AblationStudiesView({ data, onRunStudy }: { data: AblationData | undefined; onRunStudy: () => void }) {
+function AblationStudiesView({
+    data,
+    onRunStudy,
+}: {
+    data: AblationData | undefined;
+    onRunStudy: (mode: "quick" | "production") => void;
+}) {
     const studies = data?.studies || [];
     const latestStudy = studies[0];
+    const [ablationMode, setAblationMode] = useState<"quick" | "production">("quick");
 
     return (
         <div className="space-y-6">
@@ -429,11 +445,67 @@ function AblationStudiesView({ data, onRunStudy }: { data: AblationData | undefi
                         Bandingkan performa berbagai konfigurasi RAG untuk menemukan kombinasi optimal
                     </p>
                 </div>
-                <Button className="gap-2" onClick={onRunStudy}>
-                    <FlaskConical className="h-4 w-4" />
-                    Jalankan Studi Ablasi
-                </Button>
             </div>
+
+            {/* Mode Selection */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-lg">Mode Evaluasi</CardTitle>
+                    <CardDescription>Pilih jumlah pertanyaan untuk studi ablasi</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid grid-cols-2 gap-4">
+                        <button
+                            className={`cursor-pointer rounded-lg border-2 p-4 text-left transition-all ${
+                                ablationMode === "quick"
+                                    ? "border-primary bg-primary/5"
+                                    : "border-border hover:border-primary/50"
+                            }`}
+                            onClick={() => setAblationMode("quick")}
+                            type="button"
+                        >
+                            <div className="flex items-center gap-2">
+                                <FlaskConical className="h-5 w-5 text-amber-500" />
+                                <span className="font-semibold">Quick Mode</span>
+                                <Badge className="ml-auto" variant="secondary">
+                                    5 Pertanyaan
+                                </Badge>
+                            </div>
+                            <p className="mt-2 text-muted-foreground text-xs">
+                                Studi ablasi cepat untuk pengujian awal dan iterasi development. Cocok untuk validasi
+                                konfigurasi sebelum studi penuh.
+                            </p>
+                        </button>
+                        <button
+                            className={`cursor-pointer rounded-lg border-2 p-4 text-left transition-all ${
+                                ablationMode === "production"
+                                    ? "border-primary bg-primary/5"
+                                    : "border-border hover:border-primary/50"
+                            }`}
+                            onClick={() => setAblationMode("production")}
+                            type="button"
+                        >
+                            <div className="flex items-center gap-2">
+                                <Rocket className="h-5 w-5 text-green-500" />
+                                <span className="font-semibold">Production Mode</span>
+                                <Badge className="ml-auto" variant="default">
+                                    50 Pertanyaan
+                                </Badge>
+                            </div>
+                            <p className="mt-2 text-muted-foreground text-xs">
+                                Studi ablasi lengkap untuk signifikansi statistik dan publikasi akademik. Mendukung
+                                paired t-test, ANOVA, dan effect size.
+                            </p>
+                        </button>
+                    </div>
+                    <div className="mt-4 flex justify-end">
+                        <Button className="gap-2" onClick={() => onRunStudy(ablationMode)}>
+                            <FlaskConical className="h-4 w-4" />
+                            Jalankan Studi Ablasi ({ablationMode === "quick" ? "5" : "50"} Pertanyaan)
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
 
             {/* Ablation Configurations */}
             <Card>
@@ -525,9 +597,9 @@ function AblationStudiesView({ data, onRunStudy }: { data: AblationData | undefi
                     <FlaskConical className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
                     <h3 className="mb-2 font-medium text-lg">Belum Ada Studi Ablasi</h3>
                     <p className="mb-4 text-muted-foreground">
-                        Jalankan studi ablasi untuk membandingkan performa berbagai konfigurasi RAG
+                        Pilih mode evaluasi di atas dan jalankan studi ablasi untuk membandingkan performa berbagai
+                        konfigurasi RAG
                     </p>
-                    <Button onClick={onRunStudy}>Mulai Studi Ablasi</Button>
                 </Card>
             )}
         </div>

@@ -67,21 +67,35 @@ import {
  * @returns JSON response with completion status and question count
  * @throws Error - When evaluation execution fails, updates run status to \"failed\"
  */
-export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const { id } = await params;
 
-        console.log(`[Evaluation Run] Starting evaluation run: ${id}`);
+        // Parse request body to get evaluation mode
+        const body = await request.json().catch(() => ({}));
+        const evaluationMode: "quick" | "production" = body.evaluationMode || "quick";
+
+        // Determine question count based on mode
+        // QUICK MODE: 5 questions for fast iteration and development testing
+        // PRODUCTION MODE: 50 questions for statistical significance and academic publication
+        const questionCount = evaluationMode === "quick" ? 5 : 50;
+
+        console.log(
+            `[Evaluation Run] Starting evaluation run: ${id} (mode: ${evaluationMode}, questions: ${questionCount})`
+        );
 
         // Update run status
         await db.update(evaluationRuns).set({ status: "running" }).where(eq(evaluationRuns.id, id));
 
-        // Seed this run with the predefined ACADEMIC_QUESTIONS (force 50-question bank)
+        // Seed this run with the predefined ACADEMIC_QUESTIONS based on mode
         // Delete any previous questions for the run and insert the canonical set so downstream analysis is consistent
         await db.delete(evaluationQuestions).where(eq(evaluationQuestions.runId, id));
 
+        // Select first N questions based on evaluation mode
+        const selectedQuestions = ACADEMIC_QUESTIONS.slice(0, questionCount);
+
         const insertedQuestions: (typeof evaluationQuestions.$inferSelect)[] = [];
-        for (const q of ACADEMIC_QUESTIONS) {
+        for (const q of selectedQuestions) {
             const [inserted] = await db
                 .insert(evaluationQuestions)
                 .values({
@@ -102,7 +116,9 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
 
         const questions = insertedQuestions;
 
-        console.log(`[Evaluation Run] Seeded run ${id} with ${questions.length} predefined questions`);
+        console.log(
+            `[Evaluation Run] Seeded run ${id} with ${questions.length} predefined questions (${evaluationMode} mode)`
+        );
 
         console.log(`[Evaluation Run] Processing ${questions.length} questions`);
 

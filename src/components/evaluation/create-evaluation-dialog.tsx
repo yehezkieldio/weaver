@@ -1,8 +1,22 @@
 "use client";
 
-import { Brain, Globe, Layers, Loader2, Plus, RefreshCw, Shield, Trash2, Upload, Zap } from "lucide-react";
+import {
+    Brain,
+    FlaskConical,
+    Globe,
+    Layers,
+    Loader2,
+    Plus,
+    RefreshCw,
+    Rocket,
+    Shield,
+    Trash2,
+    Upload,
+    Zap,
+} from "lucide-react";
 import { type SetStateAction, useId, useState } from "react";
 import { ImportQuestionsDialog } from "@/components/evaluation/import-questions-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -19,6 +33,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { SAMPLE_QUESTIONS_ID } from "@/lib/evaluation-questions";
+
+type EvaluationMode = "quick" | "production";
 
 interface Question {
     question: string;
@@ -44,6 +60,7 @@ export function CreateEvaluationDialog({ open, onOpenChange, onCreated }: Create
     const [useReranker, setUseReranker] = useState(true);
     const [rerankerStrategy, setRerankerStrategy] = useState<string>("ensemble");
     const [language, setLanguage] = useState<string>("id");
+    const [evaluationMode, setEvaluationMode] = useState<EvaluationMode>("quick");
     const [showImportDialog, setShowImportDialog] = useState(false);
     const [createdRunId, setCreatedRunId] = useState<string | null>(null);
 
@@ -82,6 +99,7 @@ export function CreateEvaluationDialog({ open, onOpenChange, onCreated }: Create
                     useReranker,
                     rerankerStrategy,
                     language,
+                    evaluationMode,
                 }),
             });
 
@@ -137,6 +155,55 @@ export function CreateEvaluationDialog({ open, onOpenChange, onCreated }: Create
                             value={description}
                         />
                     </div>
+
+                    {/* Evaluation Mode Selection */}
+                    <Card className="space-y-4 p-4">
+                        <h4 className="font-medium text-sm">Mode Evaluasi</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                            <button
+                                className={`cursor-pointer rounded-lg border-2 p-4 text-left transition-all ${
+                                    evaluationMode === "quick"
+                                        ? "border-primary bg-primary/5"
+                                        : "border-border hover:border-primary/50"
+                                }`}
+                                onClick={() => setEvaluationMode("quick")}
+                                type="button"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <FlaskConical className="h-5 w-5 text-amber-500" />
+                                    <span className="font-semibold">Quick Mode</span>
+                                    <Badge className="ml-auto" variant="secondary">
+                                        5 Pertanyaan
+                                    </Badge>
+                                </div>
+                                <p className="mt-2 text-muted-foreground text-xs">
+                                    Evaluasi cepat untuk pengujian awal dan iterasi development. Cocok untuk validasi
+                                    konfigurasi sebelum evaluasi penuh.
+                                </p>
+                            </button>
+                            <button
+                                className={`cursor-pointer rounded-lg border-2 p-4 text-left transition-all ${
+                                    evaluationMode === "production"
+                                        ? "border-primary bg-primary/5"
+                                        : "border-border hover:border-primary/50"
+                                }`}
+                                onClick={() => setEvaluationMode("production")}
+                                type="button"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <Rocket className="h-5 w-5 text-green-500" />
+                                    <span className="font-semibold">Production Mode</span>
+                                    <Badge className="ml-auto" variant="default">
+                                        50 Pertanyaan
+                                    </Badge>
+                                </div>
+                                <p className="mt-2 text-muted-foreground text-xs">
+                                    Evaluasi lengkap untuk signifikansi statistik dan publikasi akademik. Mendukung
+                                    Paired t-test, One-way ANOVA, dan perhitungan effect size.
+                                </p>
+                            </button>
+                        </div>
+                    </Card>
 
                     <Card className="space-y-4 p-4">
                         <h4 className="font-medium text-sm">Konfigurasi RAG</h4>
