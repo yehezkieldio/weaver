@@ -19,7 +19,7 @@
 
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { ablationStudies, evaluationQuestions as evaluationQuestionsTable } from "@/lib/db/schema";
+import { ablationStudies } from "@/lib/db/schema";
 import { ACADEMIC_QUESTIONS } from "@/lib/evaluation-questions";
 import { ABLATION_CONFIGS, type AblationConfig, generateAblationReport, runAblationStudy } from "@/lib/rag/evaluation";
 
@@ -89,32 +89,16 @@ export async function POST(request: Request) {
         // Parse configs - use provided or default to first 5 for faster testing
         const configs: AblationConfig[] = providedConfigs || ABLATION_CONFIGS.slice(0, 5);
 
-        // Get questions from various sources
-        let testQuestions: { question: string; groundTruth: string }[] = [];
+        // Always use predefined questions for statistical significance (force 50-question bank)
+        // Ignoring provided questions or DB fallback — predefined `ACADEMIC_QUESTIONS` is the single source of truth for experiments
+        const testQuestions: { question: string; groundTruth: string }[] = ACADEMIC_QUESTIONS.map((q) => ({
+            question: q.question,
+            groundTruth: q.groundTruth,
+        }));
 
-        if (providedQuestions.length > 0) {
-            // Use provided questions
-            testQuestions = providedQuestions;
-        } else {
-            // Try to get questions from the latest evaluation run
-            const latestQuestions = await db
-                .select({
-                    question: evaluationQuestionsTable.question,
-                    groundTruth: evaluationQuestionsTable.groundTruth,
-                })
-                .from(evaluationQuestionsTable)
-                .limit(20);
-
-            if (latestQuestions.length > 0) {
-                testQuestions = latestQuestions;
-            } else {
-                // Fallback to predefined academic questions from the centralized store
-                testQuestions = ACADEMIC_QUESTIONS.map((q) => ({
-                    question: q.question,
-                    groundTruth: q.groundTruth,
-                }));
-            }
-        }
+        console.log(
+            `[POST /api/evaluation/ablation] Forced to use ${testQuestions.length} predefined questions for ablation study`
+        );
 
         console.log(
             `[POST /api/evaluation/ablation] Starting ablation study with ${testQuestions.length} questions and ${configs.length} configs`

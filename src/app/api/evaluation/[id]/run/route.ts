@@ -30,6 +30,7 @@ import { eq } from "drizzle-orm";
 import { CHAT_MODEL, telemetryConfig } from "@/lib/ai";
 import { db } from "@/lib/db";
 import { evaluationQuestions, evaluationRuns } from "@/lib/db/schema";
+import { ACADEMIC_QUESTIONS } from "@/lib/evaluation-questions";
 import { buildRagPrompt, retrieveContext, SYSTEM_PROMPTS } from "@/lib/rag/context-builder";
 import {
     calculateAllMetrics,
@@ -75,8 +76,33 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
         // Update run status
         await db.update(evaluationRuns).set({ status: "running" }).where(eq(evaluationRuns.id, id));
 
-        // Get questions for this run
-        const questions = await db.select().from(evaluationQuestions).where(eq(evaluationQuestions.runId, id));
+        // Seed this run with the predefined ACADEMIC_QUESTIONS (force 50-question bank)
+        // Delete any previous questions for the run and insert the canonical set so downstream analysis is consistent
+        await db.delete(evaluationQuestions).where(eq(evaluationQuestions.runId, id));
+
+        const insertedQuestions: (typeof evaluationQuestions.$inferSelect)[] = [];
+        for (const q of ACADEMIC_QUESTIONS) {
+            const [inserted] = await db
+                .insert(evaluationQuestions)
+                .values({
+                    runId: id,
+                    question: q.question,
+                    groundTruth: q.groundTruth,
+                })
+                .returning();
+
+            insertedQuestions.push(inserted);
+        }
+
+        // Update run metadata to reflect the seeded questions
+        await db
+            .update(evaluationRuns)
+            .set({ totalQuestions: insertedQuestions.length })
+            .where(eq(evaluationRuns.id, id));
+
+        const questions = insertedQuestions;
+
+        console.log(`[Evaluation Run] Seeded run ${id} with ${questions.length} predefined questions`);
 
         console.log(`[Evaluation Run] Processing ${questions.length} questions`);
 
