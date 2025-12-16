@@ -605,7 +605,7 @@ export async function POST(request: Request) {
             const result = streamText({
                 model: CHAT_MODEL,
                 system: systemPrompt,
-                messages: convertToModelMessages(messages.slice(0, -1)),
+                messages: convertToModelMessages(messages),
                 experimental_telemetry: {
                     ...telemetryConfig,
                     functionId: "rag-chat",
