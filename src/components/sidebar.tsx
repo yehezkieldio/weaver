@@ -8,16 +8,16 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
     {
-        title: "Chat",
+        title: "Obrolan",
         href: "/",
         icon: MessageSquare,
-        description: "Conversational interface",
+        description: "Antarmuka percakapan",
     },
     {
-        title: "Knowledge Base",
+        title: "Basis Pengetahuan",
         href: "/manage",
         icon: Database,
-        description: "Document management",
+        description: "Pengelolaan dokumen",
     },
     // {
     //     title: "Evaluation",

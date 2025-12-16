@@ -12,10 +12,10 @@ export default function EvaluationPage() {
                             <div className="rounded-lg bg-primary/10 p-2">
                                 <BarChart3 className="h-6 w-6 text-primary" />
                             </div>
-                            <h1 className="font-semibold text-2xl text-foreground">RAG Evaluation</h1>
+                            <h1 className="font-semibold text-2xl text-foreground">Evaluasi RAG</h1>
                         </div>
                         <p className="text-muted-foreground">
-                            Quantitative analysis using RAGAS metrics: Compare RAG vs Non-RAG performance
+                            Analisis kuantitatif menggunakan metrik RAGAS: Bandingkan kinerja RAG dan Non-RAG
                         </p>
                     </div>
 

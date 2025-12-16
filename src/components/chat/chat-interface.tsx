@@ -243,12 +243,12 @@ function getStepIcon(stepType: AgentStep["stepType"]): React.ReactNode {
 
 function getLoadingText(isStreaming: boolean, useAgenticMode: boolean): string {
     if (isStreaming) {
-        return "Streaming response...";
+        return "Streaming respons...";
     }
     if (useAgenticMode) {
-        return "Agent reasoning... / Agen sedang berpikir...";
+        return "Penalaran agen...";
     }
-    return "Thinking...";
+    return "Sedang berpikir...";
 }
 
 /**
@@ -336,7 +336,7 @@ const AgentStepsCollapsible = memo(function AgentStepsCollapsibleComponent({ ste
             <CollapsibleTrigger asChild>
                 <Button className="gap-2 text-xs" size="sm" variant="ghost">
                     <Brain className="h-3 w-3" />
-                    {steps.length} reasoning steps
+                    {steps.length} langkah penalaran
                     <Badge className="ml-1 text-[10px]" variant="secondary">
                         {totalDurationMs}ms total
                     </Badge>
@@ -391,7 +391,7 @@ const AgentStepsCollapsible = memo(function AgentStepsCollapsibleComponent({ ste
                                                     ) : (
                                                         <ChevronRight className="h-3 w-3" />
                                                     )}
-                                                    {isExpanded ? "Hide details" : "Show details"}
+                                                    {isExpanded ? "Sembunyikan detail" : "Tampilkan detail"}
                                                 </Button>
                                             ) : null}
                                             {isExpanded && hasDetails ? (
@@ -462,9 +462,9 @@ const SourcesCollapsible = memo(function SourcesCollapsibleComponent({ chunks }:
     };
 
     const getRelevanceLabel = (score: number): string => {
-        if (score >= 0.8) return "High";
-        if (score >= 0.5) return "Medium";
-        return "Low";
+        if (score >= 0.8) return "Tinggi";
+        if (score >= 0.5) return "Sedang";
+        return "Rendah";
     };
 
     return (
@@ -472,7 +472,7 @@ const SourcesCollapsible = memo(function SourcesCollapsibleComponent({ chunks }:
             <CollapsibleTrigger asChild>
                 <Button className="gap-2 text-xs" size="sm" variant="ghost">
                     <FileText className="h-3 w-3" />
-                    {chunks.length} sources
+                    {chunks.length} sumber
                     <ChevronDown className="h-3 w-3 transition-transform data-[state=open]:rotate-180" />
                 </Button>
             </CollapsibleTrigger>
@@ -517,7 +517,9 @@ const SourcesCollapsible = memo(function SourcesCollapsibleComponent({ chunks }:
                                     {/* Relevance Score Bar */}
                                     <div className="mb-2 space-y-1">
                                         <div className="flex items-center justify-between">
-                                            <span className="text-[10px] text-muted-foreground">Fused Relevance</span>
+                                            <span className="text-[10px] text-muted-foreground">
+                                                Relevansi Gabungan
+                                            </span>
                                             <span className="font-medium text-[10px]">
                                                 {(chunk.similarity * 100).toFixed(0)}%
                                             </span>
@@ -532,7 +534,7 @@ const SourcesCollapsible = memo(function SourcesCollapsibleComponent({ chunks }:
                                                 <div className="space-y-0.5">
                                                     <div className="flex justify-between">
                                                         <span className="text-[10px] text-muted-foreground">
-                                                            Vector
+                                                            Vektor
                                                         </span>
                                                         <span className="text-[10px]">
                                                             {(chunk.vectorScore * 100).toFixed(0)}%
@@ -1055,23 +1057,23 @@ const DebugPanel = memo(function DebugPanelComponent({
         <Card className="border-amber-500/50 bg-amber-500/5 p-3">
             <div className="mb-2 flex items-center gap-2">
                 <Bug className="h-4 w-4 text-amber-600" />
-                <span className="font-medium text-amber-700 text-sm dark:text-amber-400">Debug Mode</span>
+                <span className="font-medium text-amber-700 text-sm dark:text-amber-400">Mode Debug</span>
             </div>
             <div className="flex flex-wrap gap-2">
                 <Button onClick={() => onAddDummyMessage("user")} size="sm" variant="outline">
-                    Add User Message
+                    Tambahkan Pesan Pengguna
                 </Button>
                 <Button onClick={() => onAddDummyMessage("assistant")} size="sm" variant="outline">
-                    Add Assistant Message
+                    Tambahkan Pesan Asisten
                 </Button>
                 <Button onClick={() => onAddDummyMessage("rag")} size="sm" variant="outline">
-                    Add RAG Message
+                    Tambahkan Pesan RAG
                 </Button>
                 <Button onClick={() => onAddDummyMessage("agentic-streaming")} size="sm" variant="outline">
-                    Simulate Agentic Streaming
+                    Simulasikan Agentic Streaming
                 </Button>
                 <Button onClick={() => onAddDummyMessage("error")} size="sm" variant="outline">
-                    Trigger Error State
+                    Pemicu Kondisi Error
                 </Button>
             </div>
         </Card>
@@ -1653,7 +1655,7 @@ function useChatLogic() {
                                 ...state.sessions,
                                 {
                                     id: dbSession.id,
-                                    title: dbSession.title || "New Chat",
+                                    title: dbSession.title || "Obrolan Baru",
                                     messages: [],
                                     createdAt: Date.now(),
                                     updatedAt: Date.now(),
@@ -1768,7 +1770,7 @@ function useChatLogic() {
                         sessions: [
                             {
                                 id: newSession.id,
-                                title: newSession.title || "New Chat",
+                                title: newSession.title || "Obrolan Baru",
                                 messages: [],
                                 createdAt: Date.now(),
                                 updatedAt: Date.now(),
@@ -1943,12 +1945,12 @@ export function ChatInterface() {
                         <div className="flex items-center gap-2">
                             <Cloud className="h-4 w-4 text-amber-600" />
                             <span className="text-amber-700 text-sm dark:text-amber-400">
-                                Unsaved Session — This chat won't be stored
+                                Sesi Tidak Disimpan — Obrolan ini tidak akan disimpan
                             </span>
                         </div>
                         <Button className="gap-1.5" onClick={handleSaveSession} size="sm" variant="outline">
                             <Save className="h-3.5 w-3.5" />
-                            Save Session
+                            Simpan Sesi
                         </Button>
                     </div>
                 )}

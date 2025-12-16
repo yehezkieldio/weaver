@@ -284,11 +284,11 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
     const pendingCount = files.filter((f) => f.status === "pending").length;
 
     const chunkingDescriptions: Record<ChunkingStrategy, string> = {
-        auto: "Automatically selects optimal strategy based on document structure",
-        recursive: "Split by structure (paragraphs, sentences) with overlap",
-        semantic: "Split by topic/meaning changes using embeddings",
-        sentence_window: "Individual sentences with surrounding context",
-        hierarchical: "Parent-child chunk relationships for multi-level retrieval",
+        auto: "Memilih strategi optimal secara otomatis berdasarkan struktur dokumen",
+        recursive: "Memecah berdasarkan struktur (paragraf, kalimat) dengan overlap",
+        semantic: "Memecah berdasarkan perubahan topik/makna menggunakan embeddings",
+        sentence_window: "Kalimat individu dengan konteks sekitarnya",
+        hierarchical: "Relasi induk-anak untuk pengambilan multi-level",
     };
 
     return (
@@ -336,27 +336,27 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
                             <SelectContent>
                                 <SelectItem value="auto">
                                     <span className="flex items-center gap-2">
-                                        <Sparkles className="h-3 w-3" /> Adaptive (Auto)
+                                        <Sparkles className="h-3 w-3" /> Adaptif (Otomatis)
                                     </span>
                                 </SelectItem>
                                 <SelectItem value="recursive">
                                     <span className="flex items-center gap-2">
-                                        <GitBranch className="h-3 w-3" /> Recursive
+                                        <GitBranch className="h-3 w-3" /> Rekursif
                                     </span>
                                 </SelectItem>
                                 <SelectItem value="semantic">
                                     <span className="flex items-center gap-2">
-                                        <Type className="h-3 w-3" /> Semantic
+                                        <Type className="h-3 w-3" /> Semantik
                                     </span>
                                 </SelectItem>
                                 <SelectItem value="sentence_window">
                                     <span className="flex items-center gap-2">
-                                        <Layers className="h-3 w-3" /> Sentence Window
+                                        <Layers className="h-3 w-3" /> Jendela Kalimat
                                     </span>
                                 </SelectItem>
                                 <SelectItem value="hierarchical">
                                     <span className="flex items-center gap-2">
-                                        <GitBranch className="h-3 w-3" /> Hierarchical
+                                        <GitBranch className="h-3 w-3" /> Hierarkis
                                     </span>
                                 </SelectItem>
                             </SelectContent>
@@ -511,21 +511,21 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
                     </div>
 
                     <div className="space-y-1.5">
-                        <Label htmlFor="category">Category / Kategori</Label>
+                        <Label htmlFor="category">Kategori</Label>
                         <Input
                             id="category"
                             onChange={(e) => setCategory(e.target.value)}
-                            placeholder="e.g., Computer Science / Ilmu Komputer"
+                            placeholder="mis., Ilmu Komputer"
                             value={category}
                         />
                     </div>
 
                     <div className="space-y-1.5">
-                        <Label htmlFor="tags">Tags</Label>
+                        <Label htmlFor="tags">Tag</Label>
                         <Input
                             id="tags"
                             onChange={(e) => setTags(e.target.value)}
-                            placeholder="e.g., machine-learning, nlp, penelitian"
+                            placeholder="mis., machine-learning, nlp, penelitian"
                             value={tags}
                         />
                     </div>
@@ -536,10 +536,10 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
             {files.length > 0 && (
                 <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                        <h3 className="font-medium text-foreground">Files ({files.length})</h3>
+                        <h3 className="font-medium text-foreground">Berkas ({files.length})</h3>
                         {pendingCount > 0 && (
                             <Button onClick={uploadAll} size="sm">
-                                Upload All ({pendingCount})
+                                Unggah Semua ({pendingCount})
                             </Button>
                         )}
                     </div>
@@ -578,7 +578,8 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
                                                         </p>
                                                         {fileItem.estimatedTimeMs && fileItem.estimatedTimeMs > 0 && (
                                                             <p className="text-muted-foreground text-xs">
-                                                                ~{Math.ceil(fileItem.estimatedTimeMs / 1000)}s remaining
+                                                                ~{Math.ceil(fileItem.estimatedTimeMs / 1000)} detik
+                                                                tersisa
                                                             </p>
                                                         )}
                                                     </div>
@@ -598,7 +599,7 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
                                                 size="sm"
                                                 variant="outline"
                                             >
-                                                Upload
+                                                Unggah
                                             </Button>
                                         )}
 
@@ -609,7 +610,7 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
                                         {fileItem.status === "processing" && (
                                             <Badge className="gap-1" variant="secondary">
                                                 <Loader2 className="h-3 w-3 animate-spin" />
-                                                Processing
+                                                Memproses
                                             </Badge>
                                         )}
 
@@ -629,7 +630,7 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
                                                 variant="outline"
                                             >
                                                 <RefreshCw className="h-3 w-3" />
-                                                Retry
+                                                Ulangi
                                             </Button>
                                         )}
 

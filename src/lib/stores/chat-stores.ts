@@ -232,7 +232,7 @@ export const useChatStore = create<ChatStore>()(
             },
 
             // Actions
-            createSession: (title = "New Chat") => {
+            createSession: (title = "Obrolan Baru") => {
                 const sessionId = crypto.randomUUID();
                 set((state) => {
                     state.sessions.unshift({
@@ -249,7 +249,7 @@ export const useChatStore = create<ChatStore>()(
                 return sessionId;
             },
 
-            createEphemeralSession: (title = "Unsaved Chat") => {
+            createEphemeralSession: (title = "Obrolan Tidak Disimpan") => {
                 const sessionId = `ephemeral-${crypto.randomUUID()}`;
                 set((state) => {
                     state.sessions.unshift({

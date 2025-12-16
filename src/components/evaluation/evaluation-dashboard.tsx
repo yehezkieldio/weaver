@@ -195,10 +195,10 @@ export function EvaluationDashboard() {
                             <AlertTriangle className="mr-1 h-4 w-4" />
                             Halusinasi
                         </TabsTrigger>
-                        <TabsTrigger value="domain">
+                        {/* <TabsTrigger value="domain">
                             <BookOpen className="mr-1 h-4 w-4" />
                             Domain Akademik
-                        </TabsTrigger>
+                        </TabsTrigger> */}
                         <TabsTrigger value="comparison">
                             <BarChart3 className="mr-1 h-4 w-4" />
                             Perbandingan
@@ -438,13 +438,13 @@ function AblationStudiesView({ data, onRunStudy }: { data: AblationData | undefi
             <Card>
                 <CardHeader>
                     <CardTitle className="text-lg">Konfigurasi yang Diuji</CardTitle>
-                    <CardDescription>13 konfigurasi berbeda untuk analisis komprehensif</CardDescription>
+                    <CardDescription>9 konfigurasi berbeda untuk analisis komprehensif</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                         {[
                             { name: "Baseline (Tanpa RAG)", desc: "LLM murni tanpa retrieval", icon: Target },
-                            { name: "Vector Only", desc: "Hanya embedding similarity", icon: Zap },
+                            { name: "Vector Only", desc: "Hanya embedding kesamaan", icon: Zap },
                             { name: "BM25 Only", desc: "Hanya Okapi BM25 keyword", icon: Zap },
                             { name: "Hybrid (Tanpa Re-rank)", desc: "Vector + BM25 fusion", icon: Layers },
                             {
@@ -1011,27 +1011,27 @@ function EvaluationResults({
                         <div className="space-y-4">
                             <MetricRow
                                 description="Kesetiaan terhadap konteks"
-                                label="Faithfulness"
+                                label="Kesetiaan"
                                 value={aggregateMetrics?.rag?.faithfulness || 0}
                             />
                             <MetricRow
                                 description="Relevansi jawaban"
-                                label="Answer Relevancy"
+                                label="Relevansi Jawaban"
                                 value={aggregateMetrics?.rag?.answerRelevancy || 0}
                             />
                             <MetricRow
                                 description="Presisi retrieval"
-                                label="Context Precision"
+                                label="Presisi Konteks"
                                 value={aggregateMetrics?.rag?.contextPrecision || 0}
                             />
                             <MetricRow
                                 description="Kelengkapan retrieval"
-                                label="Context Recall"
+                                label="Recall Konteks"
                                 value={aggregateMetrics?.rag?.contextRecall || 0}
                             />
                             <MetricRow
                                 description="Kebenaran vs ground truth"
-                                label="Answer Correctness"
+                                label="Kebenaran Jawaban"
                                 value={aggregateMetrics?.rag?.answerCorrectness || 0}
                             />
                         </div>
@@ -1049,12 +1049,12 @@ function EvaluationResults({
                         <div className="space-y-4">
                             <MetricRow
                                 description="Relevansi jawaban"
-                                label="Answer Relevancy"
+                                label="Relevansi Jawaban"
                                 value={aggregateMetrics?.nonRag?.answerRelevancy || 0}
                             />
                             <MetricRow
                                 description="Kebenaran vs ground truth"
-                                label="Answer Correctness"
+                                label="Kebenaran Jawaban"
                                 value={aggregateMetrics?.nonRag?.answerCorrectness || 0}
                             />
                         </div>
@@ -1175,14 +1175,14 @@ function ComparisonChart({ runs }: { runs: EvaluationRun[] }) {
 
         return runs.map((run) => ({
             name: run.name,
-            "RAG Correctness": run.aggregateMetrics?.rag?.answerCorrectness || 0,
-            "Non-RAG Correctness": run.aggregateMetrics?.nonRag?.answerCorrectness || 0,
-            "RAG Faithfulness": run.aggregateMetrics?.rag?.faithfulness || 0,
-            "RAG Relevancy": run.aggregateMetrics?.rag?.answerRelevancy || 0,
-            "RAG Precision": run.aggregateMetrics?.rag?.contextPrecision || 0,
-            "RAG Recall": run.aggregateMetrics?.rag?.contextRecall || 0,
-            "Hallucination Rate": (1 - (run.aggregateMetrics?.avgHallucinationRate || 0)) * 100, // Inverted for clarity
-            "Latency (ms)": run.aggregateMetrics?.avgLatencyMs || 0,
+            "Kebenaran RAG": run.aggregateMetrics?.rag?.answerCorrectness || 0,
+            "Kebenaran Non-RAG": run.aggregateMetrics?.nonRag?.answerCorrectness || 0,
+            "Kesetiaan RAG": run.aggregateMetrics?.rag?.faithfulness || 0,
+            "Relevansi RAG": run.aggregateMetrics?.rag?.answerRelevancy || 0,
+            "Presisi RAG": run.aggregateMetrics?.rag?.contextPrecision || 0,
+            "Recall RAG": run.aggregateMetrics?.rag?.contextRecall || 0,
+            "Tingkat Halusinasi": (1 - (run.aggregateMetrics?.avgHallucinationRate || 0)) * 100, // Inverted for clarity
+            "Latensi (ms)": run.aggregateMetrics?.avgLatencyMs || 0,
         }));
     }, [runs, hasData]);
 
@@ -1222,10 +1222,10 @@ function ComparisonChart({ runs }: { runs: EvaluationRun[] }) {
                             <YAxis domain={[0, 1]} tickFormatter={(val) => `${(val * 100).toFixed(0)}%`} />
                             <Tooltip formatter={(value: number) => `${(value * 100).toFixed(1)}%`} />
                             <Legend />
-                            <Bar dataKey="RAG Correctness" fill="#10B981" />
-                            <Bar dataKey="Non-RAG Correctness" fill="#6B7280" />
-                            <Bar dataKey="RAG Faithfulness" fill="#3B82F6" />
-                            <Bar dataKey="RAG Relevancy" fill="#A855F7" />
+                            <Bar dataKey="Kebenaran RAG" fill="#10B981" />
+                            <Bar dataKey="Kebenaran Non-RAG" fill="#6B7280" />
+                            <Bar dataKey="Kesetiaan RAG" fill="#3B82F6" />
+                            <Bar dataKey="Relevansi RAG" fill="#A855F7" />
                         </BarChart>
                     </ResponsiveContainer>
                 </CardContent>
@@ -1243,34 +1243,28 @@ function ComparisonChart({ runs }: { runs: EvaluationRun[] }) {
                             <PolarAngleAxis dataKey="name" />
                             <PolarRadiusAxis angle={30} domain={[0, 1]} />
                             <Radar
-                                dataKey="RAG Correctness"
+                                dataKey="Kebenaran RAG"
                                 fill="#10B981"
                                 fillOpacity={0.6}
                                 name="RAG"
                                 stroke="#10B981"
                             />
                             <Radar
-                                dataKey="RAG Faithfulness"
+                                dataKey="Kesetiaan RAG"
                                 fill="#3B82F6"
                                 fillOpacity={0.6}
                                 name="RAG"
                                 stroke="#3B82F6"
                             />
                             <Radar
-                                dataKey="RAG Relevancy"
+                                dataKey="Relevansi RAG"
                                 fill="#A855F7"
                                 fillOpacity={0.6}
                                 name="RAG"
                                 stroke="#A855F7"
                             />
-                            <Radar
-                                dataKey="RAG Precision"
-                                fill="#F59E0B"
-                                fillOpacity={0.6}
-                                name="RAG"
-                                stroke="#F59E0B"
-                            />
-                            <Radar dataKey="RAG Recall" fill="#06B6D4" fillOpacity={0.6} name="RAG" stroke="#06B6D4" />
+                            <Radar dataKey="Presisi RAG" fill="#F59E0B" fillOpacity={0.6} name="RAG" stroke="#F59E0B" />
+                            <Radar dataKey="Recall RAG" fill="#06B6D4" fillOpacity={0.6} name="RAG" stroke="#06B6D4" />
                         </RadarChart>
                     </ResponsiveContainer>
                 </CardContent>
@@ -1286,8 +1280,8 @@ function ComparisonChart({ runs }: { runs: EvaluationRun[] }) {
                         <LineChart
                             data={runs.map((run) => ({
                                 name: run.retrievalStrategy || "Unknown",
-                                Correctness: run.aggregateMetrics?.rag?.answerCorrectness || 0,
-                                "Hallucination Rate": (1 - (run.aggregateMetrics?.avgHallucinationRate || 0)) * 100,
+                                Kebenaran: run.aggregateMetrics?.rag?.answerCorrectness || 0,
+                                "Tingkat Halusinasi": (1 - (run.aggregateMetrics?.avgHallucinationRate || 0)) * 100,
                             }))}
                             margin={{
                                 top: 5,
@@ -1301,8 +1295,8 @@ function ComparisonChart({ runs }: { runs: EvaluationRun[] }) {
                             <YAxis />
                             <Tooltip />
                             <Legend />
-                            <Line activeDot={{ r: 8 }} dataKey="Correctness" stroke="#10B981" type="monotone" />
-                            <Line dataKey="Hallucination Rate" stroke="#EF4444" type="monotone" />
+                            <Line activeDot={{ r: 8 }} dataKey="Kebenaran" stroke="#10B981" type="monotone" />
+                            <Line dataKey="Tingkat Halusinasi" stroke="#EF4444" type="monotone" />
                         </LineChart>
                     </ResponsiveContainer>
                 </CardContent>
@@ -1347,134 +1341,6 @@ function ComparisonChart({ runs }: { runs: EvaluationRun[] }) {
                     </ResponsiveContainer>
                 </CardContent>
             </Card>
-        </div>
-    );
-}
-
-function AblationStudyPanel() {
-    const { data: ablationData, mutate: mutateAblation } = useSWR("/api/evaluation/ablation", fetcher);
-    const studies = ablationData?.studies || [];
-    const latestStudy = studies[0];
-
-    const runAblationStudy = async () => {
-        await fetch("/api/evaluation/ablation", { method: "POST" });
-        mutateAblation();
-    };
-
-    return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="font-semibold text-xl">Studi Ablasi</h2>
-                    <p className="text-muted-foreground">
-                        Bandingkan performa berbagai konfigurasi RAG untuk menemukan kombinasi optimal
-                    </p>
-                </div>
-                <Button className="gap-2" onClick={runAblationStudy}>
-                    <FlaskConical className="h-4 w-4" />
-                    Jalankan Studi Ablasi
-                </Button>
-            </div>
-
-            {/* Ablation Configurations */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-lg">Konfigurasi yang Diuji</CardTitle>
-                    <CardDescription>13 konfigurasi berbeda untuk analisis komprehensif</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                        {[
-                            { name: "Baseline (Tanpa RAG)", desc: "LLM murni tanpa retrieval", icon: Target },
-                            { name: "Vector Only", desc: "Hanya embedding similarity", icon: Zap },
-                            { name: "BM25 Only", desc: "Hanya Okapi BM25 keyword", icon: Zap },
-                            { name: "Hybrid (Tanpa Re-rank)", desc: "Vector + BM25 fusion", icon: Layers },
-                            {
-                                name: "Hybrid + Cross-Encoder",
-                                desc: "Dengan cross-encoder re-ranking",
-                                icon: RefreshCw,
-                            },
-                            { name: "Hybrid + LLM Re-rank", desc: "Dengan LLM-based re-ranking", icon: Brain },
-                            { name: "Hybrid + Ensemble", desc: "Kombinasi semua re-ranker", icon: RefreshCw },
-                            { name: "Semantic Chunking", desc: "Chunking berdasarkan makna", icon: Layers },
-                            { name: "Sentence Window", desc: "Konteks kalimat sekitar", icon: Layers },
-                            { name: "Hierarchical", desc: "Parent-child chunking", icon: Layers },
-                            { name: "Agentic Mode", desc: "Multi-step reasoning", icon: Brain },
-                            { name: "Full System", desc: "Semua fitur aktif", icon: Shield },
-                            { name: "Indonesian Optimized", desc: "Dioptimasi untuk Bahasa Indonesia", icon: BookOpen },
-                        ].map((config) => (
-                            <div className="flex items-start gap-3 rounded-lg border bg-muted/30 p-3" key={config.name}>
-                                <config.icon className="mt-0.5 h-5 w-5 text-primary" />
-                                <div>
-                                    <p className="font-medium text-sm">{config.name}</p>
-                                    <p className="text-muted-foreground text-xs">{config.desc}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* Results Table */}
-            {latestStudy?.results && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg">Hasil Studi Ablasi Terbaru</CardTitle>
-                        <CardDescription>Perbandingan metrik antar konfigurasi</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Konfigurasi</TableHead>
-                                    <TableHead>Faithfulness</TableHead>
-                                    <TableHead>Relevancy</TableHead>
-                                    <TableHead>Precision</TableHead>
-                                    <TableHead>Correctness</TableHead>
-                                    <TableHead>Halusinasi</TableHead>
-                                    <TableHead>Academic</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {latestStudy.results.map((result: AblationResult) => (
-                                    <TableRow key={result.configName}>
-                                        <TableCell className="font-medium">{result.configName}</TableCell>
-                                        <TableCell>
-                                            <MetricBadge value={result.metrics.faithfulness} />
-                                        </TableCell>
-                                        <TableCell>
-                                            <MetricBadge value={result.metrics.answerRelevancy} />
-                                        </TableCell>
-                                        <TableCell>
-                                            <MetricBadge value={result.metrics.contextPrecision} />
-                                        </TableCell>
-                                        <TableCell>
-                                            <MetricBadge value={result.metrics.answerCorrectness} />
-                                        </TableCell>
-                                        <TableCell>
-                                            <MetricBadge inverted value={1 - result.metrics.hallucinationRate} />
-                                        </TableCell>
-                                        <TableCell>
-                                            <MetricBadge value={result.metrics.academicRigor} />
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
-            )}
-
-            {!latestStudy && (
-                <Card className="p-8 text-center">
-                    <FlaskConical className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-                    <h3 className="mb-2 font-medium text-lg">Belum Ada Studi Ablasi</h3>
-                    <p className="mb-4 text-muted-foreground">
-                        Jalankan studi ablasi untuk membandingkan performa berbagai konfigurasi RAG
-                    </p>
-                    <Button onClick={runAblationStudy}>Mulai Studi Ablasi</Button>
-                </Card>
-            )}
         </div>
     );
 }
@@ -1636,22 +1502,22 @@ function EvaluationResultsPanel({
                         <h3 className="font-semibold text-lg">Metrik Agregat</h3>
                         <MetricRow
                             description="Kesetiaan terhadap konteks"
-                            label="Faithfulness"
+                            label="Kesetiaan"
                             value={aggregateMetrics?.rag?.faithfulness || 0}
                         />
                         <MetricRow
                             description="Relevansi jawaban"
-                            label="Answer Relevancy"
+                            label="Relevansi Jawaban"
                             value={aggregateMetrics?.rag?.answerRelevancy || 0}
                         />
                         <MetricRow
                             description="Presisi retrieval"
-                            label="Context Precision"
+                            label="Presisi Konteks"
                             value={aggregateMetrics?.rag?.contextPrecision || 0}
                         />
                         <MetricRow
                             description="Kelengkapan retrieval"
-                            label="Context Recall"
+                            label="Recall Konteks"
                             value={aggregateMetrics?.rag?.contextRecall || 0}
                         />
                         <MetricRow

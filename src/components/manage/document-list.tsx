@@ -74,7 +74,7 @@ export function DocumentList() {
     );
 
     const handleDelete = async (id: string) => {
-        if (!confirm("Are you sure you want to delete this document?")) return;
+        if (!confirm("Yakin ingin menghapus dokumen ini?")) return;
         await fetch(`/api/documents?id=${id}`, { method: "DELETE" });
         mutate();
     };
@@ -85,28 +85,28 @@ export function DocumentList() {
                 return (
                     <Badge className="gap-1 border-green-500/30 bg-green-500/20 text-green-600" variant="default">
                         <CheckCircle className="h-3 w-3" />
-                        Indexed
+                        Diindeks
                     </Badge>
                 );
             case "processing":
                 return (
                     <Badge className="gap-1" variant="secondary">
                         <Loader2 className="h-3 w-3 animate-spin" />
-                        Processing
+                        Sedang memproses
                     </Badge>
                 );
             case "pending":
                 return (
                     <Badge className="gap-1" variant="outline">
                         <Clock className="h-3 w-3" />
-                        Pending
+                        Menunggu
                     </Badge>
                 );
             case "failed":
                 return (
                     <Badge className="gap-1" variant="destructive">
                         <AlertCircle className="h-3 w-3" />
-                        Failed
+                        Gagal
                     </Badge>
                 );
             default:
@@ -144,7 +144,7 @@ export function DocumentList() {
                     <Input
                         className="pl-9"
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search documents, courses, keywords..."
+                        placeholder="Cari dokumen, mata kuliah, kata kunci..."
                         value={searchQuery}
                     />
                 </div>
@@ -158,11 +158,11 @@ export function DocumentList() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Document</TableHead>
-                            <TableHead>Type</TableHead>
+                            <TableHead>Dokumen</TableHead>
+                            <TableHead>Tipe</TableHead>
                             <TableHead>Chunking</TableHead>
                             <TableHead>Status</TableHead>
-                            <TableHead>Uploaded</TableHead>
+                            <TableHead>Diunggah</TableHead>
                             <TableHead className="w-[50px]" />
                         </TableRow>
                     </TableHeader>
@@ -170,7 +170,9 @@ export function DocumentList() {
                         {filteredDocs.length === 0 ? (
                             <TableRow>
                                 <TableCell className="py-8 text-center text-muted-foreground" colSpan={6}>
-                                    {searchQuery ? "No documents match your search" : "No documents uploaded yet"}
+                                    {searchQuery
+                                        ? "Tidak ada dokumen yang cocok dengan pencarian Anda"
+                                        : "Belum ada dokumen yang diunggah"}
                                 </TableCell>
                             </TableRow>
                         ) : (
@@ -235,14 +237,14 @@ export function DocumentList() {
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuItem className="gap-2" onClick={() => setSelectedDoc(doc)}>
                                                     <Eye className="h-4 w-4" />
-                                                    View Details
+                                                    Lihat Detail
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem
                                                     className="gap-2 text-destructive"
                                                     onClick={() => handleDelete(doc.id)}
                                                 >
                                                     <Trash2 className="h-4 w-4" />
-                                                    Delete
+                                                    Hapus
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
@@ -257,9 +259,9 @@ export function DocumentList() {
             {/* Stats */}
             {documents.length > 0 && (
                 <div className="flex gap-4 text-muted-foreground text-sm">
-                    <span>{documents.length} documents</span>
-                    <span>{documents.filter((d) => d.processingStatus === "completed").length} indexed</span>
-                    <span>{documents.filter((d) => d.processingStatus === "processing").length} processing</span>
+                    <span>{documents.length} dokumen</span>
+                    <span>{documents.filter((d) => d.processingStatus === "completed").length} diindeks</span>
+                    <span>{documents.filter((d) => d.processingStatus === "processing").length} sedang diproses</span>
                 </div>
             )}
 
@@ -272,23 +274,23 @@ export function DocumentList() {
                         <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div>
-                                    <p className="text-muted-foreground">File Name</p>
+                                    <p className="text-muted-foreground">Nama Berkas</p>
                                     <p className="font-medium">{selectedDoc.fileName}</p>
                                 </div>
                                 <div>
-                                    <p className="text-muted-foreground">File Size</p>
+                                    <p className="text-muted-foreground">Ukuran Berkas</p>
                                     <p className="font-medium">{(selectedDoc.fileSize / 1024 / 1024).toFixed(2)} MB</p>
                                 </div>
                                 <div>
-                                    <p className="text-muted-foreground">Document Type</p>
+                                    <p className="text-muted-foreground">Jenis Dokumen</p>
                                     <p className="font-medium capitalize">
-                                        {selectedDoc.metadata?.documentType?.replace("_", " ") || "Unknown"}
+                                        {selectedDoc.metadata?.documentType?.replace("_", " ") || "Tidak diketahui"}
                                     </p>
                                 </div>
                                 <div>
-                                    <p className="text-muted-foreground">Chunking Strategy</p>
+                                    <p className="text-muted-foreground">Strategi Chunking</p>
                                     <p className="font-medium capitalize">
-                                        {selectedDoc.chunkingStrategy || "Recursive"}
+                                        {selectedDoc.chunkingStrategy || "Rekursif"}
                                     </p>
                                 </div>
                                 {selectedDoc.metadata?.courseCode && (
@@ -324,7 +326,7 @@ export function DocumentList() {
                             </div>
                             {selectedDoc.metadata?.keywords && selectedDoc.metadata.keywords.length > 0 && (
                                 <div>
-                                    <p className="mb-2 text-muted-foreground text-sm">Extracted Keywords</p>
+                                    <p className="mb-2 text-muted-foreground text-sm">Kata Kunci yang Diekstrak</p>
                                     <div className="flex flex-wrap gap-1">
                                         {selectedDoc.metadata.keywords.map((keyword) => (
                                             <Badge key={keyword} variant="outline">

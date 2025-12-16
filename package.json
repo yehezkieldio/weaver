@@ -48,6 +48,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-dropzone": "^14.3.8",
+    "react-latex-next": "^3.0.0",
     "react-markdown": "^10.1.0",
     "recharts": "^3.5.1",
     "sonner": "^2.0.7",

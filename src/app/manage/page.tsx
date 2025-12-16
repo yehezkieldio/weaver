@@ -14,11 +14,9 @@ export default function ManagePage() {
                             <div className="rounded-lg bg-primary/10 p-2">
                                 <Database className="h-6 w-6 text-primary" />
                             </div>
-                            <h1 className="font-semibold text-2xl text-foreground">Knowledge Base</h1>
+                            <h1 className="font-semibold text-2xl text-foreground">Basis Pengetahuan</h1>
                         </div>
-                        <p className="text-muted-foreground">
-                            Upload, manage, and organize documents for the RAG system
-                        </p>
+                        <p className="text-muted-foreground">Unggah, kelola, dan susun dokumen untuk sistem RAG</p>
                     </div>
 
                     {/* Tabs */}
@@ -26,11 +24,11 @@ export default function ManagePage() {
                         <TabsList>
                             <TabsTrigger className="gap-2" value="upload">
                                 <Upload className="h-4 w-4" />
-                                Upload Documents
+                                Unggah Dokumen
                             </TabsTrigger>
                             <TabsTrigger className="gap-2" value="documents">
                                 <FileText className="h-4 w-4" />
-                                Document Library
+                                Perpustakaan Dokumen
                             </TabsTrigger>
                         </TabsList>
 

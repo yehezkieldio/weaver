@@ -138,7 +138,7 @@ export const SessionManager = memo(function SessionManagerComponent({
 
     const handleDeleteSession = useCallback(
         async (sessionId: string) => {
-            if (!window.confirm("Delete this chat session? This cannot be undone.")) {
+            if (!window.confirm("Hapus sesi obrolan ini? Tindakan ini tidak dapat diurungkan.")) {
                 return;
             }
 
@@ -171,7 +171,7 @@ export const SessionManager = memo(function SessionManagerComponent({
                             sessions: [
                                 {
                                     id: newSession.id,
-                                    title: newSession.title || "New Chat",
+                                    title: newSession.title || "Obrolan Baru",
                                     messages: [],
                                     createdAt: Date.now(),
                                     updatedAt: Date.now(),
@@ -283,7 +283,7 @@ export const SessionManager = memo(function SessionManagerComponent({
                                 handleCreateSession();
                             }
                         }}
-                        placeholder="New chat title (optional)"
+                        placeholder="Judul obrolan baru (opsional)"
                         value={newSessionTitle}
                     />
                     <Button
@@ -291,7 +291,7 @@ export const SessionManager = memo(function SessionManagerComponent({
                         disabled={isCreating}
                         onClick={handleCreateSession}
                         size="sm"
-                        title="New saved chat"
+                        title="Simpan obrolan baru"
                     >
                         {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                     </Button>
@@ -300,7 +300,7 @@ export const SessionManager = memo(function SessionManagerComponent({
                         disabled={isCreating}
                         onClick={handleCreateEphemeralSession}
                         size="sm"
-                        title="New unsaved chat (won't be stored)"
+                        title="Obrolan baru tanpa penyimpanan (tidak akan disimpan)"
                         variant="outline"
                     >
                         <Cloud className="h-4 w-4" />
@@ -310,7 +310,7 @@ export const SessionManager = memo(function SessionManagerComponent({
                         disabled={isSyncing}
                         onClick={handleResync}
                         size="sm"
-                        title="Sync sessions with server"
+                        title="Sinkronkan sesi dengan server"
                         variant="ghost"
                     >
                         <RefreshCw className={cn("h-4 w-4", isSyncing && "animate-spin")} />
@@ -324,14 +324,14 @@ export const SessionManager = memo(function SessionManagerComponent({
                     {isLoadingSessions && (
                         <div className="flex items-center justify-center py-8 text-muted-foreground">
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            <span className="text-sm">Loading sessions...</span>
+                            <span className="text-sm">Memuat sesi...</span>
                         </div>
                     )}
                     {!isLoadingSessions && sessions.length === 0 && (
                         <div className="py-8 text-center text-muted-foreground text-sm">
-                            No chat sessions yet.
+                            Belum ada sesi obrolan.
                             <br />
-                            Create one to get started!
+                            Buat satu untuk memulai!
                         </div>
                     )}
                     {!isLoadingSessions && sessions.length > 0 && (
@@ -367,7 +367,7 @@ export const SessionManager = memo(function SessionManagerComponent({
                         variant="ghost"
                     >
                         <Trash2 className="mr-2 h-3 w-3" />
-                        Delete All Sessions
+                        Hapus Semua Sesi
                     </Button>
                 </div>
             )}
@@ -447,13 +447,13 @@ const SessionItem = memo(function SessionItemComponent({
                         {session.isEphemeral && (
                             <Badge className="h-4 gap-0.5 px-1 text-[10px]" variant="secondary">
                                 <Cloud className="h-2.5 w-2.5" />
-                                Unsaved
+                                Belum disimpan
                             </Badge>
                         )}
                     </div>
                     <p className="truncate text-muted-foreground text-xs">
                         {formatDate(session.updatedAt)}
-                        {session.messages.length > 0 && ` • ${session.messages.length} messages`}
+                        {session.messages.length > 0 && ` • ${session.messages.length} pesan`}
                     </p>
                 </div>
             </button>
@@ -471,12 +471,12 @@ const SessionItem = memo(function SessionItemComponent({
                 <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={onStartRename}>
                         <Edit2 className="mr-2 h-3 w-3" />
-                        Rename
+                        Ganti Nama
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={onDelete}>
                         <Trash2 className="mr-2 h-3 w-3" />
-                        Delete
+                        Hapus
                     </DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
@@ -615,14 +615,14 @@ export const SessionSelector = memo(function SessionSelectorComponent({
                     <Button className="gap-2" size="sm" variant="outline">
                         <MessageSquare className="h-4 w-4" />
                         <span className="max-w-[150px] truncate">
-                            {isLoadingSessions ? "Loading..." : activeSession?.title || "Select Chat"}
+                            {isLoadingSessions ? "Memuat..." : activeSession?.title || "Pilih Obrolan"}
                         </span>
                         <ChevronDown className="h-3 w-3" />
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-64">
                     {sessions.length === 0 ? (
-                        <div className="p-3 text-center text-muted-foreground text-sm">No sessions yet</div>
+                        <div className="p-3 text-center text-muted-foreground text-sm">Belum ada sesi</div>
                     ) : (
                         <ScrollArea className="max-h-64">
                             {sessions.map((session) => (
@@ -649,16 +649,16 @@ export const SessionSelector = memo(function SessionSelectorComponent({
                         ) : (
                             <Plus className="mr-2 h-4 w-4" />
                         )}
-                        New Chat
+                        Obrolan Baru
                     </DropdownMenuItem>
                     <DropdownMenuItem className="cursor-pointer" onClick={handleCreateEphemeralSession}>
                         <Cloud className="mr-2 h-4 w-4" />
-                        Unsaved Chat
+                        Obrolan Tidak Disimpan
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem className="cursor-pointer" disabled={isSyncing} onClick={handleResync}>
                         <RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
-                        Sync Sessions
+                        Sinkronkan Sesi
                     </DropdownMenuItem>
                     {sessions.length > 0 && (
                         <DropdownMenuItem
@@ -666,7 +666,7 @@ export const SessionSelector = memo(function SessionSelectorComponent({
                             onClick={handleDeleteAllSessions}
                         >
                             <Trash2 className="mr-2 h-4 w-4" />
-                            Delete All
+                            Hapus Semua
                         </DropdownMenuItem>
                     )}
                 </DropdownMenuContent>

@@ -35,12 +35,12 @@ export function MetricsChart({ ragMetrics, nonRagMetrics }: MetricsChartProps) {
     // Data for bar chart comparison
     const barData = [
         {
-            name: "Answer Relevancy",
+            name: "Relevansi Jawaban",
             RAG: ragMetrics.answerRelevancy * 100,
             "Non-RAG": nonRagMetrics.answerRelevancy * 100,
         },
         {
-            name: "Answer Correctness",
+            name: "Kebenaran Jawaban",
             RAG: ragMetrics.answerCorrectness * 100,
             "Non-RAG": nonRagMetrics.answerCorrectness * 100,
         },
@@ -48,11 +48,11 @@ export function MetricsChart({ ragMetrics, nonRagMetrics }: MetricsChartProps) {
 
     // Data for radar chart (RAG-specific metrics)
     const radarData = [
-        { metric: "Faithfulness", value: ragMetrics.faithfulness * 100 },
-        { metric: "Relevancy", value: ragMetrics.answerRelevancy * 100 },
-        { metric: "Precision", value: ragMetrics.contextPrecision * 100 },
+        { metric: "Kesetiaan", value: ragMetrics.faithfulness * 100 },
+        { metric: "Relevansi", value: ragMetrics.answerRelevancy * 100 },
+        { metric: "Presisi", value: ragMetrics.contextPrecision * 100 },
         { metric: "Recall", value: ragMetrics.contextRecall * 100 },
-        { metric: "Correctness", value: ragMetrics.answerCorrectness * 100 },
+        { metric: "Kebenaran", value: ragMetrics.answerCorrectness * 100 },
     ];
 
     // Colors matching the theme
@@ -64,7 +64,7 @@ export function MetricsChart({ ragMetrics, nonRagMetrics }: MetricsChartProps) {
             {/* Bar Chart Comparison */}
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-lg">RAG vs Non-RAG Comparison</CardTitle>
+                    <CardTitle className="text-lg">Perbandingan RAG vs Non-RAG</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="h-[300px]">
@@ -102,7 +102,7 @@ export function MetricsChart({ ragMetrics, nonRagMetrics }: MetricsChartProps) {
             {/* Radar Chart for RAGAS Metrics */}
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-lg">RAGAS Metrics Profile</CardTitle>
+                    <CardTitle className="text-lg">Profil Metrik RAGAS</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="h-[300px]">
