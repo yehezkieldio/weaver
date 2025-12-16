@@ -1,11 +1,9 @@
 import { BarChart3 } from "lucide-react";
 import { EvaluationDashboard } from "@/components/evaluation/evaluation-dashboard";
-import { Sidebar } from "@/components/sidebar";
 
 export default function EvaluationPage() {
     return (
-        <div className="flex h-screen bg-background">
-            <Sidebar />
+        <div className="flex h-screen bg-background font-sans">
             <main className="flex-1 overflow-auto">
                 <div className="mx-auto max-w-7xl p-6">
                     {/* Header */}

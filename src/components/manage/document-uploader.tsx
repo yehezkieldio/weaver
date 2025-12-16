@@ -59,7 +59,7 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
     const [category, setCategory] = useState("");
     const [tags, setTags] = useState("");
     const [documentType, setDocumentType] = useState<string>("auto");
-    const [languageHint, setLanguageHint] = useState<LanguageHint>("auto");
+    const [languageHint, setLanguageHint] = useState<LanguageHint>("id");
 
     const generateFileId = useCallback(
         (file: File) =>

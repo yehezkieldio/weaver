@@ -1,13 +1,11 @@
 import { Database, FileText, Upload } from "lucide-react";
 import { DocumentList } from "@/components/manage/document-list";
 import { DocumentUploader } from "@/components/manage/document-uploader";
-import { Sidebar } from "@/components/sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function ManagePage() {
     return (
-        <div className="flex h-screen bg-background">
-            <Sidebar />
+        <div className="flex h-screen bg-background font-sans">
             <main className="flex-1 overflow-auto">
                 <div className="mx-auto max-w-6xl p-6">
                     {/* Header */}

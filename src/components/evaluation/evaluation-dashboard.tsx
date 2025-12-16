@@ -256,7 +256,7 @@ export function EvaluationDashboard() {
                                     <TableHead>Status</TableHead>
                                     <TableHead>Progress</TableHead>
                                     <TableHead>Dibuat</TableHead>
-                                    <TableHead className="w-[120px]">Aksi</TableHead>
+                                    <TableHead className="w-30">Aksi</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -454,12 +454,8 @@ function AblationStudiesView({ data, onRunStudy }: { data: AblationData | undefi
                             },
                             { name: "Hybrid + LLM Re-rank", desc: "Dengan LLM-based re-ranking", icon: Brain },
                             { name: "Hybrid + Ensemble", desc: "Kombinasi semua re-ranker", icon: RefreshCw },
-                            { name: "Semantic Chunking", desc: "Chunking berdasarkan makna", icon: Layers },
-                            { name: "Sentence Window", desc: "Konteks kalimat sekitar", icon: Layers },
-                            { name: "Hierarchical", desc: "Parent-child chunking", icon: Layers },
                             { name: "Agentic Mode", desc: "Multi-step reasoning", icon: Brain },
                             { name: "Full System", desc: "Semua fitur aktif", icon: Shield },
-                            { name: "Indonesian Optimized", desc: "Dioptimasi untuk Bahasa Indonesia", icon: BookOpen },
                         ].map((config) => (
                             <div className="flex items-start gap-3 rounded-lg border bg-muted/30 p-3" key={config.name}>
                                 <config.icon className="mt-0.5 h-5 w-5 text-primary" />
@@ -1578,7 +1574,7 @@ function LatencyAnalysis({ runId }: { runId: string | null }) {
                             value={latency / 1000}
                         />
                         {/* Add more detailed latency breakdown if available */}
-                        <div className="h-[300px] w-full">
+                        <div className="h-75 w-full">
                             <ResponsiveContainer>
                                 <LineChart
                                     data={[

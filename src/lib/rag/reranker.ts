@@ -155,17 +155,37 @@ const DEFAULT_OPTIONS: RerankerOptions = {
     },
 };
 
-let crossEncoderPipeline: Awaited<ReturnType<typeof pipeline>> | null = null;
-
-async function getCrossEncoderPipeline() {
-    if (!crossEncoderPipeline) {
-        crossEncoderPipeline = await pipeline("text-classification", "cross-encoder/ms-marco-MiniLM-L2-v2");
-    }
-    return crossEncoderPipeline;
+interface PipelineStore {
+    instance: unknown | null;
+    promise: Promise<unknown> | null;
 }
 
-async function crossEncoderScore(query: string, passages: string[]): Promise<number[]> {
-    const pipe = await getCrossEncoderPipeline();
+const globalForPipeline = globalThis as unknown as { __MY_PIPELINE__?: PipelineStore };
+
+export function getPipeline(progressCallback?: (progressInfo: unknown) => void) {
+    const store = globalForPipeline.__MY_PIPELINE__ ?? { instance: null, promise: null };
+    globalForPipeline.__MY_PIPELINE__ = store;
+    if (store.instance) return store.instance;
+    if (store.promise) return store.promise;
+
+    store.promise = (async () => {
+        const instance = await pipeline("text-classification", "cross-encoder/ms-marco-MiniLM-L2-v2", {
+            progress_callback: progressCallback,
+        });
+        store.instance = instance;
+        store.promise = null;
+        return instance;
+    })();
+
+    return store.promise;
+}
+
+async function crossEncoderScore(
+    query: string,
+    passages: string[],
+    progressCallback?: (progressInfo: unknown) => void
+): Promise<number[]> {
+    const pipe = (await getPipeline(progressCallback)) as Awaited<ReturnType<typeof pipeline>>;
     const scores: number[] = [];
 
     for (const passage of passages) {

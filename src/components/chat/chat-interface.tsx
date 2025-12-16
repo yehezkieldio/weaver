@@ -630,7 +630,7 @@ const EmptyState = memo(function EmptyStateComponent() {
             </div> */}
             <h3 className="mb-2 font-medium text-foreground text-lg">Selamat Datang di MuliaChat</h3>
             <p className="mx-auto mb-4 max-w-md text-muted-foreground text-sm">
-                Ajukan pertanyaan tentang dokumen yang telah Anda unggah dalam Bahasa Indonesia.
+                Silahkan ajukan pertanyaan tentang Universitas Mulia.
             </p>
         </div>
     );
@@ -1176,7 +1176,7 @@ const SettingsPanel = memo(function SettingsPanelComponent({
                             <SelectTrigger className="h-8 w-40">
                                 <SelectValue />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="font-sans">
                                 <SelectItem value="hybrid">
                                     <span className="flex items-center gap-1.5">
                                         <Zap className="h-3 w-3" /> Hybrid (RRF)
