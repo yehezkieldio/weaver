@@ -162,6 +162,21 @@ CREATE TABLE "guardrail_logs" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "human_annotations" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"evaluation_question_id" uuid NOT NULL,
+	"annotator_id" text NOT NULL,
+	"faithfulness_rating" integer,
+	"relevancy_rating" integer,
+	"correctness_rating" integer,
+	"has_hallucination" boolean,
+	"hallucination_notes" text,
+	"overall_quality" integer,
+	"annotation_time_ms" integer,
+	"notes" text,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "statistical_analyses" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"evaluation_run_id" uuid,
@@ -180,6 +195,7 @@ ALTER TABLE "document_chunks" ADD CONSTRAINT "document_chunks_document_id_docume
 ALTER TABLE "document_processing_progress" ADD CONSTRAINT "document_processing_progress_document_id_documents_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."documents"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "evaluation_questions" ADD CONSTRAINT "evaluation_questions_run_id_evaluation_runs_id_fk" FOREIGN KEY ("run_id") REFERENCES "public"."evaluation_runs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "guardrail_logs" ADD CONSTRAINT "guardrail_logs_session_id_chat_sessions_id_fk" FOREIGN KEY ("session_id") REFERENCES "public"."chat_sessions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "human_annotations" ADD CONSTRAINT "human_annotations_evaluation_question_id_evaluation_questions_id_fk" FOREIGN KEY ("evaluation_question_id") REFERENCES "public"."evaluation_questions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "statistical_analyses" ADD CONSTRAINT "statistical_analyses_evaluation_run_id_evaluation_runs_id_fk" FOREIGN KEY ("evaluation_run_id") REFERENCES "public"."evaluation_runs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "statistical_analyses" ADD CONSTRAINT "statistical_analyses_ablation_study_id_ablation_studies_id_fk" FOREIGN KEY ("ablation_study_id") REFERENCES "public"."ablation_studies"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "content_search_idx" ON "document_chunks" USING gin ("content" gin_trgm_ops);

@@ -1,5 +1,5 @@
 {
-  "id": "151a68c4-0067-457a-ac68-457b041b7132",
+  "id": "c8cf05ab-cab4-4da6-9413-c17a26ac424a",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -153,8 +153,12 @@
           "name": "agent_steps_session_id_chat_sessions_id_fk",
           "tableFrom": "agent_steps",
           "tableTo": "chat_sessions",
-          "columnsFrom": ["session_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "session_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -252,8 +256,12 @@
           "name": "chat_messages_session_id_chat_sessions_id_fk",
           "tableFrom": "chat_messages",
           "tableTo": "chat_sessions",
-          "columnsFrom": ["session_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "session_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -414,8 +422,12 @@
           "name": "document_chunks_document_id_documents_id_fk",
           "tableFrom": "document_chunks",
           "tableTo": "documents",
-          "columnsFrom": ["document_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "document_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -497,8 +509,12 @@
           "name": "document_processing_progress_document_id_documents_id_fk",
           "tableFrom": "document_processing_progress",
           "tableTo": "documents",
-          "columnsFrom": ["document_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "document_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -508,7 +524,9 @@
         "document_processing_progress_document_id_unique": {
           "name": "document_processing_progress_document_id_unique",
           "nullsNotDistinct": false,
-          "columns": ["document_id"]
+          "columns": [
+            "document_id"
+          ]
         }
       },
       "policies": {},
@@ -864,8 +882,12 @@
           "name": "evaluation_questions_run_id_evaluation_runs_id_fk",
           "tableFrom": "evaluation_questions",
           "tableTo": "evaluation_runs",
-          "columnsFrom": ["run_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "run_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1024,8 +1046,113 @@
           "name": "guardrail_logs_session_id_chat_sessions_id_fk",
           "tableFrom": "guardrail_logs",
           "tableTo": "chat_sessions",
-          "columnsFrom": ["session_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "session_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.human_annotations": {
+      "name": "human_annotations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "evaluation_question_id": {
+          "name": "evaluation_question_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "annotator_id": {
+          "name": "annotator_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "faithfulness_rating": {
+          "name": "faithfulness_rating",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "relevancy_rating": {
+          "name": "relevancy_rating",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "correctness_rating": {
+          "name": "correctness_rating",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "has_hallucination": {
+          "name": "has_hallucination",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "hallucination_notes": {
+          "name": "hallucination_notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "overall_quality": {
+          "name": "overall_quality",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "annotation_time_ms": {
+          "name": "annotation_time_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "human_annotations_evaluation_question_id_evaluation_questions_id_fk": {
+          "name": "human_annotations_evaluation_question_id_evaluation_questions_id_fk",
+          "tableFrom": "human_annotations",
+          "tableTo": "evaluation_questions",
+          "columnsFrom": [
+            "evaluation_question_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1103,8 +1230,12 @@
           "name": "statistical_analyses_evaluation_run_id_evaluation_runs_id_fk",
           "tableFrom": "statistical_analyses",
           "tableTo": "evaluation_runs",
-          "columnsFrom": ["evaluation_run_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "evaluation_run_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1112,8 +1243,12 @@
           "name": "statistical_analyses_ablation_study_id_ablation_studies_id_fk",
           "tableFrom": "statistical_analyses",
           "tableTo": "ablation_studies",
-          "columnsFrom": ["ablation_study_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "ablation_study_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
