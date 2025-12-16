@@ -1,18 +1,18 @@
 /**
- * @fileoverview University Domain-Specific Processing for Indonesian Academic Content
+ * @fileoverview University Domain-Specific Processing for Indonesian University Information
  *
  * WHY This Module:
- * - Indonesian academic documents have unique structure (BAB I, RPS, skripsi)
- * - Domain-specific terminology improves retrieval (mahasiswa, dosen, metodologi)
- * - Course metadata enables better context (course codes, instructors, semesters)
- * - Citation styles differ (Indonesian APA style)
+ * - PRIMARY DOMAIN: General university information (guides, regulations, procedures, faculty, programs, facilities)
+ * - SECONDARY: Academic documents (thesis, RPS) are part of the broader university information ecosystem
+ * - Indonesian university documents have unique structure and terminology
+ * - Domain-specific processing improves retrieval accuracy for university-specific queries
  * - Document type detection enables specialized chunking strategies
  *
  * WHY Indonesian-Specific:
  * - Numbered chapters use Roman numerals: "BAB I PENDAHULUAN"
- * - Unique document types: RPS (Rencana Pembelajaran Semester), skripsi, tesis
- * - Indonesian synonym patterns (penelitian ≈ riset ≈ studi ≈ kajian)
- * - Course codes follow different patterns (e.g., "MK-2401", "IF234")
+ * - Unique document types: RPS (Rencana Pembelajaran Semester), buku pedoman, peraturan
+ * - Indonesian synonym patterns (prosedur ≈ tata cara ≈ mekanisme)
+ * - Administrative codes and patterns (NIM, NIP, SK, UKT)
  *
  * Supported Document Categories (12 domains, 50+ document types):
  * 1. Informasi Akademik: CPL, kurikulum, kalender akademik, KRS/KHS, IP/IPK
@@ -30,18 +30,18 @@
  *
  * Key Features:
  * - Document type detection (50+ types across 12 categories)
- * - PDF-ified Excel/table content handling
+ * - PDF-ified Excel/table content handling (for administrative docs)
  * - Course metadata extraction (codes, names, instructors)
  * - Section extraction (BAB, abstrak, metodologi)
- * - Academic synonym expansion (penelitian → riset, studi, kajian)
+ * - Academic synonym expansion (prosedur → tata cara, mekanisme, alur)
  * - Citation extraction (APA, IEEE, MLA)
  * - Keyword extraction (manual + LLM-based)
  * - PDF text normalization (fixes OCR artifacts)
  * - Table structure detection for administrative documents
  *
  * Research Foundation:
- * - Indonesian Academic Writing Standards (Pedoman Penulisan Karya Ilmiah)
- * - Query expansion improves recall by 20-30% for academic queries
+ * - Indonesian University Administrative Standards
+ * - Query expansion improves recall by 20-30% for university information queries
  */
 
 import { generateText } from "ai";

@@ -1,0 +1,15 @@
+Pendaftaran Calon Mahasiswa Baru
+
+Guna mempermudah proses pendaftaran camaba. Berikut merupakan tutorial pengisian data camaba menggunakan smart integreted academic system (SIAS).
+
+Langkah 1
+
+Calon Pendaftar Mengisi Formulir Pendaftaran di website SIAS untuk melakukan pendaftaran secara online dengan mengisi field-field yang tersedia dengan benar. Khusus untuk nomer WA dan Email yang diinput, wajib menggunakan aktif untuk mendapatkan username dan password untuk melakukan pendaftaran serta melakukan tes.
+
+Langka 2
+
+Setelah mendapatkan username dan password yang dikirim melalui salah satu pilihan yaitu WA atau Email. Kemudian Login menggunakan username dan password yang telah didapatkan.
+
+Langka 3
+
+Calon mahasiswa melakukan tes online dengan jenis soal yang berbeda-beda. Kemudian dapat melihat hasilnya setelah admin melakukan validasi.

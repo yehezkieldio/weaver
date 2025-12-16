@@ -1,0 +1,154 @@
+Lembaran Fakta Sarjana Sistem Informasi
+Informasi Umum
+
+Lulusan : Sarjana Komputer (S.Kom)
+Durasi : 8 Semester atau 4 Tahun
+Mulai Belajar : September 2024
+Lokasi : Kampus PSDKU Samarinda
+Bahasa : Bahasa Indonesia
+Syarat Penerimaan : Lulusan SMA Sederajat
+Biaya : Belum diperbaharui
+Kontak : 0811 590 950
+
+Metode Perkuliahan
+
+TATAP MUKA
+KELAS ONLINE
+PRAKTIKUM
+KERJA PRAKTEK
+STUDI KASUS
+
+Sertifikasi Kelulusan
+Prospek Karir
+Konsentrasi Creative Animation & Multimedia
+
+KONSENTRASI INI MERUPAKAN PENGEMBANGAN LEBIH LANJUT DARI DIGITAL ART AND DESIGN YANG LEBIH DIFOKUSKAN DALAM MERANCANG, MEMBUAT, MENGEMBANGKAN, DAN MENERAPKAN APLIKASI DAN/ATAU KONTEN BERBASIS MULTIMEDIA. AKAN TETAPI DI CREATIVE ANIMATION AND MULTIMEDIA, LEBIH DIKEMBANGKAN KEDALAM CARA BERPIKIR MULTIMEDIA SPECIALIST. SELAIN MAMPU MENCIPTAKAN PRODUK INFORMASI KREATIF SERTA INTERAKTIF BERBASIS MULTIMEDIA, ANDA AKAN BELAJAR UNTUK MENJADI MULTIMEDIA ANALYST ATAUPUN MULTIMEDIA CONSULTANT YANG TERAMPIL DI BIDANGNYA DENGAN BERBAGAI MEDIA (MULTIPLATFORM), MUDAH DIGUNAKAN (USER FRIENDLY), DAN DENGAN DESAIN ANTARMUKA (USER INTERFACE) YANG BERAGAM.
+
+MULTIMEDIA SPECIALIST
+VIDEO EDITOR
+ADVANCE ANIMATOR
+ADVANCE MULTIMEDIA DESIGNER
+
+Konsentrasi Business Intelligence
+
+KONSENTRASI INI AKAN MEMBENTUK KARAKTER MANDIRI YANG MEMILIKI KEAHLIAN DALAM MENGEMBANGKAN TEKNOLOGI INFORMASI UNTUK PEMECAHAN MASALAH BISNIS DAN SEBAGAI PENGHUBUNG ANTARA KEBUTUHAN BISNIS DI SEKTOR INDUSTRY DAN PENELITIAN DENGAN TEKNOLOGI INFORMASI YANG BERKEMBANG SAAT INI. MAHASISWA AKAN MEMPELAJARI MODEL BUSINESS TEKNOLOGI INFORMASI DENGAN MENGGABUNGKAN 4 FOKUS AREA YAKNI BUSSINES ANALYSTIC, DIGITAL MARKETING, APLIKASI SOCIAL MEDIA, START-UP DAN IT ENTERPRENEURSHIP.
+
+INFORMATION TECHNOPRENEURSHIP
+GAME APPLICATION SYSTEM
+ALGORITHM ENGINEERING
+BUSINESS SOLUTION
+COMPUTER APPLICATION
+
+Kurikulum
+
+Semester 1
+
+NAMA MATA KULIAH	SKS	KET
+Bahasa Inggris	3
+Algoritme dan Struktur Data	3
+Matematika Diskrit	3
+Organisasi dan Arsitektur Komputer	3
+Sistem Operasi	3
+Pancasila	2
+Teknologi Informasi	3
+Pendidikan Anti Korupsi	2
+22
+
+Semester 2
+
+NAMA MATA KULIAH	SKS	KET
+Hukum Ketenagakerjaan	2	MK Transdisipliner Prodi Hukum
+Dasar Pemrograman	3
+Aljabar Linier	3
+Sistem Basis Data	3
+Jaringan Komputer	3
+Pendidikan Agama	2
+Bahasa Inggris Bisnis	3
+Pendidikan Kewarganegaraan	2
+21
+
+Semester 3
+
+NAMA MATA KULIAH	SKS	KET
+Akuntansi Pengantar I	3	MK Transdisipliner Prodi S1-Akuntansi
+Etika Profesi SI	3
+Pemrograman Berorientasi Obyek	4
+Keamanan Komputer dan Informasi	3
+Statistika dan Probabilitas	3
+Bahasa Indonesia	3
+Media Sosial Untuk Bisnis	3	Pilihan
+19-22
+
+Semester 4
+
+NAMA MATA KULIAH	SKS	KET
+Grafik dan Visualisasi	3	Konsentrasi Creative Animation & Multimedia
+Desain Animasi I	3
+Data Warehouse	3	Konsentrasi Business Intelligence
+Analisis dan Perancangan Sistem Informasi	4
+Riset Operasi Bisnis	3
+Pemrograman Web	3
+Komunikasi Publik	2
+Wirausaha Berbasis Teknologi	4
+Knowledge Management	2	Pilihan
+Perpajakan I	2	MK Transdisipliner Prodi S1-Akuntansi
+21-24
+
+Semester 5
+
+NAMA MATA KULIAH	SKS	KET
+Desain Animasi II	3	Konsentrasi Creative Animation & Multimedia
+Desain Grafis Bisnis	3
+Seni Visual	3
+Manajemen Risiko dan Kualitas Data	3	Konsentrasi Business Intelligence
+Analisis Multivariat	3
+Manajemen Fungsi Bisnis	3
+Pengujian Dan Implementasi Sistem	3
+Manajemen Proyek	4
+Metodologi Penelitian	3
+Penulisan dan Publikasi Ilmiah	2
+Manajemen Pengadaan dan Investasi TI	3	Pilihan
+IS Strategy	3	Pilihan
+18-24
+
+Semester 6
+
+NAMA MATA KULIAH	SKS	KET
+Penulisan dan Publikasi Ilmiah	2
+Pemrograman Perangkat Bergerak	4
+Proposal Penelitian dan Aplikasi Bisnis TI	3
+Sistem Pendukung Keputusan	3
+Manajemen Kualitas Data	3	Business Intelligence
+Manajemen Rantai Pasok	3	Business Intelligence
+Pengujian Dan Implementasi Sistem	3	Business Intelligence
+Animasi 3D	3	Creative Animation & Multimedia
+Penyuntingan Video	3	Creative Animation & Multimedia
+Video Kreatif Bisnis	3	Creative Animation & Multimedia
+Perencanaan dan Pengembangan Bisnis	2	MK Transdisipliner di S1 Manajemen
+23
+
+Semester 7
+
+NAMA MATA KULIAH	SKS	KET
+Video Kreatif Bisnis	3	Konsentrasi Creative Animation & Multimedia
+Inteligensi Bisnis	3	Konsentrasi Business Intelligence
+Proposal Penelitian dan Aplikasi Bisnis TI	2
+Kuliah Kerja Nyata	4
+Arsitektur Perusahaan	3	Pilihan
+Manajemen Layanan TI (IT Service)	3	Pilihan
+IT Audit dan Controls	3	Pilihan
+IS Inovation and New Technologies	2	Pilihan
+Service Oriented Architecture	3	Pilihan
+9-24
+
+Semester 8
+
+NAMA MATA KULIAH	SKS	KET
+Skripsi	6
+6
+
+Tawaran Transdisiplin
+
+NAMA MATA KULIAH	SKS	KET
+Etika Profesi SI	3
+Pemrograman Perangkat Bergerak	4

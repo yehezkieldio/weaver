@@ -1,0 +1,138 @@
+Lembaran Fakta Sistem Informasi
+Informasi Umum
+
+Lulusan : Sarjana Komputer (S.Kom)
+Durasi : 8 Semester atau 4 Tahun
+Mulai Belajar : September 2024
+Lokasi : Kampus Utama Balikpapan
+Bahasa : Bahasa Indonesia
+Syarat Penerimaan : Lulusan SMA Sederajat
+Biaya : Dana Perkuliahan Rata-rata Rp 5.2 Juta
+Kontak : 0811 590 950
+
+Metode Perkuliahan
+
+SMALL GROUP DISCUSSION
+CONTEXTUAL INSTRUCTION
+CASE STUDY
+PROJECT BASED LEARNING
+
+Sertifikasi Kelulusan
+
+BNSP
+ORACLE ACADEMYDATABASE FOUNDATIONS
+ORACLE ACADEMY JAVA FOUNDATIONS
+
+Prospek Karir
+Konsentrasi Creative Animation & Multimedia
+
+KONSENTRASI INI MERUPAKAN PENGEMBANGAN LEBIH LANJUT DARI DIGITAL ART AND DESIGN YANG LEBIH DIFOKUSKAN DALAM MERANCANG, MEMBUAT, MENGEMBANGKAN, DAN MENERAPKAN APLIKASI DAN/ATAU KONTEN BERBASIS MULTIMEDIA. AKAN TETAPI DI CREATIVE ANIMATION AND MULTIMEDIA, LEBIH DIKEMBANGKAN KEDALAM CARA BERPIKIR MULTIMEDIA SPECIALIST.SELAIN MAMPU MENCIPTAKAN PRODUK INFORMASI KREATIF SERTA INTERAKTIF BERBASIS MULTIMEDIA, ANDA AKAN BELAJAR UNTUK MENJADI MULTIMEDIA ANALYST ATAUPUN MULTIMEDIA CONSULTANT YANG TERAMPIL DI BIDANGNYA DENGAN BERBAGAI MEDIA (MULTIPLATFORM), MUDAH DIGUNAKAN (USER FRIENDLY), DAN DENGAN DESAIN ANTARMUKA (USER INTERFACE) YANG BERAGAM.
+
+MULTIMEDIA SPECIALIST
+VIDEO EDITOR
+ADVANCE ANIMATOR
+ADVANCE MULTIMEDIA DESIGNER
+
+Konsentrasi Business Intelligence
+
+KONSENTRASI INI AKAN MEMBENTUK KARAKTER MANDIRI YANG MEMILIKI KEAHLIAN DALAM MENGEMBANGKAN TEKNOLOGI INFORMASI UNTUK PEMECAHAN MASALAH BISNIS DAN SEBAGAI PENGHUBUNG ANTARA KEBUTUHAN BISNIS DI SEKTOR INDUSTRY DAN PENELITIAN DENGAN TEKNOLOGI INFORMASI YANG BERKEMBANG SAAT INI. MAHASISWA AKAN MEMPELAJARI MODEL BUSINESS TEKNOLOGI INFORMASI DENGAN MENGGABUNGKAN 4 FOKUS AREA YAKNI BUSSINES ANALYSTIC, DIGITALMARKETING,APLIKASI SOCIAL MEDIA, START-UPDAN IT ENTERPRENEURSHIP.
+
+SYSTEM ANALYST
+DATABASE ADMINISTRATOR
+BUSINESS PROCESS ANALYST
+INFORMATION SYSTEM AUDITOR
+OPERATIONSANALYST
+
+Kurikulum
+
+Semester 1
+
+NAMA MATA KULIAH SKS	KET
+Pancasila	2 MKDU
+Pendidikan Agama 2 MKDU
+Pendidikan Anti Korupsi	2 MKDU
+Teknologi Informasi	3 Wajib
+Sistem Operasi	3 Wajib
+Algoritme dan Struktur Data	3 Wajib
+Bahasa Inggris	3 Wajib
+Matematika Diskrit	3 Wajib
+Interaksi Manusia dan Komputer 3 Wajib
+24
+
+Semester 2
+
+NAMA MATA KULIAH	SKS	KET
+Bahasa Inggris Bisnis	3 Wajib
+Bahasa Indonesia 2 MKDU
+Pendidikan Kewarganegaraan	2 MKDU
+Jaringan Komputer	3 Wajib
+Sistem Basis Data	3 Wajib
+Aljabar Linier	3 Wajib
+Dasar Pemrograman	3 Wajib
+Etika Profesi SI	3 Wajib
+22
+
+Semester 3
+
+NAMA MATA KULIAH	SKS	KET
+Wirausaha Berbasis Teknologi	4 Wajib
+Komunikasi Publik	2 Wajib
+Statistika dan Probabilitas	3 Wajib
+Analisis dan Perancangan Sistem Informasi	4 Wajib
+Intelegensi Bisnis 3 Wajib
+Organisasi dan Arsitektur Komputer 3 Wajib
+Multimedia	3 Wajib
+22
+
+Semester 4
+
+NAMA MATA KULIAH SKS	KET
+Pemrograman Web	3 Wajib
+Data Mining	3 Wajib
+Audit Sistem Informasi 3 Wajib
+Sistem Informasi Enterprise 3 Wajib
+Analisis dan Visualisasi Data 3 Wajib
+Manajemen Fungsi Bisnis	3 Mata Kuliah Pilihan dengan konsentrasi Bussiness Intelligence
+Sistem Basis Data Lanjut	3 Mata Kuliah Pilihan dengan konsentrasi Bussiness Intelligence
+Desain Animasi I	3 Mata Kuliah Pilihan dengan konsentrasi Creative Animation & Multimedia
+Desain Digital	3 Mata Kuliah Pilihan dengan konsentrasi Creative Animation & Multimedia
+21-24
+
+Semester 5
+
+NAMA MATA KULIAH SKS	KET
+Metodologi Penelitian	3 Wajib
+Manajemen Proyek	4 Wajib
+Pemrograman Berorientasi Obyek	4 Wajib
+Perencanaan Sumber Daya Perusahaan	3 Mata Kuliah Pilihan dengan konsentrasi Bussiness Intelligence
+Riset Operasi Bisnis	3 Mata Kuliah Pilihan dengan konsentrasi Bussiness Intelligence
+Desain Animasi II	3 Mata Kuliah Pilihan dengan konsentrasi Creative Animation & Multimedia
+Desain Grafis Bisnis	3 Mata Kuliah Pilihan dengan konsentrasi Creative Animation & Multimedia
+Seni Visual	3 Mata Kuliah Pilihan dengan konsentrasi Creative Animation & Multimedia
+22-24
+
+Semester 6
+
+NAMA MATA KULIAH SKS	KET
+Penulisan dan Publikasi Ilmiah	2 Wajib
+Pemrograman Perangkat Bergerak	4 Wajib
+Proposal Penelitian dan Aplikasi Bisnis TI	3 Wajib
+Sistem Pendukung Keputusan	3 Wajib
+Manajemen Kualitas Data	3 Wajib
+Pengujian Dan Implementasi Sistem	3 Mata Kuliah Pilihan dengan konsentrasi Bussiness Intelligence
+Manajemen Rantai Pasok 3 Mata Kuliah Pilihan dengan konsentrasi Bussiness Intelligence
+Animasi 3D	3 Mata Kuliah Pilihan dengan konsentrasi Creative Animation & Multimedia
+Penyuntingan Video	3 Mata Kuliah Pilihan dengan konsentrasi Creative Animation & Multimedia
+22-24
+
+Semester 7
+
+NAMA MATA KULIAH SKS	KET
+Kuliah Kerja Nyata	4 Wajib
+4
+
+Semester 8
+
+NAMA MATA KULIAH	SKS	KET
+Skripsi	6 Wajib
+6

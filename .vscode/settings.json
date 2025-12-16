@@ -40,6 +40,9 @@
   "[css]": {
     "editor.defaultFormatter": "biomejs.biome"
   },
+  "[plaintext]": {
+    "editor.wordWrap": "on"
+  },
   "files.associations": {
     "*.css": "tailwindcss"
   },

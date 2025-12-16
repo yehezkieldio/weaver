@@ -1,0 +1,157 @@
+Lembaran Fakta Sarjana Teknologi Informasi
+Informasi Umum
+
+Lulusan : Sarjana Komputer (S.Kom)
+Durasi : 8 Semester atau 4 Tahun
+Mulai Belajar : September 2024
+Lokasi : Kampus Utama Balikpapan
+Bahasa : Bahasa Indonesia
+Syarat Penerimaan : Lulusan SMA Sederajat
+Biaya : Dana Perkuliahan Rata-rata 5.2 juta
+Kontak : 0811 590 950
+
+Metode Perkuliahan
+
+TATAP MUKA
+KELAS ONLINE
+PRAKTIKUM
+KERJA PRAKTEK
+STUDI KASUS
+
+Sertifikasi Kelulusan
+
+BNSP
+CISCO (CCNA 1-4, CCNA SECURITY)
+CHFI (COMPUTER HACKING FORENSIC INVESTIGATOR)
+CEH (CERTIFIED ETHICAL HACKER)
+MICROSOFT
+MIKROTIKMTCNA
+ORACLE
+
+Prospek Karir
+KONSENTRASI: FORENSIC AND SECURITY ARCHITECTURE
+
+KONSENTRASI INI AKAN MEMBENTUK KARAKTER YANG MEMILIKI KEAHLIAN DIBIDANG FORENSIK IDENTIFIKASI,KEAMANAN SIBER, TEKNOLOGI INTERNET OF THINGS UNTUK SMART CITY, INTEGRASI SISTEM DAN LAYANAN AWAN (CLOUD COMPUTINGI) YANG BERSERTIFIKASI UNTUK MENDUKUNG KEMANDIRIAN BERKOMPETENSI DITINGKAT NASIONAL DAN INTERNASIONAL. MAHASISWA AKAN BELAJAR MENGENAL ILMU KOMPUTER DALAM BIDANG TEKNOLOGI INFORMASI, SERTA DAPAT TURUT DALAM MENGEMBANGKAN FORENSIC IDENTIFIKASI & KEAMANAN SIBER TEKNOLOGI BERBASIS INTERNET (INTERNET OF THINGS)
+
+SECURITY ANALIS
+CISO / DIRECTOR OF SECURITY
+PENETRATION TESTER
+COMPUTER FORENSICS INVESTIGATOR OR FORENSIC ANALYST
+VULNERABILITY SECURITY RESEARCH ENGINEER
+SECURITY AUDITOR
+SECURITY ARCHITECT
+INCIDENT RESPONDER, Dsb
+
+KONSENTRASI : NETWORK TECHNOLOGY
+
+KONSENTRASI INI BERKAITAN DENGAN KEMAMPUAN SEORANG INDIVIDU DALAM MERANCANG, MEMBANGUN, MENGOPERASIKAN, DAN MENGAWASI BERBAGAI KOMPONEN TEKNIS INFRASTRUKTUR JARINGAN DAN TELEKOMUNIKASI. INFRASTRUKTUR JARINGAN DISINI MENCAKUP MEDIUM ENTERPRISE NETWORK DAN INFRASTRUKTUR TELEKOMUNIKASI DI SINI ADALAH MEDIUM TRANSMISI ATAU KONEKSI BERBASIS DIGITAL/ELEKTRONIK, YANG BEROPERASI MELALUI DARAT (TERESTRIAL), LAUT (KABEL LAUT), MAUPUN UDARA (SATELIT).PEMBELAJARAN KOMUNIKASI YANG BAIK JUGA AKAN DISERTAKAN DALAM RANGKA PENDEKATAN KEPADA ENDUSER SEBAGAI PENGGUNA LAYANAN JARINGAN YG DISEDIAKAN DAN JUGA SEBAGAI BEKAL MEMBUKA PELUANG WIRAUSAHA BERDASARKAN KOMPETENSI YG DIPELAJARI.
+
+NETWORK ADMINISTATOR
+NETWORK SERVICES SUPERVISOR
+NETWORK TECHNICIAN
+
+Kurikulum
+
+Semester 1
+
+NAMA MATA KULIAH	SKS	KET
+Pancasila	2
+Pendidikan Agama	2
+Teknologi Informasi	3
+Sistem Basis Data	3
+Bahasa Inggris	2
+Perangkat Keras Komputer	3
+Logika Informatika	3
+Aljabar Linier dan Matrik	2
+20
+
+Semester 2
+
+NAMA MATA KULIAH	SKS	KET
+Bahasa Indonesia	2
+Bahasa Inggris Bisnis	3
+Pendidikan Kewarganegaraan	2
+Wirausaha Berbasis Teknologi	4
+Komunikasi Publik	2
+Algoritma dan Teknik Pemrograman	3
+Komunikasi Data	3
+Interaksi Manusia dan Komputer	3
+Perencanaan dan Pengembangan Bisnis	2	(Transdisipliner)
+24
+
+Semester 3
+
+NAMA MATA KULIAH	SKS	KET
+Pendidikan Anti Korupsi	2
+Jaringan Komputer	3
+Sistem Operasi	3
+Teknologi Multimedia	3
+Kriptografi	3
+Data Image Prosesing	3
+Pemodelan Data	3
+Aplikasi Sosial Media	3
+23
+
+Semester 4
+
+NAMA MATA KULIAH	SKS	KET
+Pemrograman Web	3
+Statistika dan Probabilitas	3
+Manajemen Big Data	3
+Sistem Pengambil Keputusan (DSS)	3
+Tata Kelola Infrastruktur Teknologi Informasi	3
+Arsitektur dan Integrasi Sistem	3
+Etika Profesi	2
+Perpajakan I	2	(Transdisipliner)
+22
+
+Semester 5
+
+NAMA MATA KULIAH	SKS	KET
+Sistem Informasi Geografis	3
+Platform dan Pengembangan Aplikasi Mobile	3
+Komputer Forensik	3	Forensics & Security
+Sistem Deteksi dan Intrusi	3	Forensics & Security
+Forensik Teknologi Informasi	3	Forensics & Security
+Kejahatan Teknologi informasi	3	Forensics & Security
+Wired Technology & Fiber Optics	3	Network Technology
+Administrasi dan Desain Network	3	Network Technology
+Jaringan Nirkabel	3	Network Technology
+Routing dan Switching	3	Network Technology
+18
+
+Semester 6
+
+NAMA MATA KULIAH	SKS	KET
+Penulisan dan Publikasi Ilmiah	2
+Metodologi Penelitian	3
+Proyek Teknologi Informasi	3
+Keamanan Siber	3	Forensics & Security
+Keamanan Teknologi Komputer	3	Forensics & Security
+Keamanan Web dan Aplikasi	3	Forensics & Security
+Backup dan Pemulihan Data	3	Forensics & Security
+Internet Of Things (IOT)	3	Network Technology
+Teknologi Komunikasi Satelite (VSAT)	3	Network Technology
+Grid dan Komputer Awan	3	Network Technology
+Keamanan Jaringan	3	Network Technology
+Kejahatan Siber	3	Network Technology
+23
+
+Semester 7
+
+NAMA MATA KULIAH	SKS	KET
+Kuliah Kerja Nyata	4
+Kuliah Kerja Praktik	4
+8
+
+Semester 8
+
+NAMA MATA KULIAH	SKS	KET
+Skripsi	6
+6
+
+Transdisipliner
+
+NAMA MATA KULIAH	SKS	KET
+Komputer Forensik	3
+Backup dan Pemulihan Data	3

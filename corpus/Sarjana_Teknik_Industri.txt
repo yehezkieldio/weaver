@@ -1,0 +1,134 @@
+Lembaran Fakta Sarjana Teknik Industri
+Informasi Umum
+
+Lulusan : Sarjana Teknik (S.T)
+Durasi : 8 Semester atau 4 Tahun
+Lokasi : Kampus Utama Balikpapan
+Bahasa : Bahasa Indonesia
+Syarat Penerimaan : Lulusan SMA Sederajat
+Kontak : 0811 590 950
+
+Metode Perkuliahan
+
+TATAP MUKA
+KELAS ONLINE
+PRAKTIKUM
+KERJA PRAKTEK
+STUDI KASUS
+
+Konsentrasi
+KONSENTRASI : Intelligent Industrial Automation
+
+Konsentrasi ini berfokus pada penerapan otomatisasi cerdas dalam industri untuk meningkatkan efisiensi dan produktivitas. Mahasiswa akan mempelajari sistem kendali otomatis, robotika, kecerdasan buatan (AI), dan Internet of Things (IoT) dalam proses produksi. Dengan pendekatan berbasis data dan teknologi canggih, mereka siap menjadi insinyur otomatisasi, analis sistem industri, atau manajer proyek yang mampu mengoptimalkan operasional industri di era digital.
+KONSENTRASI : Industrial System Optimization
+
+Konsentrasi ini mengajarkan strategi optimasi sistem industri guna meningkatkan efisiensi dan kualitas operasional. Mahasiswa akan mempelajari manajemen rantai pasok, analisis data, perencanaan produksi, serta penerapan teknologi ERP dalam industri. Lulusan dari konsentrasi ini dapat berkarier sebagai analis rantai pasok, manajer operasional, atau konsultan industri yang membantu perusahaan mencapai keunggulan kompetitif.
+
+Prospek Karir
+
+Manajer Operasi
+Manajer Operasi bertanggung jawab untuk merancang, mengimplementasikan, dan mengelola sistem operasional di perusahaan. Mereka fokus pada peningkatan efisiensi, produktivitas, dan kualitas proses produksi serta memastikan bahwa operasi berjalan lancar dan sesuai dengan standar yang ditetapkan. Tugas mereka meliputi perencanaan jadwal produksi, pengelolaan sumber daya, dan pengawasan tim operasional.
+
+Konsultan Manajemen
+Konsultan Manajemen membantu perusahaan dalam menganalisis masalah operasional dan memberikan solusi strategis untuk meningkatkan kinerja. Mereka menggunakan teknik-teknik analisis dan pemodelan untuk memahami proses bisnis dan menawarkan rekomendasi untuk efisiensi operasional, pengurangan biaya, dan perbaikan manajerial.
+
+Analis Rantai Pasokan
+Analis Rantai Pasokan mengelola dan mengoptimalkan rantai pasokan dari pemasok hingga pelanggan akhir. Mereka menganalisis data untuk merencanakan dan mengelola inventaris, pengiriman, dan logistik. Tugas mereka meliputi identifikasi dan mitigasi risiko dalam rantai pasokan, serta pengembangan strategi untuk meningkatkan efisiensi dan mengurangi biaya.
+
+Insinyur Proses dan Sistem Informasi
+Insinyur Proses dan Sistem Informasi fokus pada perancangan dan pengelolaan proses produksi untuk meningkatkan efisiensi dan kualitas produk. Mereka bekerja pada pembuatan, implementasi, dan pengawasan prosedur produksi, serta melakukan analisis untuk menemukan dan memperbaiki masalah dalam proses. Tugas mereka juga mencakup pengujian dan penerapan teknologi baru untuk meningkatkan proses produksi.
+
+Manajer Kualitas
+Manajer Kualitas bertanggung jawab untuk memastikan bahwa produk dan layanan memenuhi standar kualitas yang ditetapkan. Mereka merancang dan mengelola sistem kontrol kualitas, melakukan audit kualitas, dan bekerja sama dengan tim produksi untuk mengidentifikasi serta memperbaiki masalah kualitas. Mereka juga memastikan kepatuhan terhadap regulasi dan standar industri.
+
+Kurikulum
+
+Semester 1
+
+NAMA MATA KULIAH	SKS TEORI	SKS PRAKTIK
+Pendidikan Agama	2
+Pendidikan Pancasila	2
+Kalkulus 1	4
+Pengantar Teknik Industri	4
+Bahasa Indonesia	2
+Pengetahuan Bahan	3
+Teori Probabilitas	3
+20
+
+Semester 2
+
+NAMA MATA KULIAH	SKS	KET
+Kewarganegaraan	2
+Pengantar Ilmu Ekonomi	3
+Logika dan Algoritma	4
+Aljabar Linear	3
+Fisika Mekanika dan Panas	4
+Kalkulus 2	4
+20
+0
+
+Semester 3
+
+NAMA MATA KULIAH	SKS TEORI	SKS PRAKTIK
+Ekonomi Teknik	2
+Fisika Listrik, Optik, dan Gelombang	3
+Mekanika Teknik	2
+Perancangan Kerja, Metode, Standar Kerja dan Praktikum	2	2
+Proses Produksi dan Praktikum	2	2
+Menggambar Teknik	3
+Statistika Dasar	2
+13
+7
+
+Semester 4
+
+NAMA MATA KULIAH	SKS TEORI	SKS PRAKTIK
+Akuntansi Biaya	2
+Perancangan Produksi dan Pengendalian Persediaan + Praktikum	2	2
+Sistem Kualitas	3
+Faktor Manusia dalam Rekayasa dan Desain + Praktikum	2	2
+Programa Linear	3
+Statistika Industri dan Praktikum	2	2
+16
+4
+
+Semester 5
+
+NAMA MATA KULIAH	SKS TEORI	SKS PRAKTIK
+Analitika dan Visualisasi Data	2
+Perancangan Fasilitas dan Penanganan Material	4
+Reliabilitas dan Pemeliharaan	3
+Perancangan Proyek Industri	2	2
+Perancangan Organisasi dan Psikologi Industri	3
+Penelitian Operasi	4
+18
+2
+
+Semester 6
+
+NAMA MATA KULIAH	SKS TEORI	SKS PRAKTIK
+Sistem Multivariat	3
+Permodelan Sistem + Praktikum	2	2
+Sistem Informasi	3
+Perancangan Proyek Industri	2	2
+Perancangan Produk	3
+Metodologi Penelitian	3
+16
+4
+
+Semester 7
+
+NAMA MATA KULIAH	SKS	KET
+Kesehatan, Keselamatan Kerja dan Lindung Lingkungan	4
+Kapita Selekta Industri	4
+Perancangan Teknik Industri + Praktikum	2	2
+Sistem Rantai Pasok	4
+Simulasi Industri	2	2
+16
+4
+
+Semester 8
+
+NAMA MATA KULIAH	SKS	KET
+Penulisan Skripsi	4
+4
