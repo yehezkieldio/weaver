@@ -959,19 +959,6 @@ export const ABLATION_CONFIGS: AblationConfig[] = [
         topK: 5,
         language: "auto",
     },
-    {
-        name: "indonesian_optimized",
-        description: "Dioptimasi untuk Bahasa Indonesia",
-        useRag: true,
-        useReranker: true,
-        rerankerStrategy: "ensemble",
-        retrievalStrategy: "hybrid",
-        chunkingStrategy: "semantic",
-        useAgenticMode: true,
-        useGuardrails: true,
-        topK: 7,
-        language: "id",
-    },
 ];
 
 // Run ablation study

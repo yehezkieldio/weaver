@@ -108,6 +108,10 @@ interface AggregateMetrics {
         answerCorrectness: number;
     };
     avgFactualConsistency?: number; // Added for HallucinationMetricsView
+    nonRagHallucinationRate?: number; // Non-RAG hallucination for comparison
+    avgAcademicRigor?: number; // Domain-specific metric
+    avgCitationAccuracy?: number; // Domain-specific metric
+    avgTerminologyCorrectness?: number; // Domain-specific metric
 }
 
 export function EvaluationDashboard() {
@@ -533,6 +537,55 @@ function AblationStudiesView({ data, onRunStudy }: { data: AblationData | undefi
     );
 }
 
+// Sub-component for hallucination row to properly use hooks
+function HallucinationRow({ run }: { run: EvaluationRun }) {
+    const { data: runDetails } = useSWR<{
+        run: EvaluationRun;
+        aggregateMetrics: AggregateMetrics;
+    }>(`/api/evaluation/${run.id}`, fetcher);
+
+    const ragHallucination = runDetails?.aggregateMetrics?.avgHallucinationRate;
+    const nonRagHallucination = runDetails?.aggregateMetrics?.nonRagHallucinationRate;
+    const factualConsistency = runDetails?.aggregateMetrics?.avgFactualConsistency;
+    const sourceAttribution = runDetails?.aggregateMetrics?.avgSourceAttribution;
+
+    // Calculate improvement (lower hallucination is better)
+    const improvement =
+        ragHallucination !== undefined && nonRagHallucination !== undefined && nonRagHallucination > 0
+            ? ((nonRagHallucination - ragHallucination) / nonRagHallucination) * 100
+            : null;
+
+    return (
+        <TableRow>
+            <TableCell className="font-medium">{run.name}</TableCell>
+            <TableCell>
+                <MetricBadge inverted value={ragHallucination !== undefined ? 1 - ragHallucination : undefined} />
+            </TableCell>
+            <TableCell>
+                <MetricBadge inverted value={nonRagHallucination !== undefined ? 1 - nonRagHallucination : undefined} />
+            </TableCell>
+            <TableCell>
+                {improvement !== null ? (
+                    <Badge
+                        className={improvement > 0 ? "bg-green-500/20 text-green-600" : "bg-red-500/20 text-red-600"}
+                    >
+                        {improvement > 0 ? "+" : ""}
+                        {improvement.toFixed(0)}%
+                    </Badge>
+                ) : (
+                    <Badge variant="outline">N/A</Badge>
+                )}
+            </TableCell>
+            <TableCell>
+                <MetricBadge value={factualConsistency} />
+            </TableCell>
+            <TableCell>
+                <MetricBadge value={sourceAttribution} />
+            </TableCell>
+        </TableRow>
+    );
+}
+
 function HallucinationMetricsView({ runs }: { runs: EvaluationRun[] }) {
     const { data: hallucinationData } = useSWR(
         runs.length > 0 ? "/api/evaluation/hallucination-summary" : null,
@@ -643,26 +696,7 @@ function HallucinationMetricsView({ runs }: { runs: EvaluationRun[] }) {
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                runs.map((run) => (
-                                    <TableRow key={run.id}>
-                                        <TableCell className="font-medium">{run.name}</TableCell>
-                                        <TableCell>
-                                            <MetricBadge inverted value={0.85} />
-                                        </TableCell>
-                                        <TableCell>
-                                            <MetricBadge inverted value={0.65} />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge className="bg-green-500/20 text-green-600">+20%</Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            <MetricBadge value={0.88} />
-                                        </TableCell>
-                                        <TableCell>
-                                            <MetricBadge value={0.82} />
-                                        </TableCell>
-                                    </TableRow>
-                                ))
+                                runs.slice(0, 5).map((run) => <HallucinationRow key={run.id} run={run} />)
                             )}
                         </TableBody>
                     </Table>
@@ -726,7 +760,23 @@ function HallucinationMetricsView({ runs }: { runs: EvaluationRun[] }) {
     );
 }
 
-function DomainMetricsView(_props: { runs: EvaluationRun[] }) {
+function DomainMetricsView({ runs }: { runs: EvaluationRun[] }) {
+    // Fetch metrics from the most recent completed run
+    const latestCompletedRun = runs.find((r) => r.status === "completed");
+    const { data: runDetails } = useSWR<{
+        run: EvaluationRun;
+        aggregateMetrics: AggregateMetrics;
+    }>(latestCompletedRun ? `/api/evaluation/${latestCompletedRun.id}` : null, fetcher);
+
+    const academicRigor = runDetails?.aggregateMetrics?.avgAcademicRigor;
+    const citationAccuracy = runDetails?.aggregateMetrics?.avgCitationAccuracy;
+    const terminologyCorrectness = runDetails?.aggregateMetrics?.avgTerminologyCorrectness;
+
+    const formatPercent = (value: number | undefined) => {
+        if (value === undefined) return "N/A";
+        return `${(value * 100).toFixed(1)}%`;
+    };
+
     return (
         <div className="space-y-6">
             <div>
@@ -734,6 +784,14 @@ function DomainMetricsView(_props: { runs: EvaluationRun[] }) {
                 <p className="text-muted-foreground">
                     Evaluasi khusus untuk konteks pendidikan tinggi dan penelitian akademik Indonesia
                 </p>
+                {!latestCompletedRun && (
+                    <div className="mt-2 flex items-center gap-2 rounded-md border border-yellow-500/50 bg-yellow-500/10 p-3 text-sm text-yellow-700 dark:text-yellow-400">
+                        <AlertCircle className="h-4 w-4" />
+                        <span>
+                            Belum ada evaluasi yang selesai. Metrik akan ditampilkan setelah evaluasi pertama selesai.
+                        </span>
+                    </div>
+                )}
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
@@ -743,7 +801,11 @@ function DomainMetricsView(_props: { runs: EvaluationRun[] }) {
                             <BookOpen className="h-4 w-4" />
                             Ketelitian Akademis
                         </CardDescription>
-                        <CardTitle className="text-3xl text-blue-600">87.5%</CardTitle>
+                        <CardTitle
+                            className={`text-3xl ${academicRigor !== undefined ? "text-blue-600" : "text-muted-foreground"}`}
+                        >
+                            {formatPercent(academicRigor)}
+                        </CardTitle>
                     </CardHeader>
                     <CardContent>
                         <p className="text-muted-foreground text-xs">Penggunaan bahasa akademis yang tepat</p>
@@ -756,7 +818,11 @@ function DomainMetricsView(_props: { runs: EvaluationRun[] }) {
                             <Target className="h-4 w-4" />
                             Akurasi Sitasi
                         </CardDescription>
-                        <CardTitle className="text-3xl text-green-600">82.3%</CardTitle>
+                        <CardTitle
+                            className={`text-3xl ${citationAccuracy !== undefined ? "text-green-600" : "text-muted-foreground"}`}
+                        >
+                            {formatPercent(citationAccuracy)}
+                        </CardTitle>
                     </CardHeader>
                     <CardContent>
                         <p className="text-muted-foreground text-xs">Ketepatan kutipan dan referensi</p>
@@ -769,7 +835,11 @@ function DomainMetricsView(_props: { runs: EvaluationRun[] }) {
                             <CheckCircle className="h-4 w-4" />
                             Ketepatan Terminologi
                         </CardDescription>
-                        <CardTitle className="text-3xl text-purple-600">89.1%</CardTitle>
+                        <CardTitle
+                            className={`text-3xl ${terminologyCorrectness !== undefined ? "text-purple-600" : "text-muted-foreground"}`}
+                        >
+                            {formatPercent(terminologyCorrectness)}
+                        </CardTitle>
                     </CardHeader>
                     <CardContent>
                         <p className="text-muted-foreground text-xs">Penggunaan istilah teknis yang benar</p>
