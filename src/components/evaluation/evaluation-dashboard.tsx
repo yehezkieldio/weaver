@@ -22,6 +22,7 @@ import {
     Target,
     TrendingDown,
     TrendingUp,
+    Users,
     Zap,
 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -50,6 +51,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AnnotationPanel } from "./annotation-panel";
+import { CorrelationView } from "./correlation-view";
 import { CreateEvaluationDialog } from "./create-evaluation-dialog";
 import { MetricsChart } from "./metrics-chart";
 
@@ -212,6 +215,10 @@ export function EvaluationDashboard() {
                         <TabsTrigger value="information">
                             <Info className="mr-1 h-4 w-4" />
                             Informasi
+                        </TabsTrigger>
+                        <TabsTrigger disabled={!selectedRunId} value="annotation">
+                            <Users className="mr-1 h-4 w-4" />
+                            Anotasi Manual
                         </TabsTrigger>
                     </TabsList>
 
@@ -395,6 +402,31 @@ export function EvaluationDashboard() {
 
                 <TabsContent className="space-y-4" value="information">
                     <InformationView />
+                </TabsContent>
+
+                <TabsContent className="space-y-4" value="annotation">
+                    {selectedRunId ? (
+                        <Tabs className="w-full" defaultValue="annotate">
+                            <TabsList>
+                                <TabsTrigger value="annotate">Anotasi</TabsTrigger>
+                                <TabsTrigger value="correlation">Analisis Korelasi</TabsTrigger>
+                            </TabsList>
+                            <TabsContent className="mt-4" value="annotate">
+                                <AnnotationPanel evaluationRunId={selectedRunId} runName={runDetails?.run?.name} />
+                            </TabsContent>
+                            <TabsContent className="mt-4" value="correlation">
+                                <CorrelationView evaluationRunId={selectedRunId} />
+                            </TabsContent>
+                        </Tabs>
+                    ) : (
+                        <Card className="p-8 text-center">
+                            <Users className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                            <h3 className="mb-2 font-medium text-lg">Pilih Evaluasi</h3>
+                            <p className="text-muted-foreground">
+                                Pilih evaluasi dari tab Evaluasi untuk memulai anotasi manual.
+                            </p>
+                        </Card>
+                    )}
                 </TabsContent>
             </Tabs>
 

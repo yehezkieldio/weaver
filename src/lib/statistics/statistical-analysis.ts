@@ -685,3 +685,374 @@ export function generateStatisticalReport(
 
     return report;
 }
+
+// ============================================================================
+// Correlation Analysis for Human Annotation Validation
+// ============================================================================
+
+/**
+ * Correlation result with interpretation
+ *
+ * WHY this structure:
+ * - Matches the bilingual pattern used in other statistical results
+ * - Includes both correlation coefficient and p-value for publication quality
+ * - Provides human-readable interpretation for non-statisticians
+ */
+export interface CorrelationResult {
+    method: "pearson" | "spearman";
+    coefficient: number; // -1 to 1
+    pValue: number;
+    n: number; // Sample size
+    significant: boolean; // p < 0.05
+    strength: "negligible" | "weak" | "moderate" | "strong" | "very_strong";
+    interpretation: string;
+    interpretationId: string;
+}
+
+/**
+ * Cohen's Kappa result for inter-rater reliability
+ */
+export interface KappaResult {
+    kappa: number; // -1 to 1
+    observedAgreement: number; // Po
+    expectedAgreement: number; // Pe
+    strength: "poor" | "slight" | "fair" | "moderate" | "substantial" | "almost_perfect";
+    interpretation: string;
+    interpretationId: string;
+}
+
+/**
+ * Comprehensive correlation report for human vs automated metrics
+ */
+export interface CorrelationReport {
+    overallCorrelation: CorrelationResult;
+    byMetric: {
+        metricName: string;
+        pearson: CorrelationResult;
+        spearman: CorrelationResult;
+    }[];
+    interRaterReliability?: KappaResult;
+    summary: {
+        strongCorrelations: string[];
+        weakCorrelations: string[];
+        recommendation: string;
+        recommendationId: string;
+    };
+}
+
+/**
+ * Calculate Pearson correlation coefficient
+ *
+ * WHY: Measures linear correlation between automated and human ratings
+ * - Range: -1 (perfect negative) to +1 (perfect positive)
+ * - Assumes normally distributed data
+ * - Use for interval/ratio scale data
+ *
+ * @param x - First array of values (e.g., automated scores)
+ * @param y - Second array of values (e.g., human ratings)
+ * @returns Correlation result with interpretation
+ */
+export function pearsonCorrelation(x: number[], y: number[]): CorrelationResult {
+    if (x.length !== y.length || x.length < 3) {
+        return {
+            method: "pearson",
+            coefficient: 0,
+            pValue: 1,
+            n: Math.min(x.length, y.length),
+            significant: false,
+            strength: "negligible",
+            interpretation: "Insufficient data for correlation analysis",
+            interpretationId: "Data tidak cukup untuk analisis korelasi",
+        };
+    }
+
+    const n = x.length;
+    const sumX = x.reduce((a, b) => a + b, 0);
+    const sumY = y.reduce((a, b) => a + b, 0);
+    const sumXY = x.reduce((acc, xi, i) => acc + xi * y[i], 0);
+    const sumX2 = x.reduce((acc, xi) => acc + xi * xi, 0);
+    const sumY2 = y.reduce((acc, yi) => acc + yi * yi, 0);
+
+    const numerator = n * sumXY - sumX * sumY;
+    const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+
+    const r = denominator === 0 ? 0 : numerator / denominator;
+
+    // Calculate t-statistic for p-value
+    const t = r * Math.sqrt((n - 2) / (1 - r * r));
+    const df = n - 2;
+    const pValue = tToPValue(Math.abs(t), df);
+
+    const strength = interpretCorrelationStrength(Math.abs(r));
+    const significant = pValue < 0.05;
+
+    return {
+        method: "pearson",
+        coefficient: r,
+        pValue,
+        n,
+        significant,
+        strength,
+        interpretation: generateCorrelationInterpretation(r, pValue, n, "en"),
+        interpretationId: generateCorrelationInterpretation(r, pValue, n, "id"),
+    };
+}
+
+/**
+ * Calculate Spearman rank correlation coefficient
+ *
+ * WHY: Measures ordinal correlation, robust to non-linear relationships
+ * - Range: -1 (perfect negative) to +1 (perfect positive)
+ * - Non-parametric (no normality assumption)
+ * - Better for Likert scale ratings (ordinal data)
+ *
+ * @param x - First array of values
+ * @param y - Second array of values
+ * @returns Correlation result with interpretation
+ */
+export function spearmanCorrelation(x: number[], y: number[]): CorrelationResult {
+    if (x.length !== y.length || x.length < 3) {
+        return {
+            method: "spearman",
+            coefficient: 0,
+            pValue: 1,
+            n: Math.min(x.length, y.length),
+            significant: false,
+            strength: "negligible",
+            interpretation: "Insufficient data for correlation analysis",
+            interpretationId: "Data tidak cukup untuk analisis korelasi",
+        };
+    }
+
+    // Calculate ranks
+    const rankArray = (arr: number[]): number[] => {
+        const sorted = arr.map((v, idx) => ({ v, idx })).sort((a, b) => a.v - b.v);
+        const ranks: number[] = new Array<number>(arr.length);
+
+        let pos = 0;
+        while (pos < sorted.length) {
+            let end = pos;
+            // Handle ties by averaging ranks
+            while (end < sorted.length && sorted[end].v === sorted[pos].v) {
+                end += 1;
+            }
+            const avgRank = (pos + end + 1) / 2;
+            for (let k = pos; k < end; k += 1) {
+                ranks[sorted[k].idx] = avgRank;
+            }
+            pos = end;
+        }
+        return ranks;
+    };
+
+    const rankX = rankArray(x);
+    const rankY = rankArray(y);
+
+    // Use Pearson on ranks
+    return { ...pearsonCorrelation(rankX, rankY), method: "spearman" };
+}
+
+/**
+ * Calculate Cohen's Kappa for inter-rater reliability
+ *
+ * WHY: Measures agreement between annotators beyond chance agreement
+ * - Range: -1 (perfect disagreement) to +1 (perfect agreement)
+ * - Accounts for chance agreement (unlike simple percent agreement)
+ * - Essential for validating annotation quality
+ *
+ * @param rater1 - Ratings from first annotator (discrete categories)
+ * @param rater2 - Ratings from second annotator
+ * @returns Kappa result with interpretation
+ */
+export function cohensKappa(rater1: number[], rater2: number[]): KappaResult {
+    if (rater1.length !== rater2.length || rater1.length === 0) {
+        return {
+            kappa: 0,
+            observedAgreement: 0,
+            expectedAgreement: 0,
+            strength: "poor",
+            interpretation: "Insufficient data for reliability analysis",
+            interpretationId: "Data tidak cukup untuk analisis reliabilitas",
+        };
+    }
+
+    const n = rater1.length;
+
+    // Get all unique categories
+    const categories = [...new Set([...rater1, ...rater2])].sort((a, b) => a - b);
+    const k = categories.length;
+
+    // Build confusion matrix
+    const matrix: number[][] = new Array<number[]>(k).fill([]).map(() => new Array<number>(k).fill(0));
+
+    for (let idx = 0; idx < n; idx += 1) {
+        const row = categories.indexOf(rater1[idx]);
+        const col = categories.indexOf(rater2[idx]);
+        matrix[row][col] += 1;
+    }
+
+    // Calculate observed agreement (Po)
+    let observed = 0;
+    for (let i = 0; i < k; i++) {
+        observed += matrix[i][i];
+    }
+    const Po = observed / n;
+
+    // Calculate expected agreement (Pe)
+    let Pe = 0;
+    for (let i = 0; i < k; i++) {
+        const rowSum = matrix[i].reduce((a, b) => a + b, 0);
+        const colSum = matrix.reduce((acc, row) => acc + row[i], 0);
+        Pe += (rowSum * colSum) / (n * n);
+    }
+
+    // Calculate Kappa
+    const kappa = Pe === 1 ? 1 : (Po - Pe) / (1 - Pe);
+
+    const strength = interpretKappaStrength(kappa);
+
+    return {
+        kappa,
+        observedAgreement: Po,
+        expectedAgreement: Pe,
+        strength,
+        interpretation: generateKappaInterpretation(kappa, Po, n, "en"),
+        interpretationId: generateKappaInterpretation(kappa, Po, n, "id"),
+    };
+}
+
+/**
+ * Generate comprehensive correlation report for human vs automated metrics
+ */
+export function generateCorrelationReport(
+    automatedMetrics: Record<string, number[]>,
+    humanRatings: Record<string, number[]>,
+    interRaterData?: { rater1: number[]; rater2: number[] }
+): CorrelationReport {
+    const byMetric: CorrelationReport["byMetric"] = [];
+    const allAutomated: number[] = [];
+    const allHuman: number[] = [];
+
+    for (const metric of Object.keys(automatedMetrics)) {
+        const automated = automatedMetrics[metric];
+        const human = humanRatings[metric];
+
+        if (automated && human && automated.length === human.length) {
+            byMetric.push({
+                metricName: metric,
+                pearson: pearsonCorrelation(automated, human),
+                spearman: spearmanCorrelation(automated, human),
+            });
+
+            allAutomated.push(...automated);
+            allHuman.push(...human);
+        }
+    }
+
+    const overallCorrelation = pearsonCorrelation(allAutomated, allHuman);
+
+    const interRaterReliability = interRaterData
+        ? cohensKappa(interRaterData.rater1, interRaterData.rater2)
+        : undefined;
+
+    // Generate summary
+    const strongCorrelations = byMetric
+        .filter((m) => m.spearman.strength === "strong" || m.spearman.strength === "very_strong")
+        .map((m) => m.metricName);
+
+    const weakCorrelations = byMetric
+        .filter((m) => m.spearman.strength === "weak" || m.spearman.strength === "negligible")
+        .map((m) => m.metricName);
+
+    let recommendation: string;
+    let recommendationId: string;
+
+    if (overallCorrelation.coefficient >= 0.7 && overallCorrelation.significant) {
+        recommendation =
+            "Strong correlation between automated and human ratings indicates LLM-as-judge metrics are reliable for this evaluation context.";
+        recommendationId =
+            "Korelasi kuat antara penilaian otomatis dan manusia menunjukkan metrik LLM-as-judge dapat diandalkan untuk konteks evaluasi ini.";
+    } else if (overallCorrelation.coefficient >= 0.4 && overallCorrelation.significant) {
+        recommendation =
+            "Moderate correlation suggests automated metrics provide reasonable approximation but should be supplemented with human evaluation for critical decisions.";
+        recommendationId =
+            "Korelasi sedang menunjukkan metrik otomatis memberikan perkiraan yang wajar tetapi sebaiknya dilengkapi dengan evaluasi manusia untuk keputusan kritis.";
+    } else {
+        recommendation =
+            "Weak correlation indicates automated metrics may not accurately reflect human judgment. Consider recalibrating evaluation criteria or increasing human annotation coverage.";
+        recommendationId =
+            "Korelasi lemah menunjukkan metrik otomatis mungkin tidak secara akurat mencerminkan penilaian manusia. Pertimbangkan untuk mengkalibrasi ulang kriteria evaluasi atau meningkatkan cakupan anotasi manusia.";
+    }
+
+    return {
+        overallCorrelation,
+        byMetric,
+        interRaterReliability,
+        summary: {
+            strongCorrelations,
+            weakCorrelations,
+            recommendation,
+            recommendationId,
+        },
+    };
+}
+
+// Helper functions for correlation analysis
+
+function interpretCorrelationStrength(absR: number): "negligible" | "weak" | "moderate" | "strong" | "very_strong" {
+    if (absR < 0.1) return "negligible";
+    if (absR < 0.3) return "weak";
+    if (absR < 0.5) return "moderate";
+    if (absR < 0.7) return "strong";
+    return "very_strong";
+}
+
+function interpretKappaStrength(
+    kappa: number
+): "poor" | "slight" | "fair" | "moderate" | "substantial" | "almost_perfect" {
+    if (kappa < 0) return "poor";
+    if (kappa < 0.2) return "slight";
+    if (kappa < 0.4) return "fair";
+    if (kappa < 0.6) return "moderate";
+    if (kappa < 0.8) return "substantial";
+    return "almost_perfect";
+}
+
+function generateCorrelationInterpretation(r: number, p: number, n: number, lang: "en" | "id"): string {
+    const strength = interpretCorrelationStrength(Math.abs(r));
+    const positiveLabel = lang === "id" ? "positif" : "positive";
+    const negativeLabel = lang === "id" ? "negatif" : "negative";
+    const direction = r >= 0 ? positiveLabel : negativeLabel;
+    const significant = p < 0.05;
+
+    if (lang === "id") {
+        const strengthId: Record<string, string> = {
+            negligible: "sangat lemah",
+            weak: "lemah",
+            moderate: "sedang",
+            strong: "kuat",
+            very_strong: "sangat kuat",
+        };
+        return `Korelasi ${strengthId[strength]} ${direction} (r = ${r.toFixed(3)}, p = ${p.toFixed(4)}, n = ${n}). ${significant ? "Korelasi signifikan secara statistik." : "Korelasi tidak signifikan secara statistik."}`;
+    }
+
+    return `${strength.charAt(0).toUpperCase() + strength.slice(1).replace("_", " ")} ${direction} correlation (r = ${r.toFixed(3)}, p = ${p.toFixed(4)}, n = ${n}). ${significant ? "Correlation is statistically significant." : "Correlation is not statistically significant."}`;
+}
+
+function generateKappaInterpretation(kappa: number, Po: number, n: number, lang: "en" | "id"): string {
+    const strength = interpretKappaStrength(kappa);
+
+    if (lang === "id") {
+        const strengthId: Record<string, string> = {
+            poor: "buruk",
+            slight: "sangat rendah",
+            fair: "cukup",
+            moderate: "sedang",
+            substantial: "substansial",
+            almost_perfect: "hampir sempurna",
+        };
+        return `Reliabilitas antar-penilai ${strengthId[strength]} (κ = ${kappa.toFixed(3)}, kesepakatan teramati = ${(Po * 100).toFixed(1)}%, n = ${n}).`;
+    }
+
+    return `${strength.charAt(0).toUpperCase() + strength.slice(1).replace("_", " ")} inter-rater reliability (κ = ${kappa.toFixed(3)}, observed agreement = ${(Po * 100).toFixed(1)}%, n = ${n}).`;
+}

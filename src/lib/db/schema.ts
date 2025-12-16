@@ -443,6 +443,49 @@ export const documentProcessingProgress = pgTable("document_processing_progress"
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+/**
+ * Human Annotations table: Stores human annotator ratings for LLM-as-judge validation
+ *
+ * WHY this table exists:
+ * - **Validation**: LLM-as-judge metrics need ground truth from human experts
+ * - **Correlation Analysis**: Enable Pearson/Spearman correlation between automated and human scores
+ * - **Inter-Rater Reliability**: Multiple annotators per question enable Cohen's Kappa calculation
+ * - **Academic Rigor**: Publication requires human validation of automated metrics
+ *
+ * Rating Scale Design:
+ * - Uses 1-5 Likert scale to match common academic evaluation rubrics
+ * - Ratings are normalized to 0-1 range for correlation with automated metrics (rating/5)
+ * - Binary hallucination detection provides clear ground truth for hallucination rate validation
+ *
+ * Annotator Identification:
+ * - Uses pseudonymous annotator IDs for privacy while enabling inter-rater reliability analysis
+ * - Multiple annotations per question supported for reliability calculation
+ */
+export const humanAnnotations = pgTable("human_annotations", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    evaluationQuestionId: uuid("evaluation_question_id")
+        .references(() => evaluationQuestions.id, { onDelete: "cascade" })
+        .notNull(),
+    annotatorId: text("annotator_id").notNull(), // Pseudonymous annotator identifier
+
+    // Rating scales (1-5 Likert scale matching automated metrics)
+    faithfulnessRating: integer("faithfulness_rating"), // 1-5: How well answer sticks to sources
+    relevancyRating: integer("relevancy_rating"), // 1-5: How well answer addresses question
+    correctnessRating: integer("correctness_rating"), // 1-5: Factual accuracy vs ground truth
+
+    // Binary hallucination detection
+    hasHallucination: boolean("has_hallucination"), // Did the answer contain fabricated info?
+    hallucinationNotes: text("hallucination_notes"), // Optional explanation of hallucination
+
+    // Optional overall quality rating
+    overallQuality: integer("overall_quality"), // 1-5: Overall answer quality
+
+    // Metadata
+    annotationTimeMs: integer("annotation_time_ms"), // Time spent annotating (for quality control)
+    notes: text("notes"), // General annotator notes/observations
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export type Document = typeof documents.$inferSelect;
 export type NewDocument = typeof documents.$inferInsert;
 export type DocumentChunk = typeof documentChunks.$inferSelect;
@@ -457,3 +500,5 @@ export type AblationStudy = typeof ablationStudies.$inferSelect;
 export type StatisticalAnalysis = typeof statisticalAnalyses.$inferSelect;
 export type DocumentProcessingProgress = typeof documentProcessingProgress.$inferSelect;
 export type NewDocumentProcessingProgress = typeof documentProcessingProgress.$inferInsert;
+export type HumanAnnotation = typeof humanAnnotations.$inferSelect;
+export type NewHumanAnnotation = typeof humanAnnotations.$inferInsert;

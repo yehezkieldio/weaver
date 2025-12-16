@@ -85,6 +85,7 @@ export function DataExportPanel({ evaluationRunId, ablationStudyId, runName = "e
     const [format, setFormat] = useState<ExportFormat>("csv");
     const language = "id" as const;
     const [includeMetadata, setIncludeMetadata] = useState(true);
+    const [includeAnnotations, setIncludeAnnotations] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
     const [lastExported, setLastExported] = useState<string | null>(null);
 
@@ -95,6 +96,7 @@ export function DataExportPanel({ evaluationRunId, ablationStudyId, runName = "e
                 format,
                 language,
                 includeMetadata: String(includeMetadata),
+                includeAnnotations: String(includeAnnotations),
             });
 
             if (evaluationRunId) {
@@ -217,9 +219,22 @@ EXECUTE.`;
                 </div>
 
                 {/* Options */}
-                <div className="flex items-center space-x-2">
-                    <Switch checked={includeMetadata} id="includeMetadata" onCheckedChange={setIncludeMetadata} />
-                    <Label htmlFor="includeMetadata">Sertakan metadata (label variabel, deskripsi)</Label>
+                <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                        <Switch checked={includeMetadata} id="includeMetadata" onCheckedChange={setIncludeMetadata} />
+                        <Label htmlFor="includeMetadata">Sertakan metadata (label variabel, deskripsi)</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <Switch
+                            checked={includeAnnotations}
+                            id="includeAnnotations"
+                            onCheckedChange={setIncludeAnnotations}
+                        />
+                        <Label htmlFor="includeAnnotations">
+                            Sertakan anotasi manual dan korelasi
+                            <span className="ml-2 text-muted-foreground text-xs">(Human vs LLM-as-judge)</span>
+                        </Label>
+                    </div>
                 </div>
 
                 {/* Export Button */}
@@ -350,7 +365,16 @@ GET DATA /TYPE=TXT
                         <li>3. Jalankan paired t-test untuk RAG vs Non-RAG</li>
                         <li>4. Lakukan ANOVA untuk perbandingan strategi</li>
                         <li>5. Hitung effect size (Cohen's d, η²)</li>
-                        <li>6. Ekspor tabel hasil ke LaTeX untuk paper</li>
+                        {includeAnnotations && (
+                            <>
+                                <li className="text-primary">
+                                    6. Analisis korelasi Pearson/Spearman (Human vs Automated)
+                                </li>
+                                <li className="text-primary">7. Hitung Cohen's Kappa untuk inter-rater reliability</li>
+                                <li>8. Ekspor tabel hasil ke LaTeX untuk paper</li>
+                            </>
+                        )}
+                        {!includeAnnotations && <li>6. Ekspor tabel hasil ke LaTeX untuk paper</li>}
                     </ol>
                 </div>
 
