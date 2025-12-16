@@ -134,7 +134,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
                     question.groundTruth,
                     contextResult.chunks.map((c) => c.chunkId), // retrievedIds
                     question.relevantChunkIds ? new Set(question.relevantChunkIds) : undefined, // relevantIds from ground truth labels
-                    "akademik/universitas",
+                    "universitas-mulia",
                     latencyTracker
                 );
 
