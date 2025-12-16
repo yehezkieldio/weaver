@@ -67,7 +67,7 @@ export function MetricsChart({ ragMetrics, nonRagMetrics }: MetricsChartProps) {
                     <CardTitle className="text-lg">Perbandingan RAG vs Non-RAG</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="h-[300px]">
+                    <div className="h-75">
                         <ResponsiveContainer height="100%" width="100%">
                             <BarChart data={barData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                                 <CartesianGrid stroke="oklch(0.28 0.01 260)" strokeDasharray="3 3" />
@@ -105,7 +105,7 @@ export function MetricsChart({ ragMetrics, nonRagMetrics }: MetricsChartProps) {
                     <CardTitle className="text-lg">Profil Metrik RAGAS</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="h-[300px]">
+                    <div className="h-75">
                         <ResponsiveContainer height="100%" width="100%">
                             <RadarChart data={radarData}>
                                 <PolarGrid stroke="oklch(0.28 0.01 260)" />
