@@ -274,6 +274,175 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
     },
+    {
+        question: "Apa fasilitas yang disediakan oleh Laboratorium Farmasi?",
+        groundTruth:
+            "Laboratorium Farmasi menyediakan alat-alat khusus untuk praktikum program studi Farmasi, memungkinkan mahasiswa melakukan praktikum dan menyalurkan bakat serta minat di bidang kefarmasian.",
+        category: "facilities_services",
+        difficulty: "easy",
+        language: "id",
+    },
+    {
+        question: "Apa syarat kehadiran minimal agar mahasiswa diperbolehkan mengikuti ujian?",
+        groundTruth:
+            "Mahasiswa wajib mengikuti perkuliahan minimal 80% dari jumlah tatap muka atau proses pembelajaran efektif selama semester tersebut untuk dapat mengikuti ujian.",
+        category: "academic_regulations",
+        difficulty: "medium",
+        language: "id",
+    },
+    {
+        question: "Apa sanksi yang dapat diberikan kepada mahasiswa yang melakukan plagiat?",
+        groundTruth:
+            "Mahasiswa yang terbukti melakukan plagiat dilarang keras dan dapat dikenakan sanksi mulai dari teguran hingga diberhentikan (Drop Out) sebagai mahasiswa, sesuai dengan tingkat pelanggaran yang diatur dalam Tata Tertib Kehidupan Kampus.",
+        category: "academic_regulations",
+        difficulty: "hard",
+        language: "id",
+    },
+    {
+        question: "Apa yang dimaksud dengan status mahasiswa 'Non-Aktif'?",
+        groundTruth:
+            "Mahasiswa Non-Aktif adalah mahasiswa yang tidak terdaftar pada semester tertentu tanpa izin Rektor, berbeda dengan Cuti Akademik yang memiliki izin resmi.",
+        category: "academic_regulations",
+        difficulty: "medium",
+        language: "id",
+    },
+    {
+        question: "Apa dua jenis penelitian yang dapat dipilih mahasiswa untuk penyusunan Skripsi?",
+        groundTruth:
+            "Mahasiswa dapat memilih antara Penelitian Dasar (pengembangan ilmu pengetahuan/teori) atau Penelitian Terapan (solusi praktis/pemecahan masalah).",
+        category: "academic_regulations",
+        difficulty: "medium",
+        language: "id",
+    },
+    {
+        question: "Apa gelar akademik yang diperoleh lulusan Program Studi S1 Manajemen?",
+        groundTruth: "Lulusan Program Studi S1 Manajemen berhak menyandang gelar Sarjana Manajemen (S.M.).",
+        category: "faculty_programs",
+        difficulty: "easy",
+        language: "id",
+    },
+    {
+        question: "Siapa Direktur Eksekutif Yayasan Airlangga?",
+        groundTruth: "Direktur Eksekutif Yayasan Airlangga adalah Dr. Agung Sakti Pribadi, S.H., M.H.",
+        category: "general_university_info",
+        difficulty: "easy",
+        language: "id",
+    },
+    {
+        question: "Berapa Indeks Prestasi Kumulatif (IPK) minimal untuk dapat mengajukan judul Skripsi?",
+        groundTruth: "Mahasiswa harus memiliki IPK minimal 2,00 untuk dapat mengajukan usulan judul Skripsi.",
+        category: "academic_regulations",
+        difficulty: "medium",
+        language: "id",
+    },
+    {
+        question: "Fasilitas digital apa saja yang didapatkan mahasiswa melalui Akun Universitas?",
+        groundTruth:
+            "Setiap mahasiswa mendapatkan Akun Universitas yang memberikan akses ke fasilitas seperti Unlimited G-Drive, Google Meet, dan Google Classroom untuk menunjang pembelajaran.",
+        category: "facilities_services",
+        difficulty: "easy",
+        language: "id",
+    },
+    {
+        question: "Kapan tanggal resmi berdirinya Universitas Mulia?",
+        groundTruth:
+            "Universitas Mulia resmi berdiri pada tanggal 18 Desember 2018, berdasarkan SK Pendirian Nomor 1149/KPT/I/2018.",
+        category: "general_university_info",
+        difficulty: "medium",
+        language: "id",
+    },
+    {
+        question: "Berapa rata-rata masa studi untuk jenjang Diploma 3 (D3) di Universitas Mulia?",
+        groundTruth: "Rata-rata masa studi untuk jenjang Diploma 3 (D3) adalah 2,8 tahun.",
+        category: "academic_regulations",
+        difficulty: "medium",
+        language: "id",
+    },
+    {
+        question: "Apa status akreditasi Program Studi S1 Farmasi?",
+        groundTruth: "Program Studi S1 Farmasi telah terakreditasi 'Baik' oleh LAM-PTKes.",
+        category: "general_university_info",
+        difficulty: "medium",
+        language: "id",
+    },
+    {
+        question: "Apa tugas utama Bagian Kerja Sama dan Humas?",
+        groundTruth:
+            "Bagian Kerja Sama dan Humas bertugas membangun jejaring kemitraan dengan mitra nasional maupun internasional, serta mengelola kehumasan dan keprotokolan universitas.",
+        category: "administrative_procedures",
+        difficulty: "medium",
+        language: "id",
+    },
+    {
+        question: "Apa ketentuan mengenai Semester Pendek?",
+        groundTruth:
+            "Semester Pendek diselenggarakan di antara semester genap dan ganjil (biasanya untuk perbaikan nilai) dengan beban belajar maksimal 9 SKS dan pelaksanaan minimal 16 kali pertemuan.",
+        category: "academic_regulations",
+        difficulty: "medium",
+        language: "id",
+    },
+    {
+        question: "Program studi apa saja yang diselenggarakan di Kampus PSDKU Samarinda?",
+        groundTruth:
+            "Kampus PSDKU Samarinda menyelenggarakan Program Studi S1 Sistem Informasi dan D3 Manajemen Informatika.",
+        category: "faculty_programs",
+        difficulty: "medium",
+        language: "id",
+    },
+    {
+        question: "Bagaimana aturan pengerjaan Skripsi secara berkelompok?",
+        groundTruth:
+            "Skripsi berkelompok dapat dikerjakan oleh maksimal 3 orang mahasiswa dari prodi yang sama. Skema ini hanya diperbolehkan untuk Penelitian Terapan, dan setiap anggota memiliki tanggung jawab yang sama.",
+        category: "academic_regulations",
+        difficulty: "hard",
+        language: "id",
+    },
+    {
+        question: "Apa motto Universitas Mulia?",
+        groundTruth: "Motto Universitas Mulia adalah 'Global Technopreneur Campus: Inovatif, Mandiri, Humanis'.",
+        category: "general_university_info",
+        difficulty: "easy",
+        language: "id",
+    },
+    {
+        question: "Apa fungsi dari Ruang Peradilan Semu?",
+        groundTruth:
+            "Ruang Peradilan Semu adalah fasilitas yang didesain menyerupai ruang pengadilan asli, digunakan untuk melatih mahasiswa Prodi Hukum dalam praktik simulasi persidangan.",
+        category: "facilities_services",
+        difficulty: "easy",
+        language: "id",
+    },
+    {
+        question: "Apa tanggung jawab Bagian Kemahasiswaan dan Alumni?",
+        groundTruth:
+            "Bagian Kemahasiswaan dan Alumni bertanggung jawab mendampingi kegiatan mahasiswa, mengelola administrasi kemahasiswaan, serta memfasilitasi kegiatan dan jejaring alumni.",
+        category: "student_services",
+        difficulty: "medium",
+        language: "id",
+    },
+    {
+        question: "Apa saja konsentrasi yang ditawarkan di Program Studi S1 Hukum?",
+        groundTruth:
+            "Program Studi S1 Hukum menawarkan dua konsentrasi: (1) Cyber Law (Hukum Siber) dan (2) Business Law (Hukum Bisnis).",
+        category: "faculty_programs",
+        difficulty: "medium",
+        language: "id",
+    },
+    {
+        question: "Apa itu STDC dan apa fungsinya?",
+        groundTruth:
+            "STDC (Student Technopreneur Development Center) adalah badan/organisasi yang bertugas membina organisasi kemahasiswaan (HMJ dan UKM) dalam rangka pengembangan aktivitas organisasi.",
+        category: "general_university_info",
+        difficulty: "medium",
+        language: "id",
+    },
+    {
+        question: "Siapa Dekan Fakultas Ilmu Komputer (FIKOM) saat ini?",
+        groundTruth: "Dekan Fakultas Ilmu Komputer (FIKOM) adalah Djumhadi, S.T., M.Kom.",
+        category: "general_university_info",
+        difficulty: "easy",
+        language: "id",
+    },
 ];
 
 /**
