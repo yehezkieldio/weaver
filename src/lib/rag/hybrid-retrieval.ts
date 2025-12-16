@@ -26,7 +26,7 @@
  * - Stemming and stopword removal for Indonesian language
  */
 
-import { and, isNotNull, sql, or, ilike } from "drizzle-orm";
+import { and, ilike, isNotNull, or, sql } from "drizzle-orm";
 import { generateEmbedding } from "@/lib/ai/embeddings";
 import { db } from "@/lib/db";
 import { documentChunks, documents } from "@/lib/db/schema";
@@ -705,11 +705,7 @@ ${result.content}`;
     return expandedResults;
 }
 
-async function performKeywordCandidateSearch(
-    query: string,
-    topK: number,
-    language: "en" | "id"
-): Promise<ChunkData[]> {
+async function performKeywordCandidateSearch(query: string, topK: number, language: "en" | "id"): Promise<ChunkData[]> {
     const tokens = tokenize(query, language);
     if (tokens.length === 0) return [];
 
@@ -791,12 +787,12 @@ export async function hybridRetrieve(query: string, options: HybridRetrievalOpti
     // 2. Keyword Search Phase (Candidate Selection)
     if (opts.strategy === "keyword" || opts.strategy === "hybrid") {
         console.log(`[hybridRetrieve:${retrievalId}] Performing keyword candidate search`);
-        
+
         // If we haven't detected language yet (e.g. keyword only strategy), try to detect from query
         if (detectedLanguage === "en" && opts.language === "auto") {
-             detectedLanguage = detectLanguage(query);
+            detectedLanguage = detectLanguage(query);
         } else if (opts.language !== "auto") {
-             detectedLanguage = opts.language;
+            detectedLanguage = opts.language;
         }
 
         const keywordCandidates = await performKeywordCandidateSearch(query, opts.topK, detectedLanguage);
@@ -807,12 +803,12 @@ export async function hybridRetrieve(query: string, options: HybridRetrievalOpti
                 chunkMap.set(chunk.chunkId, chunk);
             }
         }
-        
+
         if (keywordCandidates.length > 0 && detectedLanguage === "en" && opts.language === "auto") {
-             detectedLanguage = detectLanguage(`${query} ${keywordCandidates[0].content}`);
+            detectedLanguage = detectLanguage(`${query} ${keywordCandidates[0].content}`);
         }
     }
-    
+
     console.log(`[hybridRetrieve:${retrievalId}] Total unique candidates: ${chunkMap.size}`);
     console.log(`[hybridRetrieve:${retrievalId}] Detected language: ${detectedLanguage}`);
 
@@ -838,7 +834,7 @@ export async function hybridRetrieve(query: string, options: HybridRetrievalOpti
         opts.rrfK,
         opts.qualityWeight
     );
-    
+
     const results = buildResults(chunkMap, finalScores, opts.strategy);
 
     // Log score distribution for debugging
@@ -867,9 +863,7 @@ export async function hybridRetrieve(query: string, options: HybridRetrievalOpti
             minScore: opts.rerankerMinScore,
             language: detectedLanguage,
         });
-        console.log(
-            `[hybridRetrieve:${retrievalId}] Reranking complete - results: ${reranked.length}`
-        );
+        console.log(`[hybridRetrieve:${retrievalId}] Reranking complete - results: ${reranked.length}`);
         // Convert reranked results back to RetrievalResult format
         const rerankedResults: RetrievalResult[] = reranked.map((r) => ({
             chunkId: r.chunkId,
