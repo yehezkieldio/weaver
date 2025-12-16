@@ -155,12 +155,11 @@ const DEFAULT_OPTIONS: RerankerOptions = {
     },
 };
 
-// @ts-expect-error: expression produces a union type that is too complex to represent.
 let crossEncoderPipeline: Awaited<ReturnType<typeof pipeline>> | null = null;
 
 async function getCrossEncoderPipeline() {
     if (!crossEncoderPipeline) {
-        crossEncoderPipeline = await pipeline("text-classification", "Xenova/ms-marco-TinyBERT-L-2-v2");
+        crossEncoderPipeline = await pipeline("text-classification", "cross-encoder/ms-marco-MiniLM-L2-v2");
     }
     return crossEncoderPipeline;
 }
