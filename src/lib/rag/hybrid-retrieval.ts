@@ -26,7 +26,7 @@
  * - Stemming and stopword removal for Indonesian language
  */
 
-import { and, isNotNull, sql } from "drizzle-orm";
+import { and, isNotNull, sql, or, ilike } from "drizzle-orm";
 import { generateEmbedding } from "@/lib/ai/embeddings";
 import { db } from "@/lib/db";
 import { documentChunks, documents } from "@/lib/db/schema";
@@ -705,6 +705,42 @@ ${result.content}`;
     return expandedResults;
 }
 
+async function performKeywordCandidateSearch(
+    query: string,
+    topK: number,
+    language: "en" | "id"
+): Promise<ChunkData[]> {
+    const tokens = tokenize(query, language);
+    if (tokens.length === 0) return [];
+
+    // Use OR condition to find chunks containing ANY of the query terms
+    // Limit to topK * 5 to get a good candidate pool
+    const searchConditions = tokens.map((term) => ilike(documentChunks.content, `%${term}%`));
+
+    const results = await db
+        .select({
+            chunkId: documentChunks.id,
+            documentId: documentChunks.documentId,
+            content: documentChunks.content,
+            metadata: documentChunks.metadata,
+            embedding: documentChunks.embedding,
+            documentTitle: documents.title,
+        })
+        .from(documentChunks)
+        .innerJoin(documents, sql`${documentChunks.documentId} = ${documents.id}`)
+        .where(and(sql`${documents.processingStatus} = 'completed'`, or(...searchConditions)))
+        .limit(topK * 5);
+
+    return results.map((row) => ({
+        chunkId: row.chunkId,
+        documentId: row.documentId,
+        content: row.content,
+        metadata: row.metadata,
+        embedding: row.embedding as number[] | null,
+        documentTitle: row.documentTitle,
+    }));
+}
+
 /**
  * Perform hybrid retrieval using pgvector for vector search and BM25 for keyword search.
  *
@@ -735,76 +771,63 @@ export async function hybridRetrieve(query: string, options: HybridRetrievalOpti
     const bm25RankingResults: { id: string; rank: number; score: number }[] = [];
     let detectedLanguage: "en" | "id" = "en";
 
+    // 1. Vector Search Phase
     if (opts.strategy === "vector" || opts.strategy === "hybrid") {
-        // Use pgvector SQL for efficient vector search
         console.log(`[hybridRetrieve:${retrievalId}] Performing vector search`);
         const vectorResults = await performVectorSearch(query, opts.topK);
         console.log(`[hybridRetrieve:${retrievalId}] Vector search returned ${vectorResults.length} results`);
 
-        if (vectorResults.length === 0) {
-            console.log(`[hybridRetrieve:${retrievalId}] No vector results found`);
-            console.timeEnd(`hybridRetrieve:${retrievalId}`);
-            return [];
-        }
-
-        // Populate chunk map and vector ranking
         for (const result of vectorResults) {
             chunkMap.set(result.id, result.chunk);
             vectorRankingResults.push({ id: result.id, rank: result.rank, score: result.score });
         }
 
-        // Detect language from first chunk if auto
-        detectedLanguage =
-            opts.language === "auto" ? detectLanguage(`${query} ${vectorResults[0].chunk.content}`) : opts.language;
-        console.log(`[hybridRetrieve:${retrievalId}] Detected language: ${detectedLanguage}`);
+        if (vectorResults.length > 0) {
+            detectedLanguage =
+                opts.language === "auto" ? detectLanguage(`${query} ${vectorResults[0].chunk.content}`) : opts.language;
+        }
     }
 
-    if (opts.strategy === "keyword") {
-        // For keyword-only strategy, fetch chunks for BM25
-        console.log(`[hybridRetrieve:${retrievalId}] Performing keyword search (BM25 only)`);
-        const allChunks = await db
-            .select({
-                chunkId: documentChunks.id,
-                documentId: documentChunks.documentId,
-                content: documentChunks.content,
-                metadata: documentChunks.metadata,
-                embedding: documentChunks.embedding,
-                documentTitle: documents.title,
-            })
-            .from(documentChunks)
-            .innerJoin(documents, sql`${documentChunks.documentId} = ${documents.id}`)
-            .where(sql`${documents.processingStatus} = 'completed'`)
-            .limit(opts.topK * 10); // Limit for performance
-
-        console.log(`[hybridRetrieve:${retrievalId}] Fetched ${allChunks.length} chunks for BM25 search`);
-
-        if (allChunks.length === 0) {
-            console.log(`[hybridRetrieve:${retrievalId}] No chunks found for BM25`);
-            console.timeEnd(`hybridRetrieve:${retrievalId}`);
-            return [];
-        }
-
-        for (const chunk of allChunks) {
-            chunkMap.set(chunk.chunkId, {
-                chunkId: chunk.chunkId,
-                documentId: chunk.documentId,
-                content: chunk.content,
-                metadata: chunk.metadata,
-                embedding: chunk.embedding as number[] | null,
-                documentTitle: chunk.documentTitle,
-            });
-        }
-
-        detectedLanguage =
-            opts.language === "auto" ? detectLanguage(`${query} ${allChunks[0].content}`) : opts.language;
-    }
-
-    // Perform BM25 search on candidate chunks
+    // 2. Keyword Search Phase (Candidate Selection)
     if (opts.strategy === "keyword" || opts.strategy === "hybrid") {
-        console.log(`[hybridRetrieve:${retrievalId}] Performing BM25 search`);
+        console.log(`[hybridRetrieve:${retrievalId}] Performing keyword candidate search`);
+        
+        // If we haven't detected language yet (e.g. keyword only strategy), try to detect from query
+        if (detectedLanguage === "en" && opts.language === "auto") {
+             detectedLanguage = detectLanguage(query);
+        } else if (opts.language !== "auto") {
+             detectedLanguage = opts.language;
+        }
+
+        const keywordCandidates = await performKeywordCandidateSearch(query, opts.topK, detectedLanguage);
+        console.log(`[hybridRetrieve:${retrievalId}] Keyword search returned ${keywordCandidates.length} candidates`);
+
+        for (const chunk of keywordCandidates) {
+            if (!chunkMap.has(chunk.chunkId)) {
+                chunkMap.set(chunk.chunkId, chunk);
+            }
+        }
+        
+        if (keywordCandidates.length > 0 && detectedLanguage === "en" && opts.language === "auto") {
+             detectedLanguage = detectLanguage(`${query} ${keywordCandidates[0].content}`);
+        }
+    }
+    
+    console.log(`[hybridRetrieve:${retrievalId}] Total unique candidates: ${chunkMap.size}`);
+    console.log(`[hybridRetrieve:${retrievalId}] Detected language: ${detectedLanguage}`);
+
+    if (chunkMap.size === 0) {
+        console.log(`[hybridRetrieve:${retrievalId}] No results found`);
+        console.timeEnd(`hybridRetrieve:${retrievalId}`);
+        return [];
+    }
+
+    // 3. BM25 Scoring Phase
+    if (opts.strategy === "keyword" || opts.strategy === "hybrid") {
+        console.log(`[hybridRetrieve:${retrievalId}] Performing BM25 scoring on ${chunkMap.size} chunks`);
         const chunksForBM25 = Array.from(chunkMap.values());
         bm25RankingResults.push(...performBM25Search(query, chunksForBM25, detectedLanguage));
-        console.log(`[hybridRetrieve:${retrievalId}] BM25 search returned ${bm25RankingResults.length} results`);
+        console.log(`[hybridRetrieve:${retrievalId}] BM25 scoring complete`);
     }
 
     const finalScores = combineRankings(
@@ -815,13 +838,13 @@ export async function hybridRetrieve(query: string, options: HybridRetrievalOpti
         opts.rrfK,
         opts.qualityWeight
     );
-    console.log(`[hybridRetrieve:${retrievalId}] Combined rankings - total unique results: ${finalScores.size}`);
+    
     const results = buildResults(chunkMap, finalScores, opts.strategy);
 
     // Log score distribution for debugging
     const allScores = results.map((r) => r.fusedScore).sort((a, b) => b - a);
     console.log(
-        `[hybridRetrieve:${retrievalId}] Score distribution - max: ${allScores[0]?.toFixed(4) || "N/A"}, min: ${allScores.at(-1)?.toFixed(4) || "N/A"}, median: ${allScores[Math.floor(allScores.length / 2)]?.toFixed(4) || "N/A"}`
+        `[hybridRetrieve:${retrievalId}] Score distribution - max: ${allScores[0]?.toFixed(4) || "N/A"}, min: ${allScores.at(-1)?.toFixed(4) || "N/A"}`
     );
 
     const finalResults = results
@@ -845,7 +868,7 @@ export async function hybridRetrieve(query: string, options: HybridRetrievalOpti
             language: detectedLanguage,
         });
         console.log(
-            `[hybridRetrieve:${retrievalId}] Reranking complete - results: ${reranked.length}, avg score: ${(reranked.reduce((sum, r) => sum + r.rerankedScore, 0) / reranked.length).toFixed(3)}`
+            `[hybridRetrieve:${retrievalId}] Reranking complete - results: ${reranked.length}`
         );
         // Convert reranked results back to RetrievalResult format
         const rerankedResults: RetrievalResult[] = reranked.map((r) => ({

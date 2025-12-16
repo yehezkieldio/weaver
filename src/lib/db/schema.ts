@@ -68,9 +68,7 @@ export const documents = pgTable("documents", {
     metadata: jsonb("metadata").$type<DocumentMetadata>(),
     processingStatus: text("processing_status").notNull().default("pending"), // pending, processing, completed, failed
     processingError: text("processing_error"),
-    useMistralOcr: boolean("use_mistral_ocr").default(false),
     chunkingStrategy: text("chunking_strategy").default("recursive"), // recursive, semantic, sentence_window
-    // Progress tracking for incremental retry
     lastSuccessfulStage: text("last_successful_stage").$type<ProcessingStage>(),
     processingArtifacts: jsonb("processing_artifacts").$type<ProcessingArtifact>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -112,7 +110,6 @@ export const documentChunks = pgTable(
         metadata: jsonb("metadata").$type<DocumentChunkMetadata>(),
         embedding: vector("embedding", { dimensions: 1536 }),
         keywords: text("keywords").array(), // Extracted keywords for BM25
-        keywordVector: text("keyword_vector"), // TF-IDF vector as JSON
         createdAt: timestamp("created_at").defaultNow().notNull(),
     },
     (table) => [index("content_search_idx").using("gin", sql`${table.content} gin_trgm_ops`)]

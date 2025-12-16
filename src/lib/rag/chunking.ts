@@ -26,6 +26,7 @@
  * - Safety checks for offset tracking
  */
 
+import { randomUUID } from "node:crypto";
 import { cosineSimilarity } from "ai";
 import { generateEmbedding } from "@/lib/ai/embeddings";
 import {
@@ -92,6 +93,7 @@ export interface ChunkOptions {
 }
 
 export interface Chunk {
+    id?: string;
     content: string;
     index: number;
     startOffset: number;
@@ -603,7 +605,7 @@ export function hierarchicalChunking(text: string, options: ChunkOptions = {}, l
     });
 
     for (const largeChunk of largeChunks) {
-        const parentId = `parent_${chunks.length}`;
+        const parentId = randomUUID();
         const childIds: string[] = [];
 
         chunks.push({
@@ -622,7 +624,7 @@ export function hierarchicalChunking(text: string, options: ChunkOptions = {}, l
         });
 
         for (const childChunk of childChunks) {
-            const childId = `child_${chunks.length}`;
+            const childId = randomUUID();
             childIds.push(childId);
 
             chunks.push({

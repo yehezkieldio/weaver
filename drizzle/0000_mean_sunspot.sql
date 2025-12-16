@@ -62,8 +62,20 @@ CREATE TABLE "document_chunks" (
 	"metadata" jsonb,
 	"embedding" vector(1536),
 	"keywords" text[],
-	"keyword_vector" text,
 	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "document_processing_progress" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"document_id" uuid NOT NULL,
+	"stage" text DEFAULT 'pending' NOT NULL,
+	"progress" integer DEFAULT 0 NOT NULL,
+	"message" text DEFAULT '',
+	"estimated_time_ms" integer,
+	"stage_progress" jsonb,
+	"started_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "document_processing_progress_document_id_unique" UNIQUE("document_id")
 );
 --> statement-breakpoint
 CREATE TABLE "documents" (
@@ -76,8 +88,9 @@ CREATE TABLE "documents" (
 	"metadata" jsonb,
 	"processing_status" text DEFAULT 'pending' NOT NULL,
 	"processing_error" text,
-	"use_mistral_ocr" boolean DEFAULT false,
 	"chunking_strategy" text DEFAULT 'recursive',
+	"last_successful_stage" text,
+	"processing_artifacts" jsonb,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
@@ -90,6 +103,7 @@ CREATE TABLE "evaluation_questions" (
 	"rag_answer" text,
 	"non_rag_answer" text,
 	"retrieved_contexts" jsonb,
+	"relevant_chunk_ids" jsonb,
 	"rag_faithfulness" real,
 	"rag_answer_relevancy" real,
 	"rag_context_precision" real,
@@ -163,6 +177,7 @@ CREATE TABLE "statistical_analyses" (
 ALTER TABLE "agent_steps" ADD CONSTRAINT "agent_steps_session_id_chat_sessions_id_fk" FOREIGN KEY ("session_id") REFERENCES "public"."chat_sessions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "chat_messages" ADD CONSTRAINT "chat_messages_session_id_chat_sessions_id_fk" FOREIGN KEY ("session_id") REFERENCES "public"."chat_sessions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "document_chunks" ADD CONSTRAINT "document_chunks_document_id_documents_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."documents"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "document_processing_progress" ADD CONSTRAINT "document_processing_progress_document_id_documents_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."documents"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "evaluation_questions" ADD CONSTRAINT "evaluation_questions_run_id_evaluation_runs_id_fk" FOREIGN KEY ("run_id") REFERENCES "public"."evaluation_runs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "guardrail_logs" ADD CONSTRAINT "guardrail_logs_session_id_chat_sessions_id_fk" FOREIGN KEY ("session_id") REFERENCES "public"."chat_sessions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "statistical_analyses" ADD CONSTRAINT "statistical_analyses_evaluation_run_id_evaluation_runs_id_fk" FOREIGN KEY ("evaluation_run_id") REFERENCES "public"."evaluation_runs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
