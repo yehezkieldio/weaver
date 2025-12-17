@@ -83,6 +83,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
         const useReranker = run.useReranker ?? true;
         const rerankerStrategy =
             (run.rerankerStrategy as "ensemble" | "cross_encoder" | "llm" | "cohere") || "cross_encoder";
+        const useAgenticMode = run.useAgenticMode ?? false;
 
         // Determine question count based on mode
         // QUICK MODE: 5 questions for fast iteration and development testing
@@ -93,7 +94,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
             `[Evaluation Run] Starting evaluation run: ${id} (mode: ${evaluationMode}, questions: ${questionCount})`
         );
         console.log(
-            `[Evaluation Run] Config - strategy: ${retrievalStrategy}, reranker: ${useReranker}, rerankerStrategy: ${rerankerStrategy}`
+            `[Evaluation Run] Config - strategy: ${retrievalStrategy}, reranker: ${useReranker}, rerankerStrategy: ${rerankerStrategy}, agenticMode: ${useAgenticMode}`
         );
 
         // Update run status
@@ -215,6 +216,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
                         ragAnswerRelevancy: ragMetrics.answerRelevancy,
                         ragContextPrecision: ragMetrics.contextPrecision,
                         ragContextRecall: ragMetrics.contextRecall,
+                        ragContextRelevancy: ragMetrics.contextRelevancy, // NEW: RAGAS Context Relevancy
                         ragAnswerCorrectness: ragMetrics.answerCorrectness,
                         // Non-RAG metrics
                         nonRagAnswerRelevancy: nonRagRelevancy,

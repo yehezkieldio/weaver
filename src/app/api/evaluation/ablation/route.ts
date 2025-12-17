@@ -150,6 +150,7 @@ export async function POST(request: Request) {
                 answerRelevancy: result.metrics.answerRelevancy,
                 contextPrecision: result.metrics.contextPrecision,
                 contextRecall: result.metrics.contextRecall,
+                contextRelevancy: result.metrics.contextRelevancy, // NEW: RAGAS Context Relevancy
                 answerCorrectness: result.metrics.answerCorrectness,
                 academicRigor: result.metrics.academicRigor,
                 citationAccuracy: result.metrics.citationAccuracy,

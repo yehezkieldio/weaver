@@ -311,6 +311,7 @@ export const evaluationQuestions = pgTable("evaluation_questions", {
     ragAnswerRelevancy: real("rag_answer_relevancy"),
     ragContextPrecision: real("rag_context_precision"),
     ragContextRecall: real("rag_context_recall"),
+    ragContextRelevancy: real("rag_context_relevancy"), // NEW: RAGAS Context Relevancy metric
     ragAnswerCorrectness: real("rag_answer_correctness"),
     nonRagAnswerRelevancy: real("non_rag_answer_relevancy"),
     nonRagAnswerCorrectness: real("non_rag_answer_correctness"),

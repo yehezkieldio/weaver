@@ -84,6 +84,7 @@ export interface EvaluationMetrics {
     answerRelevancy: number;
     contextPrecision: number;
     contextRecall: number;
+    contextRelevancy: number; // NEW: RAGAS Context Relevancy metric
     answerCorrectness: number;
     // Domain-specific metrics (Indonesian university information)
     academicRigor: number;
@@ -269,9 +270,22 @@ function detectLanguage(_text: string): "id" {
 
 // Core RAGAS Metrics
 
+/**
+ * RAGAS-Faithful Faithfulness Calculation
+ *
+ * This implementation follows the original RAGAS paper (Shahul et al., 2023):
+ * 1. Decompose the answer into individual factual claims
+ * 2. Check each claim against the context using NLI (entailment)
+ * 3. Return the proportion of claims that are supported
+ *
+ * WHY this approach:
+ * - More granular than single-score LLM judgment
+ * - Each claim is independently verified
+ * - Aligns with academic NLI-based factuality research
+ */
 export async function calculateFaithfulness(answer: string, contexts: string[]): Promise<number> {
     console.log(
-        `[calculateFaithfulness] Calculating faithfulness - answer: ${answer.length} chars, contexts: ${contexts.length}`
+        `[calculateFaithfulness] RAGAS-faithful calculation - answer: ${answer.length} chars, contexts: ${contexts.length}`
     );
     if (!answer || contexts.length === 0) {
         console.log("[calculateFaithfulness] Skipping - empty answer or contexts");
@@ -279,29 +293,62 @@ export async function calculateFaithfulness(answer: string, contexts: string[]):
     }
 
     try {
-        console.log("[calculateFaithfulness] Using Indonesian prompt");
-        const prompt = `Anda mengevaluasi kesetiaan jawaban terhadap konteks sumbernya.
-
-Konteks:
-${contexts.join("\n\n")}
-
-Jawaban:
-${answer}
-
-Tugas: Analisis jawaban dan tentukan berapa persen klaim dalam jawaban yang dapat langsung didukung oleh konteks.
-Jawab HANYA dengan angka antara 0 dan 1 yang merepresentasikan skor kesetiaan.
-- 1.0 = Semua klaim langsung didukung oleh konteks
-- 0.0 = Tidak ada klaim yang didukung oleh konteks`;
-
-        const { text } = await generateText({
+        // Step 1: Decompose answer into individual claims
+        console.log("[calculateFaithfulness] Step 1: Decomposing answer into claims");
+        const { text: claimsText } = await generateText({
             model: CHAT_MODEL,
-            prompt,
-            maxOutputTokens: 10,
+            prompt: `Pecah jawaban berikut menjadi klaim-klaim faktual individual. Setiap klaim harus merupakan pernyataan tunggal yang dapat diverifikasi.
+
+Jawaban: ${answer}
+
+Kembalikan sebagai array JSON berisi string klaim. Jika tidak ada klaim faktual, kembalikan array kosong [].
+Contoh format: ["Klaim pertama", "Klaim kedua", "Klaim ketiga"]`,
+            maxOutputTokens: 1000,
+            temperature: 0.1,
         });
 
-        const score = Number.parseFloat(text.trim());
-        const result = Number.isNaN(score) ? 0 : Math.min(1, Math.max(0, score));
-        console.log(`[calculateFaithfulness] Result: ${result.toFixed(3)}`);
+        let claims: string[];
+        try {
+            claims = JSON.parse(claimsText.replace(/```json\n?|\n?```/g, "").trim());
+        } catch {
+            // Fallback: treat whole answer as single claim
+            console.log("[calculateFaithfulness] Could not parse claims, using answer as single claim");
+            claims = [answer.substring(0, 500)];
+        }
+
+        if (claims.length === 0) {
+            console.log("[calculateFaithfulness] No claims found, returning 1.0");
+            return 1.0; // No claims to verify = faithful by default
+        }
+
+        console.log(`[calculateFaithfulness] Step 2: Verifying ${claims.length} claims against context`);
+
+        // Step 2: Check each claim against contexts using NLI
+        const contextText = contexts.join("\n\n");
+        let supportedCount = 0;
+
+        // Process claims in parallel for efficiency (batch of 5)
+        const batchSize = 5;
+        for (let i = 0; i < claims.length; i += batchSize) {
+            const batch = claims.slice(i, i + batchSize);
+            const results = await Promise.all(
+                batch.map(async (claim) => {
+                    const { text } = await generateText({
+                        model: CHAT_MODEL,
+                        prompt: `Konteks:\n${contextText}\n\nKlaim: ${claim}\n\nApakah klaim ini DIDUKUNG oleh konteks? Jawab hanya: ya atau tidak`,
+                        maxOutputTokens: 5,
+                        temperature: 0.1,
+                    });
+                    return text.toLowerCase().includes("ya");
+                })
+            );
+            supportedCount += results.filter(Boolean).length;
+        }
+
+        const result = supportedCount / claims.length;
+        console.log(
+            `[calculateFaithfulness] Result: ${result.toFixed(3)} (${supportedCount}/${claims.length} claims supported)`
+        );
         return result;
     } catch (error) {
         console.error("[calculateFaithfulness] Calculation error:", error);
@@ -309,18 +356,88 @@ Jawab HANYA dengan angka antara 0 dan 1 yang merepresentasikan skor kesetiaan.
     }
 }
 
-export async function calculateAnswerRelevancy(question: string, answer: string): Promise<number> {
+/**
+ * RAGAS-Faithful Answer Relevancy Calculation
+ *
+ * This implementation follows the original RAGAS paper (Shahul et al., 2023):
+ * 1. Generate N synthetic questions from the answer
+ * 2. Compute embeddings for original question and synthetic questions
+ * 3. Return average cosine similarity between original and synthetic questions
+ *
+ * WHY this approach:
+ * - Tests if the answer could have been generated from the question
+ * - More robust than direct answer-question embedding comparison
+ * - Captures semantic alignment between question intent and answer content
+ *
+ * @param question - The original user question
+ * @param answer - The generated answer
+ * @param numQuestions - Number of synthetic questions to generate (default: 3)
+ */
+export async function calculateAnswerRelevancy(question: string, answer: string, numQuestions = 3): Promise<number> {
     if (!(question && answer)) return 0;
 
     try {
-        const [questionEmbed, answerEmbed] = await Promise.all([
+        console.log(
+            `[calculateAnswerRelevancy] RAGAS-faithful calculation - generating ${numQuestions} synthetic questions`
+        );
+
+        // Step 1: Generate N synthetic questions from the answer
+        const { text: questionsText } = await generateText({
+            model: CHAT_MODEL,
+            prompt: `Berdasarkan jawaban berikut, hasilkan ${numQuestions} pertanyaan yang kemungkinan besar dijawab oleh jawaban ini.
+
+Jawaban: ${answer}
+
+Kembalikan HANYA array JSON berisi ${numQuestions} pertanyaan dalam Bahasa Indonesia.
+Contoh format: ["Pertanyaan 1?", "Pertanyaan 2?", "Pertanyaan 3?"]`,
+            maxOutputTokens: 500,
+            temperature: 0.3,
+        });
+
+        let syntheticQuestions: string[];
+        try {
+            syntheticQuestions = JSON.parse(questionsText.replace(/```json\n?|\n?```/g, "").trim());
+        } catch {
+            console.log(
+                "[calculateAnswerRelevancy] Could not parse synthetic questions, falling back to embedding comparison"
+            );
+            // Fallback to simple embedding comparison
+            const [questionEmbed, answerEmbed] = await Promise.all([
+                generateEmbedding(question),
+                generateEmbedding(answer),
+            ]);
+            return cosineSimilarity(questionEmbed.embedding, answerEmbed.embedding);
+        }
+
+        if (syntheticQuestions.length === 0) {
+            console.log("[calculateAnswerRelevancy] No synthetic questions generated, using fallback");
+            const [questionEmbed, answerEmbed] = await Promise.all([
+                generateEmbedding(question),
+                generateEmbedding(answer),
+            ]);
+            return cosineSimilarity(questionEmbed.embedding, answerEmbed.embedding);
+        }
+
+        // Step 2: Compute embeddings for all questions
+        console.log(
+            `[calculateAnswerRelevancy] Computing embeddings for ${syntheticQuestions.length} synthetic questions`
+        );
+        const [originalEmbed, ...syntheticEmbeds] = await Promise.all([
             generateEmbedding(question),
-            generateEmbedding(answer),
+            ...syntheticQuestions.map((q: string) => generateEmbedding(q)),
         ]);
 
-        return cosineSimilarity(questionEmbed.embedding, answerEmbed.embedding);
+        // Step 3: Calculate average cosine similarity
+        const similarities = syntheticEmbeds.map((e) => cosineSimilarity(originalEmbed.embedding, e.embedding));
+
+        const avgSimilarity = similarities.reduce((a, b) => a + b, 0) / similarities.length;
+        console.log(
+            `[calculateAnswerRelevancy] Result: ${avgSimilarity.toFixed(3)} (avg of ${similarities.length} similarities)`
+        );
+
+        return avgSimilarity;
     } catch (error) {
-        console.error("Answer relevancy calculation error:", error);
+        console.error("[calculateAnswerRelevancy] Calculation error:", error);
         return 0;
     }
 }
@@ -386,6 +503,63 @@ Jawab HANYA dengan angka antara 0 dan 1.
         return Number.isNaN(score) ? 0 : Math.min(1, Math.max(0, score));
     } catch (error) {
         console.error("Context recall calculation error:", error);
+        return 0;
+    }
+}
+
+/**
+ * NEW: RAGAS Context Relevancy Calculation
+ *
+ * This metric was MISSING from the original implementation.
+ * It measures how relevant each retrieved context chunk is to the query.
+ *
+ * WHY this metric matters:
+ * - Context Precision tells us if relevant chunks rank higher
+ * - Context Relevancy tells us the absolute relevance of all chunks
+ * - Low relevancy = retrieval is returning irrelevant documents
+ *
+ * @param question - The user query
+ * @param contexts - Array of retrieved context chunks
+ * @returns Average relevancy score (0-1)
+ */
+export async function calculateContextRelevancy(question: string, contexts: string[]): Promise<number> {
+    if (!question || contexts.length === 0) return 0;
+
+    try {
+        console.log(`[calculateContextRelevancy] Evaluating ${contexts.length} contexts for query relevancy`);
+
+        // Evaluate each context's relevance to the question in parallel
+        const relevancePromises = contexts.map(async (context) => {
+            const { text } = await generateText({
+                model: CHAT_MODEL,
+                prompt: `Pertanyaan: ${question}
+
+Konteks yang diambil: ${context.substring(0, 1000)}
+
+Seberapa relevan konteks ini untuk menjawab pertanyaan?
+Berikan skor 0-1 di mana:
+- 1.0 = Sangat relevan, berisi informasi langsung untuk menjawab
+- 0.5 = Cukup relevan, berisi informasi terkait
+- 0.0 = Tidak relevan sama sekali
+
+Jawab HANYA dengan angka.`,
+                maxOutputTokens: 10,
+                temperature: 0.1,
+            });
+
+            const score = Number.parseFloat(text.trim());
+            return Number.isNaN(score) ? 0 : Math.min(1, Math.max(0, score));
+        });
+
+        const relevanceScores = await Promise.all(relevancePromises);
+        const avgRelevancy = relevanceScores.reduce((a, b) => a + b, 0) / relevanceScores.length;
+
+        console.log(
+            `[calculateContextRelevancy] Result: ${avgRelevancy.toFixed(3)} (avg of ${relevanceScores.length} contexts)`
+        );
+        return avgRelevancy;
+    } catch (error) {
+        console.error("[calculateContextRelevancy] Calculation error:", error);
         return 0;
     }
 }
@@ -717,6 +891,7 @@ export async function calculateAllMetrics(
         answerRelevancy,
         contextPrecision,
         contextRecall,
+        contextRelevancy, // NEW: RAGAS Context Relevancy
         answerCorrectness,
         // Domain-specific
         academicRigor,
@@ -732,6 +907,7 @@ export async function calculateAllMetrics(
         calculateAnswerRelevancy(question, answer),
         calculateContextPrecision(question, contexts, groundTruth),
         calculateContextRecall(groundTruth, contexts),
+        calculateContextRelevancy(question, contexts), // NEW: RAGAS Context Relevancy
         calculateAnswerCorrectness(answer, groundTruth),
         calculateAcademicRigor(answer, contexts),
         calculateCitationAccuracy(answer, contexts),
@@ -779,6 +955,7 @@ export async function calculateAllMetrics(
         answerRelevancy,
         contextPrecision,
         contextRecall,
+        contextRelevancy, // NEW: RAGAS Context Relevancy
         answerCorrectness,
         academicRigor,
         citationAccuracy,
@@ -1126,6 +1303,7 @@ function defaultZeroMetrics(): EvaluationMetrics {
         answerRelevancy: 0,
         contextPrecision: 0,
         contextRecall: 0,
+        contextRelevancy: 0, // NEW: RAGAS Context Relevancy
         answerCorrectness: 0,
         academicRigor: 0,
         citationAccuracy: 0,
