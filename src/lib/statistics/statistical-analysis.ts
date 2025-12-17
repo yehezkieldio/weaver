@@ -78,6 +78,56 @@ export interface DescriptiveStats {
     kurtosis: number;
 }
 
+// ============================================================================
+// Statistical Assumption Testing Interfaces
+// ============================================================================
+
+/**
+ * Result of a single assumption test (normality, homogeneity, etc.)
+ */
+export interface AssumptionTestResult {
+    testName: string;
+    testNameId: string;
+    passed: boolean;
+    statistic: number;
+    pValue: number;
+    threshold: number;
+    interpretation: string;
+    interpretationId: string;
+}
+
+/**
+ * Result of outlier detection analysis
+ */
+export interface OutlierAnalysis {
+    count: number;
+    percentage: number;
+    outlierIndices: number[];
+    outlierValues: number[];
+    method: "iqr" | "zscore";
+    lowerBound: number;
+    upperBound: number;
+}
+
+/**
+ * Comprehensive assumption check result for parametric tests
+ *
+ * WHY this matters:
+ * - Parametric tests (t-test, ANOVA) assume normality and homogeneity of variance
+ * - Violations lead to inflated Type I error rates or reduced power
+ * - Automatic switching to non-parametric alternatives ensures valid results
+ */
+export interface AssumptionCheckResult {
+    normalityTest?: AssumptionTestResult;
+    homogeneityTest?: AssumptionTestResult;
+    outlierAnalysis?: OutlierAnalysis;
+    assumptionsMet: boolean;
+    warnings: string[];
+    warningsId: string[];
+    recommendedTest: string;
+    recommendedTestId: string;
+}
+
 /**
  * Calculate descriptive statistics for a dataset
  *
@@ -555,6 +605,685 @@ function qToPValue(q: number, k: number, df: number): number {
 
     // Apply Bonferroni correction (conservative)
     return Math.min(1, rawPValue * numComparisons);
+}
+
+// ============================================================================
+// Statistical Assumption Testing Functions
+// ============================================================================
+
+/**
+ * Detect outliers using IQR (Interquartile Range) method
+ *
+ * WHY IQR method:
+ * - Robust to extreme values (unlike Z-score which uses mean/SD)
+ * - Standard in statistical analysis (1.5*IQR rule)
+ * - Appropriate for non-normal distributions
+ *
+ * @param data - Array of numeric values
+ * @returns Outlier analysis result
+ */
+export function detectOutliersIQR(data: number[]): OutlierAnalysis {
+    if (data.length < 4) {
+        return {
+            count: 0,
+            percentage: 0,
+            outlierIndices: [],
+            outlierValues: [],
+            method: "iqr",
+            lowerBound: data[0] ?? 0,
+            upperBound: data.at(-1) ?? 1,
+        };
+    }
+
+    const sorted = [...data].sort((a, b) => a - b);
+    const n = sorted.length;
+
+    // Calculate Q1 and Q3
+    const q1Index = Math.floor(n * 0.25);
+    const q3Index = Math.floor(n * 0.75);
+    const q1 = sorted[q1Index];
+    const q3 = sorted[q3Index];
+    const iqr = q3 - q1;
+
+    // Calculate bounds (1.5 * IQR rule)
+    const lowerBound = q1 - 1.5 * iqr;
+    const upperBound = q3 + 1.5 * iqr;
+
+    // Find outliers
+    const outlierIndices: number[] = [];
+    const outlierValues: number[] = [];
+
+    for (let i = 0; i < data.length; i += 1) {
+        if (data[i] < lowerBound || data[i] > upperBound) {
+            outlierIndices.push(i);
+            outlierValues.push(data[i]);
+        }
+    }
+
+    return {
+        count: outlierIndices.length,
+        percentage: (outlierIndices.length / data.length) * 100,
+        outlierIndices,
+        outlierValues,
+        method: "iqr",
+        lowerBound,
+        upperBound,
+    };
+}
+
+/**
+ * Detect outliers using Z-score method
+ *
+ * @param data - Array of numeric values
+ * @param threshold - Z-score threshold (default 3.0)
+ * @returns Outlier analysis result
+ */
+export function detectOutliersZScore(data: number[], threshold = 3.0): OutlierAnalysis {
+    if (data.length < 3) {
+        return {
+            count: 0,
+            percentage: 0,
+            outlierIndices: [],
+            outlierValues: [],
+            method: "zscore",
+            lowerBound: data[0] ?? 0,
+            upperBound: data.at(-1) ?? 1,
+        };
+    }
+
+    const stats = calculateDescriptiveStats(data);
+    const lowerBound = stats.mean - threshold * stats.stdDev;
+    const upperBound = stats.mean + threshold * stats.stdDev;
+
+    const outlierIndices: number[] = [];
+    const outlierValues: number[] = [];
+
+    for (let i = 0; i < data.length; i += 1) {
+        const zScore = Math.abs((data[i] - stats.mean) / stats.stdDev);
+        if (zScore > threshold) {
+            outlierIndices.push(i);
+            outlierValues.push(data[i]);
+        }
+    }
+
+    return {
+        count: outlierIndices.length,
+        percentage: (outlierIndices.length / data.length) * 100,
+        outlierIndices,
+        outlierValues,
+        method: "zscore",
+        lowerBound,
+        upperBound,
+    };
+}
+
+/**
+ * Shapiro-Wilk normality test approximation
+ *
+ * WHY Shapiro-Wilk:
+ * - Most powerful normality test for small to medium samples (n < 50)
+ * - Standard test recommended for statistical assumption checking
+ *
+ * NOTE: This is an approximation using skewness and kurtosis.
+ * For production use with n < 50, consider using a dedicated statistics library.
+ *
+ * @param data - Array of numeric values
+ * @param alpha - Significance level (default 0.05)
+ * @returns Assumption test result
+ */
+export function shapiroWilkTest(data: number[], alpha = 0.05): AssumptionTestResult {
+    const n = data.length;
+
+    if (n < 3) {
+        return {
+            testName: "Shapiro-Wilk Test",
+            testNameId: "Uji Shapiro-Wilk",
+            passed: true,
+            statistic: 1,
+            pValue: 1,
+            threshold: alpha,
+            interpretation: "Insufficient data for normality test (n < 3)",
+            interpretationId: "Data tidak cukup untuk uji normalitas (n < 3)",
+        };
+    }
+
+    const stats = calculateDescriptiveStats(data);
+
+    // Use Jarque-Bera approximation based on skewness and kurtosis
+    // JB = n/6 * (S^2 + (K^2)/4) where S=skewness, K=excess kurtosis
+    const jbStatistic = (n / 6) * (stats.skewness ** 2 + stats.kurtosis ** 2 / 4);
+
+    // JB statistic follows chi-squared distribution with df=2
+    const pValue = 1 - jStat.chisquare.cdf(jbStatistic, 2);
+    const passed = pValue >= alpha;
+
+    let interpretation: string;
+    let interpretationId: string;
+
+    if (passed) {
+        interpretation = `Data appears normally distributed (JB = ${jbStatistic.toFixed(3)}, p = ${pValue.toFixed(4)}). Parametric tests appropriate.`;
+        interpretationId = `Data tampak berdistribusi normal (JB = ${jbStatistic.toFixed(3)}, p = ${pValue.toFixed(4)}). Uji parametrik sesuai.`;
+    } else {
+        interpretation = `Data significantly deviates from normality (JB = ${jbStatistic.toFixed(3)}, p = ${pValue.toFixed(4)}). Consider non-parametric alternatives.`;
+        interpretationId = `Data menyimpang signifikan dari normalitas (JB = ${jbStatistic.toFixed(3)}, p = ${pValue.toFixed(4)}). Pertimbangkan alternatif non-parametrik.`;
+    }
+
+    return {
+        testName: "Normality Test (Jarque-Bera)",
+        testNameId: "Uji Normalitas (Jarque-Bera)",
+        passed,
+        statistic: jbStatistic,
+        pValue,
+        threshold: alpha,
+        interpretation,
+        interpretationId,
+    };
+}
+
+/**
+ * Levene's test for homogeneity of variance
+ *
+ * WHY Levene's test:
+ * - More robust than Bartlett's test to departures from normality
+ * - Standard test for ANOVA assumption checking
+ * - Uses deviations from group medians (Brown-Forsythe variant)
+ *
+ * @param groups - Array of data arrays for each group
+ * @param alpha - Significance level (default 0.05)
+ * @returns Assumption test result
+ */
+export function leveneTest(groups: number[][], alpha = 0.05): AssumptionTestResult {
+    const k = groups.length;
+    const N = groups.reduce((sum, g) => sum + g.length, 0);
+
+    if (k < 2 || N < k + 1) {
+        return {
+            testName: "Levene's Test",
+            testNameId: "Uji Levene",
+            passed: true,
+            statistic: 0,
+            pValue: 1,
+            threshold: alpha,
+            interpretation: "Insufficient data for homogeneity test",
+            interpretationId: "Data tidak cukup untuk uji homogenitas",
+        };
+    }
+
+    // Calculate group medians and absolute deviations
+    const groupDeviations: number[][] = [];
+    for (const group of groups) {
+        const sorted = [...group].sort((a, b) => a - b);
+        const median = sorted[Math.floor(sorted.length / 2)];
+        const deviations = group.map((x) => Math.abs(x - median));
+        groupDeviations.push(deviations);
+    }
+
+    // Calculate grand mean of deviations
+    const allDeviations = groupDeviations.flat();
+    const grandMean = allDeviations.reduce((a, b) => a + b, 0) / N;
+
+    // Calculate group means of deviations
+    const groupMeans = groupDeviations.map((g) => g.reduce((a, b) => a + b, 0) / g.length);
+
+    // Between-group sum of squares
+    let ssb = 0;
+    for (let i = 0; i < k; i += 1) {
+        ssb += groupDeviations[i].length * (groupMeans[i] - grandMean) ** 2;
+    }
+
+    // Within-group sum of squares
+    let ssw = 0;
+    for (let i = 0; i < k; i += 1) {
+        for (const dev of groupDeviations[i]) {
+            ssw += (dev - groupMeans[i]) ** 2;
+        }
+    }
+
+    // F-statistic
+    const dfBetween = k - 1;
+    const dfWithin = N - k;
+    const msb = ssb / dfBetween;
+    const msw = ssw / dfWithin;
+    const fStatistic = msw > 0 ? msb / msw : 0;
+
+    const pValue = fToPValue(fStatistic, dfBetween, dfWithin);
+    const passed = pValue >= alpha;
+
+    let interpretation: string;
+    let interpretationId: string;
+
+    if (passed) {
+        interpretation = `Homogeneity of variance assumption met (F = ${fStatistic.toFixed(3)}, p = ${pValue.toFixed(4)}). Parametric tests appropriate.`;
+        interpretationId = `Asumsi homogenitas varians terpenuhi (F = ${fStatistic.toFixed(3)}, p = ${pValue.toFixed(4)}). Uji parametrik sesuai.`;
+    } else {
+        interpretation = `Variances are significantly different (F = ${fStatistic.toFixed(3)}, p = ${pValue.toFixed(4)}). Consider Welch's ANOVA or non-parametric alternatives.`;
+        interpretationId = `Varians berbeda secara signifikan (F = ${fStatistic.toFixed(3)}, p = ${pValue.toFixed(4)}). Pertimbangkan ANOVA Welch atau alternatif non-parametrik.`;
+    }
+
+    return {
+        testName: "Levene's Test",
+        testNameId: "Uji Levene",
+        passed,
+        statistic: fStatistic,
+        pValue,
+        threshold: alpha,
+        interpretation,
+        interpretationId,
+    };
+}
+
+/**
+ * Check assumptions for t-test
+ *
+ * @param group1 - First group of data
+ * @param group2 - Second group of data (optional for one-sample)
+ * @param alpha - Significance level
+ * @returns Comprehensive assumption check result
+ */
+export function checkTTestAssumptions(group1: number[], group2?: number[], alpha = 0.05): AssumptionCheckResult {
+    const warnings: string[] = [];
+    const warningsId: string[] = [];
+
+    // Normality test on combined data or each group
+    const allData = group2 ? [...group1, ...group2] : group1;
+    const normalityTest = shapiroWilkTest(allData, alpha);
+
+    if (!normalityTest.passed) {
+        warnings.push("⚠️ Normality assumption violated. Consider Mann-Whitney U test.");
+        warningsId.push("⚠️ Asumsi normalitas tidak terpenuhi. Pertimbangkan uji Mann-Whitney U.");
+    }
+
+    // Homogeneity test (only for two groups)
+    let homogeneityTest: AssumptionTestResult | undefined;
+    if (group2) {
+        homogeneityTest = leveneTest([group1, group2], alpha);
+        if (!homogeneityTest.passed) {
+            warnings.push("⚠️ Homogeneity of variance violated. Using Welch's t-test is recommended.");
+            warningsId.push("⚠️ Asumsi homogenitas varians tidak terpenuhi. Disarankan menggunakan uji t Welch.");
+        }
+    }
+
+    // Outlier detection
+    const outlierAnalysis = detectOutliersIQR(allData);
+    if (outlierAnalysis.percentage > 5) {
+        warnings.push(
+            `⚠️ ${outlierAnalysis.count} outliers detected (${outlierAnalysis.percentage.toFixed(1)}%). Results may be affected.`
+        );
+        warningsId.push(
+            `⚠️ ${outlierAnalysis.count} outlier terdeteksi (${outlierAnalysis.percentage.toFixed(1)}%). Hasil mungkin terpengaruh.`
+        );
+    }
+
+    const assumptionsMet = normalityTest.passed && (homogeneityTest?.passed ?? true) && outlierAnalysis.percentage <= 5;
+
+    let recommendedTest: string;
+    let recommendedTestId: string;
+
+    if (assumptionsMet) {
+        recommendedTest = group2 ? "Independent t-test (Welch's)" : "One-sample t-test";
+        recommendedTestId = group2 ? "Uji t Independen (Welch)" : "Uji t Satu Sampel";
+    } else {
+        recommendedTest = "Mann-Whitney U test";
+        recommendedTestId = "Uji Mann-Whitney U";
+    }
+
+    return {
+        normalityTest,
+        homogeneityTest,
+        outlierAnalysis,
+        assumptionsMet,
+        warnings,
+        warningsId,
+        recommendedTest,
+        recommendedTestId,
+    };
+}
+
+/**
+ * Check assumptions for ANOVA
+ *
+ * @param groups - Array of data arrays for each group
+ * @param alpha - Significance level
+ * @returns Comprehensive assumption check result
+ */
+export function checkANOVAAssumptions(groups: number[][], alpha = 0.05): AssumptionCheckResult {
+    const warnings: string[] = [];
+    const warningsId: string[] = [];
+
+    // Normality test on each group
+    const allData = groups.flat();
+    const normalityTest = shapiroWilkTest(allData, alpha);
+
+    if (!normalityTest.passed) {
+        warnings.push("⚠️ Normality assumption violated. Consider Kruskal-Wallis test.");
+        warningsId.push("⚠️ Asumsi normalitas tidak terpenuhi. Pertimbangkan uji Kruskal-Wallis.");
+    }
+
+    // Homogeneity test
+    const homogeneityTest = leveneTest(groups, alpha);
+    if (!homogeneityTest.passed) {
+        warnings.push("⚠️ Homogeneity of variance violated. Consider Welch's ANOVA or Kruskal-Wallis.");
+        warningsId.push("⚠️ Asumsi homogenitas varians tidak terpenuhi. Pertimbangkan ANOVA Welch atau Kruskal-Wallis.");
+    }
+
+    // Outlier detection
+    const outlierAnalysis = detectOutliersIQR(allData);
+    if (outlierAnalysis.percentage > 5) {
+        warnings.push(
+            `⚠️ ${outlierAnalysis.count} outliers detected (${outlierAnalysis.percentage.toFixed(1)}%). Results may be affected.`
+        );
+        warningsId.push(
+            `⚠️ ${outlierAnalysis.count} outlier terdeteksi (${outlierAnalysis.percentage.toFixed(1)}%). Hasil mungkin terpengaruh.`
+        );
+    }
+
+    const assumptionsMet = normalityTest.passed && homogeneityTest.passed && outlierAnalysis.percentage <= 5;
+
+    let recommendedTest: string;
+    let recommendedTestId: string;
+
+    if (assumptionsMet) {
+        recommendedTest = "One-way ANOVA";
+        recommendedTestId = "ANOVA Satu Arah";
+    } else {
+        recommendedTest = "Kruskal-Wallis test";
+        recommendedTestId = "Uji Kruskal-Wallis";
+    }
+
+    return {
+        normalityTest,
+        homogeneityTest,
+        outlierAnalysis,
+        assumptionsMet,
+        warnings,
+        warningsId,
+        recommendedTest,
+        recommendedTestId,
+    };
+}
+
+// ============================================================================
+// Non-Parametric Statistical Tests
+// ============================================================================
+
+/**
+ * Mann-Whitney U test (Wilcoxon rank-sum test)
+ *
+ * WHY Mann-Whitney U:
+ * - Non-parametric alternative to independent t-test
+ * - No normality assumption required
+ * - Uses ranks instead of raw values
+ * - Robust to outliers
+ *
+ * @param group1 - First group of data
+ * @param group2 - Second group of data
+ * @param alpha - Significance level
+ * @returns Statistical result
+ */
+export function mannWhitneyUTest(group1: number[], group2: number[], alpha = 0.05): StatisticalResult {
+    const n1 = group1.length;
+    const n2 = group2.length;
+
+    if (n1 < 2 || n2 < 2) {
+        return {
+            testName: "Mann-Whitney U Test",
+            testNameId: "Uji Mann-Whitney U",
+            statistic: 0,
+            pValue: 1,
+            significant: false,
+            significanceLevel: alpha,
+            sampleSize: n1 + n2,
+            interpretation: "Insufficient data for Mann-Whitney U test",
+            interpretationId: "Data tidak cukup untuk uji Mann-Whitney U",
+        };
+    }
+
+    // Combine and rank all values
+    const combined = [
+        ...group1.map((v, i) => ({ value: v, group: 1, originalIndex: i })),
+        ...group2.map((v, i) => ({ value: v, group: 2, originalIndex: i })),
+    ].sort((a, b) => a.value - b.value);
+
+    // Assign ranks (handle ties by averaging)
+    const ranks: number[] = [];
+    let pos = 0;
+    while (pos < combined.length) {
+        let end = pos;
+        while (end < combined.length && combined[end].value === combined[pos].value) {
+            end += 1;
+        }
+        const avgRank = (pos + end + 1) / 2;
+        for (let k = pos; k < end; k += 1) {
+            ranks[k] = avgRank;
+        }
+        pos = end;
+    }
+
+    // Calculate rank sums for each group
+    let r1 = 0;
+    for (let i = 0; i < combined.length; i += 1) {
+        if (combined[i].group === 1) {
+            r1 += ranks[i];
+        }
+    }
+
+    // Calculate U statistics
+    const u1 = r1 - (n1 * (n1 + 1)) / 2;
+    const u2 = n1 * n2 - u1;
+    const uStatistic = Math.min(u1, u2);
+
+    // Normal approximation for large samples
+    const meanU = (n1 * n2) / 2;
+    const stdU = Math.sqrt((n1 * n2 * (n1 + n2 + 1)) / 12);
+    const zScore = (uStatistic - meanU) / stdU;
+
+    // Two-tailed p-value
+    const pValue = 2 * (1 - jStat.normal.cdf(Math.abs(zScore), 0, 1));
+    const significant = pValue < alpha;
+
+    // Effect size: r = Z / sqrt(N)
+    const effectSize = Math.abs(zScore) / Math.sqrt(n1 + n2);
+    const effectSizeInterpretation = interpretCorrelationEffect(effectSize);
+
+    return {
+        testName: "Mann-Whitney U Test",
+        testNameId: "Uji Mann-Whitney U",
+        statistic: uStatistic,
+        pValue,
+        significant,
+        significanceLevel: alpha,
+        effectSize,
+        effectSizeInterpretation,
+        degreesOfFreedom: n1 + n2 - 2,
+        sampleSize: n1 + n2,
+        interpretation: significant
+            ? `Significant difference between groups (U = ${uStatistic.toFixed(1)}, p = ${pValue.toFixed(4)}). Effect size: ${effectSizeInterpretation} (r = ${effectSize.toFixed(3)}).`
+            : `No significant difference between groups (U = ${uStatistic.toFixed(1)}, p = ${pValue.toFixed(4)}).`,
+        interpretationId: significant
+            ? `Terdapat perbedaan signifikan antara kelompok (U = ${uStatistic.toFixed(1)}, p = ${pValue.toFixed(4)}). Ukuran efek: ${translateEffectSize(effectSizeInterpretation)} (r = ${effectSize.toFixed(3)}).`
+            : `Tidak ada perbedaan signifikan antara kelompok (U = ${uStatistic.toFixed(1)}, p = ${pValue.toFixed(4)}).`,
+    };
+}
+
+/**
+ * Kruskal-Wallis H test
+ *
+ * WHY Kruskal-Wallis:
+ * - Non-parametric alternative to one-way ANOVA
+ * - No normality or homogeneity of variance assumptions
+ * - Compares medians across multiple groups
+ *
+ * @param groups - Array of data arrays for each group
+ * @param alpha - Significance level
+ * @returns Statistical result with optional post-hoc
+ */
+export function kruskalWallisTest(
+    groups: number[][],
+    alpha = 0.05
+): StatisticalResult & { postHoc?: StatisticalResult[] } {
+    const k = groups.length;
+    const N = groups.reduce((sum, g) => sum + g.length, 0);
+
+    if (k < 2 || N < k + 1) {
+        return {
+            testName: "Kruskal-Wallis H Test",
+            testNameId: "Uji Kruskal-Wallis H",
+            statistic: 0,
+            pValue: 1,
+            significant: false,
+            significanceLevel: alpha,
+            sampleSize: N,
+            interpretation: "Insufficient data for Kruskal-Wallis test",
+            interpretationId: "Data tidak cukup untuk uji Kruskal-Wallis",
+        };
+    }
+
+    // Combine and rank all values
+    const combined: Array<{ value: number; groupIndex: number }> = [];
+    for (let i = 0; i < groups.length; i += 1) {
+        for (const value of groups[i]) {
+            combined.push({ value, groupIndex: i });
+        }
+    }
+    combined.sort((a, b) => a.value - b.value);
+
+    // Assign ranks (handle ties)
+    const ranks: number[] = [];
+    let pos = 0;
+    while (pos < combined.length) {
+        let end = pos;
+        while (end < combined.length && combined[end].value === combined[pos].value) {
+            end += 1;
+        }
+        const avgRank = (pos + end + 1) / 2;
+        for (let j = pos; j < end; j += 1) {
+            ranks[j] = avgRank;
+        }
+        pos = end;
+    }
+
+    // Calculate rank sums for each group
+    const rankSums: number[] = new Array(k).fill(0);
+    for (let i = 0; i < combined.length; i += 1) {
+        rankSums[combined[i].groupIndex] += ranks[i];
+    }
+
+    // Calculate H statistic
+    let hSum = 0;
+    for (let i = 0; i < k; i += 1) {
+        const ni = groups[i].length;
+        hSum += rankSums[i] ** 2 / ni;
+    }
+    const hStatistic = (12 / (N * (N + 1))) * hSum - 3 * (N + 1);
+
+    // H follows chi-squared distribution with df = k - 1
+    const df = k - 1;
+    const pValue = 1 - jStat.chisquare.cdf(hStatistic, df);
+    const significant = pValue < alpha;
+
+    // Effect size: eta-squared approximation
+    const etaSquared = (hStatistic - k + 1) / (N - k);
+    const effectSizeInterpretation = interpretEtaSquared(Math.max(0, etaSquared));
+
+    const result: StatisticalResult & { postHoc?: StatisticalResult[] } = {
+        testName: "Kruskal-Wallis H Test",
+        testNameId: "Uji Kruskal-Wallis H",
+        statistic: hStatistic,
+        pValue,
+        significant,
+        significanceLevel: alpha,
+        effectSize: Math.max(0, etaSquared),
+        effectSizeInterpretation,
+        degreesOfFreedom: df,
+        sampleSize: N,
+        interpretation: significant
+            ? `Significant differences found among groups (H(${df}) = ${hStatistic.toFixed(3)}, p = ${pValue.toFixed(4)}). Effect size (η² ≈ ${etaSquared.toFixed(3)}) indicates ${effectSizeInterpretation} effect.`
+            : `No significant differences among groups (H(${df}) = ${hStatistic.toFixed(3)}, p = ${pValue.toFixed(4)}).`,
+        interpretationId: significant
+            ? `Ditemukan perbedaan signifikan antar kelompok (H(${df}) = ${hStatistic.toFixed(3)}, p = ${pValue.toFixed(4)}). Ukuran efek (η² ≈ ${etaSquared.toFixed(3)}) menunjukkan efek ${translateEffectSize(effectSizeInterpretation)}.`
+            : `Tidak ditemukan perbedaan signifikan antar kelompok (H(${df}) = ${hStatistic.toFixed(3)}, p = ${pValue.toFixed(4)}).`,
+    };
+
+    // Post-hoc pairwise Mann-Whitney U tests if significant
+    if (significant && k > 2) {
+        result.postHoc = [];
+        for (let i = 0; i < k; i += 1) {
+            for (let j = i + 1; j < k; j += 1) {
+                const pairwiseTest = mannWhitneyUTest(groups[i], groups[j], alpha / ((k * (k - 1)) / 2)); // Bonferroni correction
+                pairwiseTest.testName = `Mann-Whitney U: Group ${i + 1} vs Group ${j + 1}`;
+                pairwiseTest.testNameId = `Mann-Whitney U: Kelompok ${i + 1} vs Kelompok ${j + 1}`;
+                result.postHoc.push(pairwiseTest);
+            }
+        }
+    }
+
+    return result;
+}
+
+/**
+ * Helper function to interpret correlation-based effect sizes
+ */
+function interpretCorrelationEffect(r: number): string {
+    const absR = Math.abs(r);
+    if (absR < 0.1) return "negligible";
+    if (absR < 0.3) return "small";
+    if (absR < 0.5) return "medium";
+    return "large";
+}
+
+/**
+ * Smart test selection: automatically choose appropriate test based on assumptions
+ *
+ * @param groups - Array of data arrays for each group
+ * @param paired - Whether data is paired (for 2 groups only)
+ * @param alpha - Significance level
+ * @returns Object with assumption check, recommended test, and test result
+ */
+export function smartStatisticalTest(
+    groups: number[][],
+    paired = false,
+    alpha = 0.05
+): {
+    assumptionCheck: AssumptionCheckResult;
+    testUsed: string;
+    result: StatisticalResult;
+} {
+    if (groups.length === 2) {
+        const assumptionCheck = checkTTestAssumptions(groups[0], groups[1], alpha);
+
+        if (assumptionCheck.assumptionsMet) {
+            const result = paired
+                ? pairedTTest(groups[0], groups[1], alpha)
+                : independentTTest(groups[0], groups[1], alpha);
+            return {
+                assumptionCheck,
+                testUsed: result.testName,
+                result,
+            };
+        }
+        const result = mannWhitneyUTest(groups[0], groups[1], alpha);
+        return {
+            assumptionCheck,
+            testUsed: result.testName,
+            result,
+        };
+    }
+    const assumptionCheck = checkANOVAAssumptions(groups, alpha);
+
+    if (assumptionCheck.assumptionsMet) {
+        const result = oneWayANOVA(groups, alpha);
+        return {
+            assumptionCheck,
+            testUsed: result.testName,
+            result,
+        };
+    }
+    const result = kruskalWallisTest(groups, alpha);
+    return {
+        assumptionCheck,
+        testUsed: result.testName,
+        result,
+    };
 }
 
 /**

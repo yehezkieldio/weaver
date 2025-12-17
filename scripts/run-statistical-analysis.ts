@@ -1,17 +1,20 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { ablationStudies, evaluationQuestions, evaluationRuns } from "@/lib/db/schema";
+import { formatValidationResult, validateAblationData, validateEvaluationData } from "@/lib/statistics/data-validation";
+import type { RAGComparisonResult } from "@/lib/statistics/statistical-analysis";
 import {
     analyzeAblationStudy,
     bootstrapConfidenceInterval,
     calculateDescriptiveStats,
+    checkANOVAAssumptions,
+    checkTTestAssumptions,
     compareRAGvsNonRAG,
     confidenceInterval,
     generateStatisticalReport,
     independentTTest,
-    oneWayANOVA,
-    pairedTTest,
-    type RAGComparisonResult,
+    type pairedTTest,
+    smartStatisticalTest,
 } from "@/lib/statistics/statistical-analysis";
 
 // Real evaluation data structure from database
@@ -274,8 +277,35 @@ async function runAnalysis() {
 
     console.log();
 
+    // ===== 0. DATA QUALITY VALIDATION =====
+    console.log("0. DATA QUALITY VALIDATION / VALIDASI KUALITAS DATA");
+    console.log("-".repeat(50));
+
+    if (evaluationData.length > 0) {
+        const evalValidation = validateEvaluationData(evaluationData);
+        console.log("\nEvaluation Data:");
+        console.log(formatValidationResult(evalValidation, "en"));
+
+        if (!evalValidation.isValid) {
+            console.log("\n⚠️ WARNING: Data quality issues detected. Results may be unreliable.");
+            console.log("⚠️ PERINGATAN: Masalah kualitas data terdeteksi. Hasil mungkin tidak dapat diandalkan.");
+        }
+    }
+
+    if (ablationData.length > 0) {
+        const ablationValidation = validateAblationData(ablationData);
+        console.log("\nAblation Study Data:");
+        console.log(formatValidationResult(ablationValidation, "en"));
+
+        if (!ablationValidation.isValid) {
+            console.log("\n⚠️ WARNING: Data quality issues detected. Results may be unreliable.");
+            console.log("⚠️ PERINGATAN: Masalah kualitas data terdeteksi. Hasil mungkin tidak dapat diandalkan.");
+        }
+    }
+
     // ===== 1. DESCRIPTIVE STATISTICS =====
     if (evaluationData.length > 0) {
+        console.log(`\n${"=".repeat(60)}`);
         console.log("1. DESCRIPTIVE STATISTICS / STATISTIK DESKRIPTIF");
         console.log("-".repeat(50));
 
@@ -301,23 +331,60 @@ async function runAnalysis() {
             printDescriptiveStats(calculateDescriptiveStats(ragLatency));
         }
 
-        // ===== 2. PAIRED T-TESTS (RAG vs Non-RAG) =====
+        // ===== 2. PAIRED T-TESTS WITH ASSUMPTION CHECKING =====
         console.log(`\n${"=".repeat(60)}`);
-        console.log("2. PAIRED T-TESTS / UJI T BERPASANGAN");
+        console.log("2. PAIRED T-TESTS WITH ASSUMPTION CHECKING / UJI T BERPASANGAN DENGAN VALIDASI ASUMSI");
         console.log("-".repeat(50));
 
-        // Answer Relevancy comparison
+        // Answer Relevancy comparison with smart test selection
         if (ragRelevancy.length > 0 && nonRagRelevancy.length > 0 && ragRelevancy.length === nonRagRelevancy.length) {
             console.log("\n2.1 Answer Relevancy: RAG vs Non-RAG");
-            const relevancyTest = pairedTTest(ragRelevancy, nonRagRelevancy);
-            printTestResult(relevancyTest);
+
+            // Check assumptions first
+            const assumptionCheck = checkTTestAssumptions(ragRelevancy, nonRagRelevancy);
+            console.log("\n  [Assumption Check]");
+            console.log(
+                `    Normality: ${assumptionCheck.normalityTest?.passed ? "✓ Passed" : "✗ Failed"} (p = ${assumptionCheck.normalityTest?.pValue.toFixed(4)})`
+            );
+            if (assumptionCheck.homogeneityTest) {
+                console.log(
+                    `    Homogeneity: ${assumptionCheck.homogeneityTest.passed ? "✓ Passed" : "✗ Failed"} (p = ${assumptionCheck.homogeneityTest.pValue.toFixed(4)})`
+                );
+            }
+            console.log(
+                `    Outliers: ${assumptionCheck.outlierAnalysis?.count || 0} detected (${(assumptionCheck.outlierAnalysis?.percentage || 0).toFixed(1)}%)`
+            );
+            console.log(`    Recommended Test: ${assumptionCheck.recommendedTest}`);
+
+            // Print any warnings
+            for (const warning of assumptionCheck.warnings) {
+                console.log(`    ${warning}`);
+            }
+
+            // Use smart test selection
+            const smartResult = smartStatisticalTest([ragRelevancy, nonRagRelevancy], true);
+            console.log(`\n  [Test Used: ${smartResult.testUsed}]`);
+            printTestResult(smartResult.result);
         }
 
-        // Latency comparison
+        // Latency comparison with smart test selection
         if (ragLatency.length > 0 && nonRagLatency.length > 0 && ragLatency.length === nonRagLatency.length) {
             console.log("\n2.2 Latency: RAG vs Non-RAG");
-            const latencyTest = pairedTTest(ragLatency, nonRagLatency);
-            printTestResult(latencyTest);
+
+            const assumptionCheck = checkTTestAssumptions(ragLatency, nonRagLatency);
+            console.log("\n  [Assumption Check]");
+            console.log(
+                `    Normality: ${assumptionCheck.normalityTest?.passed ? "✓ Passed" : "✗ Failed"} (p = ${assumptionCheck.normalityTest?.pValue.toFixed(4)})`
+            );
+            console.log(`    Recommended Test: ${assumptionCheck.recommendedTest}`);
+
+            for (const warning of assumptionCheck.warnings) {
+                console.log(`    ${warning}`);
+            }
+
+            const smartResult = smartStatisticalTest([ragLatency, nonRagLatency], true);
+            console.log(`\n  [Test Used: ${smartResult.testUsed}]`);
+            printTestResult(smartResult.result);
         }
 
         // ===== 3. CONFIDENCE INTERVALS =====
@@ -374,23 +441,49 @@ async function runAnalysis() {
         }
 
         const ablationGroups = ablationData.map((d) => d.scores.faithfulness);
-        const anovaResult = oneWayANOVA(ablationGroups);
 
-        console.log("\nANOVA Results for Faithfulness across configurations:");
-        console.log(`  F-statistic: ${anovaResult.statistic.toFixed(4)}`);
-        console.log(`  p-value: ${anovaResult.pValue.toFixed(4)}`);
-        console.log(`  Significant: ${anovaResult.significant ? "Yes / Ya" : "No / Tidak"}`);
-        console.log(`  Effect size (η²): ${anovaResult.effectSize?.toFixed(4)}`);
-        console.log(`  Effect interpretation: ${anovaResult.effectSizeInterpretation}`);
-        console.log(`\n  EN: ${anovaResult.interpretation}`);
-        console.log(`  ID: ${anovaResult.interpretationId}`);
+        // Check ANOVA assumptions
+        console.log("\n[ANOVA Assumption Check]");
+        const anovaAssumptions = checkANOVAAssumptions(ablationGroups);
+        console.log(
+            `  Normality: ${anovaAssumptions.normalityTest?.passed ? "✓ Passed" : "✗ Failed"} (p = ${anovaAssumptions.normalityTest?.pValue.toFixed(4)})`
+        );
+        console.log(
+            `  Homogeneity: ${anovaAssumptions.homogeneityTest?.passed ? "✓ Passed" : "✗ Failed"} (p = ${anovaAssumptions.homogeneityTest?.pValue.toFixed(4)})`
+        );
+        console.log(
+            `  Outliers: ${anovaAssumptions.outlierAnalysis?.count || 0} detected (${(anovaAssumptions.outlierAnalysis?.percentage || 0).toFixed(1)}%)`
+        );
+        console.log(`  Assumptions Met: ${anovaAssumptions.assumptionsMet ? "✓ Yes" : "✗ No"}`);
+        console.log(`  Recommended Test: ${anovaAssumptions.recommendedTest}`);
 
-        if (anovaResult.postHoc && anovaResult.postHoc.length > 0) {
-            console.log("\nPost-hoc Tests (Tukey HSD):");
-            for (const test of anovaResult.postHoc) {
+        for (const warning of anovaAssumptions.warnings) {
+            console.log(`  ${warning}`);
+        }
+
+        // Use smart test selection
+        const smartResult = smartStatisticalTest(ablationGroups, false);
+        console.log(`\n[Test Used: ${smartResult.testUsed}]`);
+
+        console.log("\nResults for Faithfulness across configurations:");
+        console.log(`  Statistic: ${smartResult.result.statistic.toFixed(4)}`);
+        console.log(`  p-value: ${smartResult.result.pValue.toFixed(4)}`);
+        console.log(`  Significant: ${smartResult.result.significant ? "Yes / Ya" : "No / Tidak"}`);
+        console.log(`  Effect size: ${smartResult.result.effectSize?.toFixed(4)}`);
+        console.log(`  Effect interpretation: ${smartResult.result.effectSizeInterpretation}`);
+        console.log(`\n  EN: ${smartResult.result.interpretation}`);
+        console.log(`  ID: ${smartResult.result.interpretationId}`);
+
+        // Check for post-hoc tests
+        const resultWithPostHoc = smartResult.result as typeof smartResult.result & {
+            postHoc?: (typeof smartResult.result)[];
+        };
+        if (resultWithPostHoc.postHoc && resultWithPostHoc.postHoc.length > 0) {
+            console.log("\nPost-hoc Pairwise Comparisons:");
+            for (const test of resultWithPostHoc.postHoc) {
                 const sig = test.significant ? "***" : "";
                 console.log(
-                    `  ${test.testName}: q = ${test.statistic.toFixed(3)}, p = ${test.pValue.toFixed(4)} ${sig}`
+                    `  ${test.testName}: stat = ${test.statistic.toFixed(3)}, p = ${test.pValue.toFixed(4)} ${sig}`
                 );
             }
         }
