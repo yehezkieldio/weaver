@@ -124,7 +124,7 @@ export function EvaluationDashboard() {
     const [showCreateDialog, setShowCreateDialog] = useState(false);
     const [activeTab, setActiveTab] = useState("runs");
 
-    const { data: runsData, mutate: mutateRuns } = useSWR<EvaluationRun[]>("/api/evaluation", fetcher, {
+    const { data: runsData, mutate: mutateRuns } = useSWR<{ runs: EvaluationRun[] }>("/api/evaluation", fetcher, {
         refreshInterval: 5000,
     });
 
@@ -136,7 +136,7 @@ export function EvaluationDashboard() {
 
     const { data: ablationData, mutate: mutateAblation } = useSWR("/api/evaluation/ablation", fetcher);
 
-    const runs: EvaluationRun[] = Array.isArray(runsData) ? runsData : [];
+    const runs: EvaluationRun[] = runsData?.runs || [];
 
     const runEvaluation = async (id: string, mode: "quick" | "production" = "quick") => {
         await fetch(`/api/evaluation/${id}/run`, {

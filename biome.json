@@ -35,6 +35,7 @@
         "noUndeclaredVariables": "off"
       },
       "suspicious": {
+        "noTsIgnore": "off",
         "noConsole": "off",
         "noAlert": "off",
         "noEmptyBlockStatements": "off"

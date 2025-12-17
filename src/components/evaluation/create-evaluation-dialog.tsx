@@ -80,11 +80,21 @@ export function CreateEvaluationDialog({ open, onOpenChange, onCreated }: Create
 
     const handleSubmit = async () => {
         if (!name || questions.some((q) => !(q.question && q.groundTruth))) {
+            console.error("Validation failed: name or questions missing");
             return;
         }
 
         setIsLoading(true);
         try {
+            console.log("Creating evaluation with config:", {
+                name,
+                questionCount: questions.length,
+                useAgenticMode,
+                retrievalStrategy,
+                chunkingStrategy,
+                evaluationMode,
+            });
+
             const response = await fetch("/api/evaluation", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -103,12 +113,32 @@ export function CreateEvaluationDialog({ open, onOpenChange, onCreated }: Create
                 }),
             });
 
-            if (response.ok) {
-                setName("");
-                setDescription("");
-                setQuestions([{ question: "", groundTruth: "" }]);
-                onCreated();
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+                console.error("Failed to create evaluation:", errorData);
+                throw new Error(errorData.error || "Failed to create evaluation");
             }
+
+            const data = await response.json();
+            console.log("Evaluation created successfully:", data);
+
+            // Reset form state
+            setName("");
+            setDescription("");
+            setQuestions([{ question: "", groundTruth: "" }]);
+
+            // Store run ID for potential import dialog
+            if (data.run?.id) {
+                setCreatedRunId(data.run.id);
+            }
+
+            // Refresh data and close dialog
+            onCreated();
+            onOpenChange(false);
+        } catch (error) {
+            console.error("Error creating evaluation:", error);
+            // You might want to show a toast notification here
+            alert(error instanceof Error ? error.message : "Failed to create evaluation");
         } finally {
             setIsLoading(false);
         }

@@ -185,6 +185,7 @@ async function crossEncoderScore(
     passages: string[],
     progressCallback?: (progressInfo: unknown) => void
 ): Promise<number[]> {
+    // @ts-ignore
     const pipe = (await getPipeline(progressCallback)) as Awaited<ReturnType<typeof pipeline>>;
     const scores: number[] = [];
 

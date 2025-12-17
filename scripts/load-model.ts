@@ -1,5 +1,6 @@
 import { pipeline } from "@huggingface/transformers";
 
+// @ts-ignore
 let classifier: Awaited<ReturnType<typeof pipeline>> | null = null;
 
 async function init() {

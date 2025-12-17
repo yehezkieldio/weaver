@@ -73,7 +73,22 @@ export async function POST(request: Request) {
             retrievalStrategy = "hybrid",
             chunkingStrategy = "recursive",
             enableGuardrails = true,
+            useReranker = true,
+            rerankerStrategy = "ensemble",
+            language = "id",
+            evaluationMode = "quick",
         } = await request.json();
+
+        console.log("Creating evaluation run:", {
+            name,
+            questionCount: questions?.length || 0,
+            useAgenticMode,
+            retrievalStrategy,
+            chunkingStrategy,
+            useReranker,
+            rerankerStrategy,
+            evaluationMode,
+        });
 
         // Create evaluation run with configuration
         const [run] = await db
@@ -89,6 +104,8 @@ export async function POST(request: Request) {
             })
             .returning();
 
+        console.log("Evaluation run created:", run.id);
+
         // Insert questions if provided
         if (questions?.length > 0) {
             await db.insert(evaluationQuestions).values(
@@ -99,10 +116,15 @@ export async function POST(request: Request) {
                     groundTruth: q.groundTruth,
                 }))
             );
+            console.log(`Inserted ${questions.length} questions`);
         }
 
         return Response.json({ run });
     } catch (error) {
-        return Response.json({ error: "Failed to create evaluation run" }, { status: 500 });
+        console.error("Error creating evaluation run:", error);
+        return Response.json(
+            { error: error instanceof Error ? error.message : "Failed to create evaluation run" },
+            { status: 500 }
+        );
     }
 }
