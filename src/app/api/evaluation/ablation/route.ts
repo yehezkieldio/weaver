@@ -152,9 +152,7 @@ export async function POST(request: Request) {
                 contextRecall: result.metrics.contextRecall,
                 contextRelevancy: result.metrics.contextRelevancy, // NEW: RAGAS Context Relevancy
                 answerCorrectness: result.metrics.answerCorrectness,
-                academicRigor: result.metrics.academicRigor,
                 citationAccuracy: result.metrics.citationAccuracy,
-                terminologyCorrectness: result.metrics.terminologyCorrectness,
                 hallucinationRate: result.metrics.hallucinationRate,
                 factualConsistency: result.metrics.factualConsistency,
                 sourceAttribution: result.metrics.sourceAttribution,
@@ -164,6 +162,9 @@ export async function POST(request: Request) {
                 rerankingLatencyMs: result.metrics.rerankingLatencyMs,
                 generationLatencyMs: result.metrics.generationLatencyMs,
                 agentReasoningLatencyMs: result.metrics.agentReasoningLatencyMs,
+                planningLatencyMs: result.metrics.planningLatencyMs,
+                synthesisLatencyMs: result.metrics.synthesisLatencyMs,
+                avgStepLatencyMs: result.metrics.avgStepLatencyMs,
             },
             // Store per-question metrics for valid ANOVA testing (not just averages)
             perQuestionMetrics: result.perQuestionMetrics.map((m) => ({

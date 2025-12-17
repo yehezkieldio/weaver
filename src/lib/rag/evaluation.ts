@@ -88,9 +88,7 @@ export interface EvaluationMetrics {
     contextRelevancy: number; // NEW: RAGAS Context Relevancy metric
     answerCorrectness: number;
     // Domain-specific metrics (Indonesian university information)
-    academicRigor: number;
     citationAccuracy: number;
-    terminologyCorrectness: number;
     // Hallucination-specific metrics
     hallucinationRate: number;
     factualConsistency: number;
@@ -609,39 +607,6 @@ Jawab HANYA dengan angka antara 0 dan 1.`;
     }
 }
 
-export async function calculateAcademicRigor(answer: string, contexts: string[]): Promise<number> {
-    if (!answer) return 0;
-
-    try {
-        const prompt = `Evaluasi ketelitian akademis dari jawaban berikut dalam konteks pendidikan tinggi Indonesia.
-
-Jawaban: ${answer}
-
-Konteks pendukung: ${contexts.slice(0, 3).join("\n")}
-
-Kriteria penilaian:
-1. Penggunaan bahasa akademis yang tepat
-2. Struktur argumentasi yang logis
-3. Kedalaman analisis
-4. Penggunaan istilah teknis yang benar
-5. Objektivitas dan netralitas
-
-Berikan skor 0-1. Jawab HANYA dengan angka.`;
-
-        const { text } = await generateText({
-            model: JUDGE_MODEL,
-            prompt,
-            maxOutputTokens: 10,
-        });
-
-        const score = Number.parseFloat(text.trim());
-        return Number.isNaN(score) ? 0 : Math.min(1, Math.max(0, score));
-    } catch (error) {
-        console.error("Academic rigor calculation error:", error);
-        return 0;
-    }
-}
-
 export async function calculateCitationAccuracy(answer: string, contexts: string[]): Promise<number> {
     if (!answer || contexts.length === 0) return 0;
 
@@ -670,45 +635,6 @@ Berikan skor 0-1. Jawab HANYA dengan angka.`;
         return Number.isNaN(score) ? 0 : Math.min(1, Math.max(0, score));
     } catch (error) {
         console.error("Citation accuracy calculation error:", error);
-        return 0;
-    }
-}
-
-export async function calculateTerminologyCorrectness(
-    answer: string,
-    contexts: string[],
-    domain?: string
-): Promise<number> {
-    if (!answer) return 0;
-
-    try {
-        const domainContext = domain || "akademik/universitas";
-
-        const prompt = `Evaluasi ketepatan penggunaan terminologi dalam jawaban untuk domain ${domainContext}.
-
-Jawaban: ${answer}
-
-Konteks referensi: ${contexts.slice(0, 2).join("\n")}
-
-Kriteria:
-1. Penggunaan istilah teknis yang tepat dan konsisten
-2. Definisi yang akurat
-3. Tidak ada kesalahan penggunaan jargon
-4. Konsistensi dengan terminologi standar di bidang terkait
-5. Penggunaan singkatan yang tepat
-
-Berikan skor 0-1. Jawab HANYA dengan angka.`;
-
-        const { text } = await generateText({
-            model: JUDGE_MODEL,
-            prompt,
-            maxOutputTokens: 10,
-        });
-
-        const score = Number.parseFloat(text.trim());
-        return Number.isNaN(score) ? 0 : Math.min(1, Math.max(0, score));
-    } catch (error) {
-        console.error("Terminology correctness calculation error:", error);
         return 0;
     }
 }
@@ -902,9 +828,7 @@ export async function calculateAllMetrics(
         contextRelevancy, // NEW: RAGAS Context Relevancy
         answerCorrectness,
         // Domain-specific
-        academicRigor,
         citationAccuracy,
-        terminologyCorrectness,
         // Hallucination
         hallucinationRate,
         factualConsistency,
@@ -917,9 +841,7 @@ export async function calculateAllMetrics(
         calculateContextRecall(groundTruth, contexts),
         calculateContextRelevancy(question, contexts), // NEW: RAGAS Context Relevancy
         calculateAnswerCorrectness(answer, groundTruth),
-        calculateAcademicRigor(answer, contexts),
         calculateCitationAccuracy(answer, contexts),
-        calculateTerminologyCorrectness(answer, contexts, domain),
         calculateHallucinationRate(answer, contexts),
         calculateFactualConsistency(answer, contexts),
         calculateSourceAttribution(answer, contexts),
@@ -965,9 +887,7 @@ export async function calculateAllMetrics(
         contextRecall,
         contextRelevancy, // NEW: RAGAS Context Relevancy
         answerCorrectness,
-        academicRigor,
         citationAccuracy,
-        terminologyCorrectness,
         hallucinationRate,
         factualConsistency,
         sourceAttribution,
@@ -1310,9 +1230,7 @@ function defaultZeroMetrics(): EvaluationMetrics {
         contextRecall: 0,
         contextRelevancy: 0, // NEW: RAGAS Context Relevancy
         answerCorrectness: 0,
-        academicRigor: 0,
         citationAccuracy: 0,
-        terminologyCorrectness: 0,
         hallucinationRate: 0,
         factualConsistency: 0,
         sourceAttribution: 0,

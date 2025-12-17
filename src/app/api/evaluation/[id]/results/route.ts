@@ -78,9 +78,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
                 answerCorrectness: average(validQuestions.map((q) => q.nonRagAnswerCorrectness)),
             },
             // Domain-specific metrics
-            avgAcademicRigor: average(validQuestions.map((q) => q.ragAcademicRigor)),
             avgCitationAccuracy: average(validQuestions.map((q) => q.ragCitationAccuracy)),
-            avgTerminologyCorrectness: average(validQuestions.map((q) => q.ragTerminologyCorrectness)),
             // Hallucination metrics
             avgHallucinationRate: average(validQuestions.map((q) => q.ragHallucinationRate)),
             avgFactualConsistency: average(validQuestions.map((q) => q.ragFactualConsistency)),
@@ -97,6 +95,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
             avgRerankingLatencyMs: average(validQuestions.map((q) => q.ragRerankingLatencyMs)),
             avgGenerationLatencyMs: average(validQuestions.map((q) => q.ragGenerationLatencyMs)),
             avgAgentReasoningLatencyMs: average(validQuestions.map((q) => q.ragAgentReasoningLatencyMs)),
+            avgPlanningLatencyMs: average(validQuestions.map((q) => q.ragPlanningLatencyMs)),
+            avgSynthesisLatencyMs: average(validQuestions.map((q) => q.ragSynthesisLatencyMs)),
+            avgStepLatencyMs: average(validQuestions.map((q) => q.ragAvgStepLatencyMs)),
             avgTokensPerSecond: average(validQuestions.map((q) => q.ragTokensPerSecond)),
             // Legacy field names for backward compatibility with dashboard
             avgFaithfulness: average(validQuestions.map((q) => q.ragFaithfulness)),

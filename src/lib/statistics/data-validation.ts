@@ -64,9 +64,7 @@ export const METRIC_RANGES: Record<string, { min: number; max: number }> = {
     contextRelevancy: { min: 0, max: 1 },
     answerCorrectness: { min: 0, max: 1 },
     hallucinationRate: { min: 0, max: 1 },
-    academicRigor: { min: 0, max: 1 },
     citationAccuracy: { min: 0, max: 1 },
-    terminologyCorrectness: { min: 0, max: 1 },
     factualConsistency: { min: 0, max: 1 },
     sourceAttribution: { min: 0, max: 1 },
     contradictionScore: { min: 0, max: 1 },
@@ -75,6 +73,9 @@ export const METRIC_RANGES: Record<string, { min: number; max: number }> = {
     rerankingLatencyMs: { min: 0, max: Number.POSITIVE_INFINITY },
     generationLatencyMs: { min: 0, max: Number.POSITIVE_INFINITY },
     agentReasoningLatencyMs: { min: 0, max: Number.POSITIVE_INFINITY },
+    planningLatencyMs: { min: 0, max: Number.POSITIVE_INFINITY },
+    synthesisLatencyMs: { min: 0, max: Number.POSITIVE_INFINITY },
+    avgStepLatencyMs: { min: 0, max: Number.POSITIVE_INFINITY },
 };
 
 /**

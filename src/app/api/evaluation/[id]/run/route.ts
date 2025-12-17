@@ -234,9 +234,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
                             nonRagAnswerCorrectness: nonRagCorrectness,
                             nonRagHallucinationRate: nonRagHallucination,
                             // Domain-specific metrics
-                            ragAcademicRigor: ragMetrics.academicRigor,
                             ragCitationAccuracy: ragMetrics.citationAccuracy,
-                            ragTerminologyCorrectness: ragMetrics.terminologyCorrectness,
                             // Hallucination metrics
                             ragHallucinationRate: ragMetrics.hallucinationRate,
                             ragFactualConsistency: ragMetrics.factualConsistency,
@@ -253,6 +251,9 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
                             ragRerankingLatencyMs: Math.round(ragMetrics.rerankingLatencyMs),
                             ragGenerationLatencyMs: Math.round(ragMetrics.generationLatencyMs),
                             ragAgentReasoningLatencyMs: Math.round(ragMetrics.agentReasoningLatencyMs),
+                            ragPlanningLatencyMs: Math.round(ragMetrics.planningLatencyMs),
+                            ragSynthesisLatencyMs: Math.round(ragMetrics.synthesisLatencyMs),
+                            ragAvgStepLatencyMs: Math.round(ragMetrics.avgStepLatencyMs),
                             ragToolCallLatencyMs: Math.round(ragMetrics.toolCallLatencyMs),
                             ragTokensPerSecond: ragMetrics.tokensPerSecond,
                             // Metadata

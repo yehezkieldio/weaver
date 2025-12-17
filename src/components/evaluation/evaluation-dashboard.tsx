@@ -113,9 +113,7 @@ interface AggregateMetrics {
     };
     avgFactualConsistency?: number; // Added for HallucinationMetricsView
     nonRagHallucinationRate?: number; // Non-RAG hallucination for comparison
-    avgAcademicRigor?: number; // Domain-specific metric
     avgCitationAccuracy?: number; // Domain-specific metric
-    avgTerminologyCorrectness?: number; // Domain-specific metric
 }
 
 export function EvaluationDashboard() {
@@ -579,7 +577,6 @@ function AblationStudiesView({
                                     <TableHead>Precision</TableHead>
                                     <TableHead>Correctness</TableHead>
                                     <TableHead>Halusinasi</TableHead>
-                                    <TableHead>Academic</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -600,9 +597,6 @@ function AblationStudiesView({
                                         </TableCell>
                                         <TableCell>
                                             <MetricBadge inverted value={1 - result.metrics.hallucinationRate} />
-                                        </TableCell>
-                                        <TableCell>
-                                            <MetricBadge value={result.metrics.academicRigor} />
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -1377,24 +1371,10 @@ function InformationView() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
-                            <h4 className="font-medium text-sm">Academic Rigor (Rigor Akademik)</h4>
-                            <p className="text-muted-foreground text-xs">
-                                Menilai penggunaan bahasa akademis, struktur argumentasi, kedalaman analisis, dan
-                                objektivitas dalam konteks pendidikan tinggi Indonesia.
-                            </p>
-                        </div>
-                        <div className="space-y-2">
                             <h4 className="font-medium text-sm">Citation Accuracy (Akurasi Sitasi)</h4>
                             <p className="text-muted-foreground text-xs">
                                 Mengevaluasi apakah klaim-klaim utama memiliki atribusi sumber yang benar dan dapat
                                 diverifikasi.
-                            </p>
-                        </div>
-                        <div className="space-y-2">
-                            <h4 className="font-medium text-sm">Terminology Correctness (Ketepatan Terminologi)</h4>
-                            <p className="text-muted-foreground text-xs">
-                                Menilai penggunaan istilah teknis yang tepat dan konsisten sesuai dengan bidang studi
-                                terkait.
                             </p>
                         </div>
                     </CardContent>

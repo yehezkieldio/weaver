@@ -54,9 +54,7 @@ export interface EvaluationMetrics {
     factualConsistency: number;
     sourceAttribution: number;
     // Domain metrics
-    academicRigor: number;
     citationAccuracy: number;
-    terminologyCorrectness: number;
 }
 
 /**

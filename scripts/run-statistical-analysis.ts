@@ -33,6 +33,9 @@ interface EvaluationData {
         rerankingLatencyMs: number;
         generationLatencyMs: number;
         agentReasoningLatencyMs: number;
+        planningLatencyMs: number;
+        synthesisLatencyMs: number;
+        avgStepLatencyMs: number;
     };
     nonRagScores: {
         answerRelevancy: number;
@@ -52,6 +55,9 @@ interface AblationData {
         answerCorrectness: number[];
         hallucinationRate: number[];
         latencyMs: number[];
+        planningLatencyMs: number[];
+        synthesisLatencyMs: number[];
+        avgStepLatencyMs: number[];
     };
 }
 
@@ -96,6 +102,9 @@ async function fetchEvaluationRunData(runId: string): Promise<EvaluationData[]> 
                 rerankingLatencyMs: q.ragRerankingLatencyMs ?? 0,
                 generationLatencyMs: q.ragGenerationLatencyMs ?? 0,
                 agentReasoningLatencyMs: q.ragAgentReasoningLatencyMs ?? 0,
+                planningLatencyMs: q.ragPlanningLatencyMs ?? 0,
+                synthesisLatencyMs: q.ragSynthesisLatencyMs ?? 0,
+                avgStepLatencyMs: q.ragAvgStepLatencyMs ?? 0,
             },
             nonRagScores: {
                 answerRelevancy: q.nonRagAnswerRelevancy ?? 0,
@@ -135,6 +144,10 @@ async function fetchAblationStudyData(studyId: string): Promise<AblationData[]> 
             contextRecall: number;
             answerCorrectness: number;
             hallucinationRate: number;
+            totalLatencyMs?: number;
+            planningLatencyMs?: number;
+            synthesisLatencyMs?: number;
+            avgStepLatencyMs?: number;
         }>;
     }
 
@@ -150,6 +163,9 @@ async function fetchAblationStudyData(studyId: string): Promise<AblationData[]> 
                     answerCorrectness: [],
                     hallucinationRate: [],
                     latencyMs: [],
+                    planningLatencyMs: [],
+                    synthesisLatencyMs: [],
+                    avgStepLatencyMs: [],
                 },
             });
         }
@@ -172,6 +188,12 @@ async function fetchAblationStudyData(studyId: string): Promise<AblationData[]> 
                         config.scores.answerCorrectness.push(perQ.answerCorrectness);
                     if (perQ.hallucinationRate !== undefined)
                         config.scores.hallucinationRate.push(perQ.hallucinationRate);
+                    
+                    // Latency metrics
+                    if (perQ.totalLatencyMs !== undefined) config.scores.latencyMs.push(perQ.totalLatencyMs);
+                    if (perQ.planningLatencyMs !== undefined) config.scores.planningLatencyMs.push(perQ.planningLatencyMs);
+                    if (perQ.synthesisLatencyMs !== undefined) config.scores.synthesisLatencyMs.push(perQ.synthesisLatencyMs);
+                    if (perQ.avgStepLatencyMs !== undefined) config.scores.avgStepLatencyMs.push(perQ.avgStepLatencyMs);
                 }
             } else {
                 // Fallback: use aggregated metrics if per-question not available (legacy data)
@@ -190,11 +212,11 @@ async function fetchAblationStudyData(studyId: string): Promise<AblationData[]> 
                     config.scores.answerCorrectness.push(result.metrics.answerCorrectness);
                 if (result.metrics.hallucinationRate !== undefined)
                     config.scores.hallucinationRate.push(result.metrics.hallucinationRate);
+                
+                // Latency is not stored per-question in legacy data, use aggregated
+                if (result.metrics.totalLatencyMs !== undefined)
+                    config.scores.latencyMs.push(result.metrics.totalLatencyMs);
             }
-
-            // Latency is not stored per-question, use aggregated
-            if (result.metrics.totalLatencyMs !== undefined)
-                config.scores.latencyMs.push(result.metrics.totalLatencyMs);
         }
     }
 
@@ -312,6 +334,9 @@ async function runAnalysis() {
         const ragFaithfulness = evaluationData.map((d) => d.ragScores.faithfulness).filter((v) => v !== null);
         const ragRelevancy = evaluationData.map((d) => d.ragScores.answerRelevancy).filter((v) => v !== null);
         const ragLatency = evaluationData.map((d) => d.ragScores.latencyMs).filter((v) => v !== null);
+        const ragPlanning = evaluationData.map((d) => d.ragScores.planningLatencyMs).filter((v) => v !== null);
+        const ragSynthesis = evaluationData.map((d) => d.ragScores.synthesisLatencyMs).filter((v) => v !== null);
+        const ragAvgStep = evaluationData.map((d) => d.ragScores.avgStepLatencyMs).filter((v) => v !== null);
 
         const nonRagRelevancy = evaluationData.map((d) => d.nonRagScores.answerRelevancy).filter((v) => v !== null);
         const nonRagLatency = evaluationData.map((d) => d.nonRagScores.latencyMs).filter((v) => v !== null);
@@ -329,6 +354,21 @@ async function runAnalysis() {
         if (ragLatency.length > 0) {
             console.log("\nRAG Latency (ms):");
             printDescriptiveStats(calculateDescriptiveStats(ragLatency));
+        }
+
+        if (ragPlanning.some(v => v > 0)) {
+            console.log("\nRAG Planning Latency (ms):");
+            printDescriptiveStats(calculateDescriptiveStats(ragPlanning));
+        }
+
+        if (ragSynthesis.some(v => v > 0)) {
+            console.log("\nRAG Synthesis Latency (ms):");
+            printDescriptiveStats(calculateDescriptiveStats(ragSynthesis));
+        }
+        
+        if (ragAvgStep.some(v => v > 0)) {
+            console.log("\nRAG Avg Step Latency (ms):");
+            printDescriptiveStats(calculateDescriptiveStats(ragAvgStep));
         }
 
         // ===== 2. PAIRED T-TESTS WITH ASSUMPTION CHECKING =====

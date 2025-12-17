@@ -45,9 +45,7 @@ export interface RawEvaluationData {
     nonRagAnswerRelevancy: number | null;
     nonRagAnswerCorrectness: number | null;
     // Domain-specific
-    ragAcademicRigor: number | null;
     ragCitationAccuracy: number | null;
-    ragTerminologyCorrectness: number | null;
     // Hallucination
     ragHallucinationRate: number | null;
     ragFactualConsistency: number | null;
@@ -65,6 +63,9 @@ export interface RawEvaluationData {
     ragRerankingLatencyMs: number | null;
     ragGenerationLatencyMs: number | null;
     ragAgentReasoningLatencyMs: number | null;
+    ragPlanningLatencyMs: number | null;
+    ragSynthesisLatencyMs: number | null;
+    ragAvgStepLatencyMs: number | null;
     ragToolCallLatencyMs: number | null;
     ragTokensPerSecond: number | null;
     // Configuration
@@ -112,12 +113,7 @@ const VARIABLE_LABELS: Record<string, { en: string; id: string }> = {
         en: "Non-RAG Answer Correctness Score (0-1)",
         id: "Skor Kebenaran Jawaban Non-RAG (0-1)",
     },
-    ragAcademicRigor: { en: "RAG Academic Rigor Score (0-1)", id: "Skor Rigor Akademik RAG (0-1)" },
     ragCitationAccuracy: { en: "RAG Citation Accuracy Score (0-1)", id: "Skor Akurasi Sitasi RAG (0-1)" },
-    ragTerminologyCorrectness: {
-        en: "RAG Terminology Correctness Score (0-1)",
-        id: "Skor Ketepatan Terminologi RAG (0-1)",
-    },
     ragHallucinationRate: {
         en: "RAG Hallucination Rate (0-1, lower is better)",
         id: "Tingkat Halusinasi RAG (0-1, lebih rendah lebih baik)",
@@ -138,6 +134,9 @@ const VARIABLE_LABELS: Record<string, { en: string; id: string }> = {
     ragRerankingLatencyMs: { en: "RAG Reranking Latency (ms)", id: "Latensi Reranking RAG (ms)" },
     ragGenerationLatencyMs: { en: "RAG Generation Latency (ms)", id: "Latensi Generasi RAG (ms)" },
     ragAgentReasoningLatencyMs: { en: "RAG Agent Reasoning Latency (ms)", id: "Latensi Penalaran Agen RAG (ms)" },
+    ragPlanningLatencyMs: { en: "RAG Planning Latency (ms)", id: "Latensi Perencanaan RAG (ms)" },
+    ragSynthesisLatencyMs: { en: "RAG Synthesis Latency (ms)", id: "Latensi Sintesis RAG (ms)" },
+    ragAvgStepLatencyMs: { en: "RAG Avg Step Latency (ms)", id: "Rata-rata Latensi Langkah RAG (ms)" },
     ragToolCallLatencyMs: { en: "RAG Tool Call Latency (ms)", id: "Latensi Panggilan Tool RAG (ms)" },
     ragTokensPerSecond: { en: "RAG Tokens per Second", id: "Token per Detik RAG" },
     retrievalMethod: { en: "Retrieval Method", id: "Metode Retrieval" },
@@ -423,12 +422,13 @@ def load_evaluation_data(filepath: str) -> pd.DataFrame:
     numeric_cols = [
         'ragFaithfulness', 'ragAnswerRelevancy', 'ragContextPrecision',
         'ragContextRecall', 'ragAnswerCorrectness', 'nonRagAnswerRelevancy',
-        'nonRagAnswerCorrectness', 'ragAcademicRigor', 'ragCitationAccuracy',
-        'ragTerminologyCorrectness', 'ragHallucinationRate', 'ragFactualConsistency',
+        'nonRagAnswerCorrectness', 'ragCitationAccuracy',
+        'ragHallucinationRate', 'ragFactualConsistency',
         'ragSourceAttribution', 'ragContradictionScore', 'nonRagHallucinationRate',
         'retrievalNdcg', 'retrievalMrr', 'retrievalPrecision',
         'ragLatencyMs', 'nonRagLatencyMs', 'ragRetrievalLatencyMs',
         'ragRerankingLatencyMs', 'ragGenerationLatencyMs', 'ragAgentReasoningLatencyMs',
+        'ragPlanningLatencyMs', 'ragSynthesisLatencyMs', 'ragAvgStepLatencyMs',
         'ragToolCallLatencyMs', 'ragTokensPerSecond'
     ]
 
@@ -755,6 +755,7 @@ def plot_latency_breakdown(df: pd.DataFrame, output_path: str = None):
     """Create stacked bar chart for latency breakdown."""
     latency_cols = ['ragRetrievalLatencyMs', 'ragRerankingLatencyMs',
                     'ragGenerationLatencyMs', 'ragAgentReasoningLatencyMs',
+                    'ragPlanningLatencyMs', 'ragSynthesisLatencyMs',
                     'ragToolCallLatencyMs']
 
     available_cols = [c for c in latency_cols if c in df.columns]
@@ -764,10 +765,12 @@ def plot_latency_breakdown(df: pd.DataFrame, output_path: str = None):
 
     means = df[available_cols].mean()
 
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(12, 6))
 
-    labels = ['Retrieval', 'Reranking', 'Generation', 'Agent Reasoning', 'Tool Calls']
-    labels = labels[:len(available_cols)]
+    labels = ['Retrieval', 'Reranking', 'Generation', 'Agent Reasoning', 
+              'Planning', 'Synthesis', 'Tool Calls']
+    # Filter labels based on available columns
+    labels = [l for c, l in zip(latency_cols, labels) if c in available_cols]
 
     ax.bar(range(len(means)), means, tick_label=labels)
     ax.set_ylabel('Latency (ms)')
@@ -1154,9 +1157,7 @@ export function formatForExport(evaluationQuestions: Record<string, unknown>[]):
         ragAnswerCorrectness: q.ragAnswerCorrectness as number | null,
         nonRagAnswerRelevancy: q.nonRagAnswerRelevancy as number | null,
         nonRagAnswerCorrectness: q.nonRagAnswerCorrectness as number | null,
-        ragAcademicRigor: q.ragAcademicRigor as number | null,
         ragCitationAccuracy: q.ragCitationAccuracy as number | null,
-        ragTerminologyCorrectness: q.ragTerminologyCorrectness as number | null,
         ragHallucinationRate: q.ragHallucinationRate as number | null,
         ragFactualConsistency: q.ragFactualConsistency as number | null,
         ragSourceAttribution: q.ragSourceAttribution as number | null,
@@ -1171,6 +1172,9 @@ export function formatForExport(evaluationQuestions: Record<string, unknown>[]):
         ragRerankingLatencyMs: q.ragRerankingLatencyMs as number | null,
         ragGenerationLatencyMs: q.ragGenerationLatencyMs as number | null,
         ragAgentReasoningLatencyMs: q.ragAgentReasoningLatencyMs as number | null,
+        ragPlanningLatencyMs: q.ragPlanningLatencyMs as number | null,
+        ragSynthesisLatencyMs: q.ragSynthesisLatencyMs as number | null,
+        ragAvgStepLatencyMs: q.ragAvgStepLatencyMs as number | null,
         ragToolCallLatencyMs: q.ragToolCallLatencyMs as number | null,
         ragTokensPerSecond: q.ragTokensPerSecond as number | null,
         retrievalMethod: q.retrievalMethod as string | null,
