@@ -15,14 +15,11 @@
  * - **Speed**: 2x faster inference (critical for real-time chat)
  * - **Quality**: Near-parity with GPT-4o for academic Q&A tasks
  * - **Context Window**: 128K tokens (sufficient for RAG with retrieved chunks)
- * - **Research Consistency**: Same model for generation AND evaluation (LLM-as-judge)
- *   - Avoids confounding variable of different model capabilities
  *
- * WHY same model for generation and evaluation:
- * - **Experiment Validity**: Isolates impact of RAG architecture from model differences
- * - **Self-Preference Bias Mitigation**: Focus on relative gains between configs, not absolute scores
- * - **Cost Efficiency**: Single model deployment = simpler infrastructure
- * - **Consistency**: Ablation study results directly comparable
+ * WHY different model for evaluation (Judge):
+ * - **Bias Mitigation**: Prevents "self-preference bias" where models rate their own outputs higher
+ * - **Independence**: Evaluation is decoupled from generation parameters
+ * - **Rigor**: Aligns with best practices for LLM-based evaluation
  *
  * WHY telemetry enabled only in production:
  * - **Development**: Disable to reduce noise in logs during debugging
@@ -50,16 +47,26 @@ export const azure = createAzure({
  * Used for:
  * - Main chatbot responses
  * - Agentic tool reasoning
- * - Evaluation metrics (LLM-as-judge)
  * - Document classification
  * - Query decomposition
  *
- * Typical token usage:
- * - Simple query: 500 input + 300 output = 800 total (~$0.0001)
- * - Complex query (agentic): 2000 input + 800 output = 2800 total (~$0.0004)
- * - Evaluation: 1500 input + 50 output = 1550 total (~$0.0002) per metric
+ * 1,047,576 context
+ * Starting at $0.40/M input tokens
+ * Starting at $1.60/M output tokens
  */
 export const AZURE_CHAT_MODEL = azure(env.AZURE_OPENAI_CHAT_DEPLOYMENT);
+
+/**
+ * Judge model: GPT-4o-mini
+ *
+ * Used for:
+ * - Evaluating chatbot responses
+ *
+ * 128,000 context
+ * Starting at $0.15/M input tokens
+ * Starting at $0.60/M output tokens
+ */
+export const AZURE_JUDGE_MODEL = azure(env.AZURE_OPENAI_JUDGE_DEPLOYMENT);
 
 /**
  * Text embedding model: text-embedding-3-small (1536 dimensions)
@@ -70,40 +77,16 @@ export const AZURE_CHAT_MODEL = azure(env.AZURE_OPENAI_CHAT_DEPLOYMENT);
  * - Semantic chunking (sentence similarity)
  * - Similarity search (vector retrieval)
  *
- * Typical token usage:
- * - Single query: ~50 tokens (~$0.000001)
- * - 100 document chunks: ~50,000 tokens (~$0.001)
- * - Semantic chunking (500 sentences): ~25,000 tokens (~$0.0005)
+ * 8,192 context
+ * $0.02/M input tokens
+ * $0/M output tokens
  */
 export const AZURE_EMBEDDING_MODEL = azure.textEmbedding(env.AZURE_OPENAI_EMBEDDING_DEPLOYMENT);
 
-/**
- * Exported model aliases for consistency across codebase
- *
- * WHY aliases:
- * - Easy to swap providers (e.g., Azure → OpenAI direct) by changing one line
- * - Clear intent: CHAT_MODEL vs EMBEDDING_MODEL immediately obvious
- * - Avoid Azure-specific coupling throughout codebase
- */
 export const CHAT_MODEL = AZURE_CHAT_MODEL;
+export const JUDGE_MODEL = AZURE_JUDGE_MODEL;
 export const EMBEDDING_MODEL = AZURE_EMBEDDING_MODEL;
 
-/**
- * Telemetry configuration for AI SDK observability
- *
- * Tracks:
- * - Request/response latency per function
- * - Token usage (input/output) per call
- * - Error rates and types
- * - Cost estimation (tokens × pricing)
- *
- * WHY metadata fields:
- * - **application**: Group all muliachat requests for dashboard filtering
- * - **version**: Track performance changes across deployments
- * - **functionId**: Identify which part of system generated call (e.g., "agentic-rag" vs "direct-chat")
- *
- * Privacy note: Telemetry sends metadata only, NOT actual prompts/responses
- */
 export const telemetryConfig = {
     isEnabled: env.NODE_ENV === "production",
     functionId: "muliachat-academic-research-rag",

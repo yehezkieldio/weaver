@@ -27,7 +27,7 @@
  */
 
 import { cosineSimilarity, generateText } from "ai";
-import { CHAT_MODEL, telemetryConfig } from "@/lib/ai";
+import { CHAT_MODEL, JUDGE_MODEL, telemetryConfig } from "@/lib/ai";
 import { generateEmbedding } from "@/lib/ai/embeddings";
 import { runAgenticRag } from "./agentic-rag";
 import { buildRagPrompt, SYSTEM_PROMPTS } from "./context-builder";
@@ -299,7 +299,7 @@ export async function calculateFaithfulness(answer: string, contexts: string[]):
         // Step 1: Decompose answer into individual claims
         console.log("[calculateFaithfulness] Step 1: Decomposing answer into claims");
         const { text: claimsText } = await generateText({
-            model: CHAT_MODEL,
+            model: JUDGE_MODEL,
             prompt: `Pecah jawaban berikut menjadi klaim-klaim faktual individual. Setiap klaim harus merupakan pernyataan tunggal yang dapat diverifikasi.
 
 Jawaban: ${answer}
@@ -338,7 +338,7 @@ Contoh format: ["Klaim pertama", "Klaim kedua", "Klaim ketiga"]`,
             const results = await Promise.all(
                 batch.map(async (claim) => {
                     const { text } = await generateText({
-                        model: CHAT_MODEL,
+                        model: JUDGE_MODEL,
                         prompt: `Konteks:\n${contextText}\n\nKlaim: ${claim}\n\nApakah klaim ini DIDUKUNG oleh konteks? Jawab hanya: ya atau tidak`,
                         maxOutputTokens: 5,
                         temperature: 0.1,
@@ -390,7 +390,7 @@ export async function calculateAnswerRelevancy(question: string, answer: string,
 
         // Step 1: Generate N synthetic questions from the answer
         const { text: questionsText } = await generateText({
-            model: CHAT_MODEL,
+            model: JUDGE_MODEL,
             prompt: `Berdasarkan jawaban berikut, hasilkan ${numQuestions} pertanyaan yang kemungkinan besar dijawab oleh jawaban ini.
 
 Jawaban: ${answer}
@@ -472,7 +472,7 @@ Hitung berapa banyak konteks yang relevan dan bagi dengan total konteks.
 Jawab HANYA dengan angka antara 0 dan 1.`;
 
         const { text } = await generateText({
-            model: CHAT_MODEL,
+            model: JUDGE_MODEL,
             prompt,
             maxOutputTokens: 10,
         });
@@ -502,7 +502,7 @@ Jawab HANYA dengan angka antara 0 dan 1.
 - 0.0 = Tidak ada informasi dari jawaban benar di konteks`;
 
         const { text } = await generateText({
-            model: CHAT_MODEL,
+            model: JUDGE_MODEL,
             prompt,
             maxOutputTokens: 10,
         });
@@ -539,7 +539,7 @@ export async function calculateContextRelevancy(question: string, contexts: stri
         // Evaluate each context's relevance to the question in parallel
         const relevancePromises = contexts.map(async (context) => {
             const { text } = await generateText({
-                model: CHAT_MODEL,
+                model: JUDGE_MODEL,
                 prompt: `Pertanyaan: ${question}
 
 Konteks yang diambil: ${context.substring(0, 1000)}
@@ -594,7 +594,7 @@ Pertimbangkan akurasi faktual dan kelengkapan.
 Jawab HANYA dengan angka antara 0 dan 1.`;
 
         const { text } = await generateText({
-            model: CHAT_MODEL,
+            model: JUDGE_MODEL,
             prompt,
             maxOutputTokens: 10,
         });
@@ -629,7 +629,7 @@ Kriteria penilaian:
 Berikan skor 0-1. Jawab HANYA dengan angka.`;
 
         const { text } = await generateText({
-            model: CHAT_MODEL,
+            model: JUDGE_MODEL,
             prompt,
             maxOutputTokens: 10,
         });
@@ -661,7 +661,7 @@ Kriteria:
 Berikan skor 0-1. Jawab HANYA dengan angka.`;
 
         const { text } = await generateText({
-            model: CHAT_MODEL,
+            model: JUDGE_MODEL,
             prompt,
             maxOutputTokens: 10,
         });
@@ -700,7 +700,7 @@ Kriteria:
 Berikan skor 0-1. Jawab HANYA dengan angka.`;
 
         const { text } = await generateText({
-            model: CHAT_MODEL,
+            model: JUDGE_MODEL,
             prompt,
             maxOutputTokens: 10,
         });
@@ -733,7 +733,7 @@ Berikan TINGKAT HALUSINASI 0-1 (0 = tidak ada halusinasi, 1 = sepenuhnya halusin
 Jawab HANYA dengan angka.`;
 
         const { text } = await generateText({
-            model: CHAT_MODEL,
+            model: JUDGE_MODEL,
             prompt,
             maxOutputTokens: 10,
         });
@@ -766,7 +766,7 @@ Tentukan hubungan:
 Berikan skor 0-1 berdasarkan tingkat entailment. Jawab HANYA dengan angka.`;
 
         const { text } = await generateText({
-            model: CHAT_MODEL,
+            model: JUDGE_MODEL,
             prompt,
             maxOutputTokens: 10,
         });
@@ -799,7 +799,7 @@ Kriteria:
 Berikan skor 0-1. Jawab HANYA dengan angka.`;
 
         const { text } = await generateText({
-            model: CHAT_MODEL,
+            model: JUDGE_MODEL,
             prompt,
             maxOutputTokens: 10,
         });
@@ -833,7 +833,7 @@ Berikan skor KEBEBASAN KONTRADIKSI 0-1 (1 = tidak ada kontradiksi, 0 = kontradik
 Jawab HANYA dengan angka.`;
 
         const { text } = await generateText({
-            model: CHAT_MODEL,
+            model: JUDGE_MODEL,
             prompt,
             maxOutputTokens: 10,
         });

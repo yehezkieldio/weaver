@@ -44,8 +44,11 @@ Platform ini mengintegrasikan pendekatan **Retrieval-Augmented Generation (RAG)*
 Penelitian memanfaatkan layanan Microsoft Azure OpenAI untuk operasi LLM dan model Hugging Face *Transformers* untuk proses *re-ranking*.
 
 - **GPT-4.1 Mini (`gpt-4.1-mini`)**
-  - Penggunaan: Generasi teks dan evaluasi (*LLM-as-a-Judge*)
-  - Justifikasi: Kemampuan instruksional kuat dan efisiensi biaya tinggi, menjaga konsistensi serta objektivitas eksperimen
+  - Penggunaan: Generasi teks dan agen percakapan
+  - Justifikasi: Kemampuan instruksional kuat, latensi rendah, dan efisiensi biaya tinggi untuk interaksi real-time
+- **GPT-4o Mini (`gpt-4o-mini`)**
+  - Penggunaan: Evaluasi (*LLM-as-a-Judge*)
+  - Justifikasi: Model yang berbeda dari generator untuk memitigasi *self-preference bias* (kecenderungan model menilai outputnya sendiri lebih tinggi), memastikan objektivitas evaluasi
 - **`text-embedding-3-small`**
   - Penggunaan: Pembuatan embedding dokumen
   - Justifikasi: Keseimbangan kualitas representasi dan kecepatan komputasi
