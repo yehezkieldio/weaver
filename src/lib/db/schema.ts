@@ -296,6 +296,10 @@ export const evaluationQuestions = pgTable("evaluation_questions", {
     nonRagAnswer: text("non_rag_answer"),
     retrievedContexts: jsonb("retrieved_contexts").$type<string[]>(),
     relevantChunkIds: jsonb("relevant_chunk_ids").$type<string[]>(),
+    // Evaluation question metadata (from ACADEMIC_QUESTIONS)
+    category: text("category"), // academic_regulations, administrative_procedures, student_services, etc.
+    difficulty: text("difficulty"), // easy, medium, hard
+    questionLanguage: text("question_language"), // id, en
 
     // Core RAGAS metrics
     ragFaithfulness: real("rag_faithfulness"),

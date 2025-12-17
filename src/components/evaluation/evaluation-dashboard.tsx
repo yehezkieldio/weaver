@@ -54,6 +54,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AnnotationPanel } from "./annotation-panel";
 import { CorrelationView } from "./correlation-view";
 import { CreateEvaluationDialog } from "./create-evaluation-dialog";
+import { DataExportPanel } from "./data-export-panel";
 import { MetricsChart } from "./metrics-chart";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -379,12 +380,30 @@ export function EvaluationDashboard() {
                 </TabsContent>
 
                 <TabsContent className="space-y-4" value="results">
-                    {runDetails && (
+                    {selectedRunId && !runDetails && (
+                        <Card className="p-8 text-center">
+                            <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-muted-foreground" />
+                            <h3 className="mb-2 font-medium text-lg">Memuat Data Evaluasi...</h3>
+                            <p className="text-muted-foreground">Sedang mengambil hasil evaluasi dan metrik.</p>
+                        </Card>
+                    )}
+                    {runDetails && selectedRunId && (
                         <EvaluationResults
                             aggregateMetrics={runDetails.aggregateMetrics}
+                            evaluationRunId={selectedRunId}
                             questions={runDetails.questions}
                             run={runDetails.run}
                         />
+                    )}
+                    {!selectedRunId && (
+                        <Card className="p-8 text-center">
+                            <BarChart3 className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                            <h3 className="mb-2 font-medium text-lg">Pilih Evaluasi</h3>
+                            <p className="text-muted-foreground">
+                                Pilih evaluasi yang sudah selesai dari tab Evaluasi dan klik "Lihat" untuk melihat hasil
+                                analisis.
+                            </p>
+                        </Card>
                     )}
                 </TabsContent>
 
@@ -865,10 +884,12 @@ function EvaluationResults({
     run,
     questions,
     aggregateMetrics,
+    evaluationRunId,
 }: {
     run: EvaluationRun;
     questions: EvaluationQuestion[];
     aggregateMetrics: AggregateMetrics;
+    evaluationRunId: string;
 }) {
     return (
         <div className="space-y-6">
@@ -1015,6 +1036,9 @@ function EvaluationResults({
                     </Table>
                 </CardContent>
             </Card>
+
+            {/* Data Export Panel */}
+            <DataExportPanel evaluationRunId={evaluationRunId} runName={run.name} />
         </div>
     );
 }

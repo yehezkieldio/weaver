@@ -102,6 +102,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
                     runId: id,
                     question: q.question,
                     groundTruth: q.groundTruth,
+                    relevantChunkIds: q.relevantChunkIds || null,
+                    category: q.category || null,
+                    difficulty: q.difficulty || null,
+                    questionLanguage: q.language || null,
                 })
                 .returning();
 
