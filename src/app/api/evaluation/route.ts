@@ -101,6 +101,11 @@ export async function POST(request: Request) {
                 useAgenticMode,
                 retrievalStrategy,
                 chunkingStrategy,
+                useReranker,
+                rerankerStrategy,
+                enableGuardrails,
+                language,
+                evaluationMode,
             })
             .returning();
 

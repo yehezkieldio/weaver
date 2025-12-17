@@ -15,6 +15,13 @@
       "when": 1765932995277,
       "tag": "0001_chemical_pestilence",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1765933624986,
+      "tag": "0002_marvelous_onslaught",
+      "breakpoints": true
     }
   ]
 }

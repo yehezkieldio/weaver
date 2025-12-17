@@ -247,9 +247,14 @@ export const evaluationRuns = pgTable("evaluation_runs", {
     status: text("status").notNull().default("pending"), // pending, running, completed, failed
     totalQuestions: integer("total_questions").default(0),
     completedQuestions: integer("completed_questions").default(0),
-    retrievalStrategy: text("retrieval_strategy").default("hybrid"),
-    chunkingStrategy: text("chunking_strategy").default("recursive"),
+    retrievalStrategy: text("retrieval_strategy").default("hybrid"), // vector, keyword, hybrid
+    chunkingStrategy: text("chunking_strategy").default("recursive"), // recursive, semantic, sentence_window, hierarchical
     useAgenticMode: boolean("use_agentic_mode").default(true),
+    useReranker: boolean("use_reranker").default(true),
+    rerankerStrategy: text("reranker_strategy").default("ensemble"), // ensemble, cross_encoder, llm, cohere
+    enableGuardrails: boolean("enable_guardrails").default(true),
+    language: text("language").default("id"), // id, en
+    evaluationMode: text("evaluation_mode").default("quick"), // quick, production
     createdAt: timestamp("created_at").defaultNow().notNull(),
     completedAt: timestamp("completed_at"),
 });

@@ -67,13 +67,22 @@ import {
  * @returns JSON response with completion status and question count
  * @throws Error - When evaluation execution fails, updates run status to \"failed\"
  */
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const { id } = await params;
 
-        // Parse request body to get evaluation mode
-        const body = await request.json().catch(() => ({}));
-        const evaluationMode: "quick" | "production" = body.evaluationMode || "quick";
+        // Fetch the evaluation run configuration from database
+        const [run] = await db.select().from(evaluationRuns).where(eq(evaluationRuns.id, id));
+        if (!run) {
+            return Response.json({ error: "Evaluation run not found" }, { status: 404 });
+        }
+
+        // Use stored configuration or defaults
+        const evaluationMode = (run.evaluationMode as "quick" | "production") || "quick";
+        const retrievalStrategy = (run.retrievalStrategy as "vector" | "keyword" | "hybrid") || "hybrid";
+        const useReranker = run.useReranker ?? true;
+        const rerankerStrategy =
+            (run.rerankerStrategy as "ensemble" | "cross_encoder" | "llm" | "cohere") || "cross_encoder";
 
         // Determine question count based on mode
         // QUICK MODE: 5 questions for fast iteration and development testing
@@ -82,6 +91,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
         console.log(
             `[Evaluation Run] Starting evaluation run: ${id} (mode: ${evaluationMode}, questions: ${questionCount})`
+        );
+        console.log(
+            `[Evaluation Run] Config - strategy: ${retrievalStrategy}, reranker: ${useReranker}, rerankerStrategy: ${rerankerStrategy}`
         );
 
         // Update run status
@@ -142,12 +154,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
                 const ragStartTime = Date.now();
 
                 latencyTracker.mark("retrieval");
+                // Use stored configuration for retrieval
                 const contextResult = await retrieveContext(question.question, {
                     topK: 5,
                     minSimilarity: 0.3, // Lower threshold for better recall
-                    strategy: "hybrid",
-                    useReranker: true,
-                    rerankerStrategy: "cross_encoder",
+                    strategy: retrievalStrategy,
+                    useReranker,
+                    rerankerStrategy,
                 });
 
                 const ragPrompt = buildRagPrompt(SYSTEM_PROMPTS.rag, contextResult.context, question.question);
