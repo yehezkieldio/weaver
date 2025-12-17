@@ -194,6 +194,8 @@ export interface AblationStudyConfiguration {
 export interface AblationStudyResult {
     configName: string;
     metrics: Record<string, number>;
+    /** Per-question metrics for statistical analysis (ANOVA requires arrays, not just averages) */
+    perQuestionMetrics?: Record<string, number>[];
 }
 
 export interface StatisticalAnalysisResult {

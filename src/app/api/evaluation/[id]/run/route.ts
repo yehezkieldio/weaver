@@ -39,6 +39,7 @@ import {
     calculateHallucinationRate,
     createLatencyTracker,
 } from "@/lib/rag/evaluation";
+import { calculateETA, DEFAULT_CONCURRENCY, processBatches } from "@/lib/rag/evaluation-utils";
 
 /**
  * POST /api/evaluation/[id]/run
@@ -137,135 +138,155 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
             `[Evaluation Run] Seeded run ${id} with ${questions.length} predefined questions (${evaluationMode} mode)`
         );
 
-        console.log(`[Evaluation Run] Processing ${questions.length} questions`);
+        console.log(`[Evaluation Run] Processing ${questions.length} questions in batches of ${DEFAULT_CONCURRENCY}`);
 
         let completedCount = 0;
+        let errorCount = 0;
+        const startTime = Date.now();
+        const questionTimings: number[] = [];
 
-        for (const question of questions) {
-            try {
-                console.log(
-                    `[Evaluation Run] Question ${completedCount + 1}/${questions.length}: ${question.question.substring(0, 50)}...`
-                );
+        // Process questions in parallel batches
+        await processBatches(
+            questions,
+            async (question, index) => {
+                const questionStartTime = Date.now();
+                try {
+                    console.log(
+                        `[Evaluation Run] Question ${index + 1}/${questions.length}: ${question.question.substring(0, 50)}...`
+                    );
 
-                // Create latency tracker for detailed timing
-                const latencyTracker = createLatencyTracker();
-                latencyTracker.start();
+                    // Create latency tracker for detailed timing
+                    const latencyTracker = createLatencyTracker();
+                    latencyTracker.start();
 
-                // Generate RAG response
-                const ragStartTime = Date.now();
+                    // Generate RAG response
+                    const ragStartTime = Date.now();
 
-                latencyTracker.mark("retrieval");
-                // Use stored configuration for retrieval
-                const contextResult = await retrieveContext(question.question, {
-                    topK: 5,
-                    minSimilarity: 0.3, // Lower threshold for better recall
-                    strategy: retrievalStrategy,
-                    useReranker,
-                    rerankerStrategy,
-                });
+                    latencyTracker.mark("retrieval");
+                    // Use stored configuration for retrieval
+                    const contextResult = await retrieveContext(question.question, {
+                        topK: 5,
+                        minSimilarity: 0.3, // Lower threshold for better recall
+                        strategy: retrievalStrategy,
+                        useReranker,
+                        rerankerStrategy,
+                    });
 
-                const ragPrompt = buildRagPrompt(SYSTEM_PROMPTS.rag, contextResult.context, question.question);
+                    const ragPrompt = buildRagPrompt(SYSTEM_PROMPTS.rag, contextResult.context, question.question);
 
-                latencyTracker.mark("generation");
-                const ragResponse = await generateText({
-                    model: CHAT_MODEL,
-                    prompt: ragPrompt,
-                    temperature: 0.3,
-                    experimental_telemetry: telemetryConfig,
-                });
-                const ragLatency = Date.now() - ragStartTime;
+                    latencyTracker.mark("generation");
+                    const ragResponse = await generateText({
+                        model: CHAT_MODEL,
+                        prompt: ragPrompt,
+                        temperature: 0.3,
+                        experimental_telemetry: telemetryConfig,
+                    });
+                    const ragLatency = Date.now() - ragStartTime;
 
-                // Generate non-RAG response
-                const nonRagStartTime = Date.now();
-                const nonRagResponse = await generateText({
-                    model: CHAT_MODEL,
-                    system: SYSTEM_PROMPTS.nonRag,
-                    prompt: question.question,
-                    temperature: 0.3,
-                    experimental_telemetry: telemetryConfig,
-                });
-                const nonRagLatency = Date.now() - nonRagStartTime;
+                    // Generate non-RAG response
+                    const nonRagStartTime = Date.now();
+                    const nonRagResponse = await generateText({
+                        model: CHAT_MODEL,
+                        system: SYSTEM_PROMPTS.nonRag,
+                        prompt: question.question,
+                        temperature: 0.3,
+                        experimental_telemetry: telemetryConfig,
+                    });
+                    const nonRagLatency = Date.now() - nonRagStartTime;
 
-                // Calculate RAGAS metrics for RAG response (includes all hallucination metrics)
-                const ragMetrics = await calculateAllMetrics(
-                    question.question,
-                    ragResponse.text,
-                    contextResult.chunks.map((c) => c.content),
-                    question.groundTruth,
-                    contextResult.chunks.map((c) => c.chunkId), // retrievedIds
-                    question.relevantChunkIds ? new Set(question.relevantChunkIds) : undefined, // relevantIds from ground truth labels
-                    "universitas-mulia",
-                    latencyTracker
-                );
+                    // Calculate RAGAS metrics for RAG response (includes all hallucination metrics)
+                    const ragMetrics = await calculateAllMetrics(
+                        question.question,
+                        ragResponse.text,
+                        contextResult.chunks.map((c) => c.content),
+                        question.groundTruth,
+                        contextResult.chunks.map((c) => c.chunkId), // retrievedIds
+                        question.relevantChunkIds ? new Set(question.relevantChunkIds) : undefined, // relevantIds from ground truth labels
+                        "universitas-mulia",
+                        latencyTracker
+                    );
 
-                // Calculate metrics for non-RAG response
-                const nonRagRelevancy = await calculateAnswerRelevancy(question.question, nonRagResponse.text);
-                const nonRagCorrectness = await calculateAnswerCorrectness(nonRagResponse.text, question.groundTruth);
-                const nonRagHallucination = await calculateHallucinationRate(nonRagResponse.text, []); // No context for non-RAG
+                    // Calculate metrics for non-RAG response
+                    const nonRagRelevancy = await calculateAnswerRelevancy(question.question, nonRagResponse.text);
+                    const nonRagCorrectness = await calculateAnswerCorrectness(
+                        nonRagResponse.text,
+                        question.groundTruth
+                    );
+                    const nonRagHallucination = await calculateHallucinationRate(nonRagResponse.text, []); // No context for non-RAG
 
-                // Update question with all results including hallucination and domain metrics
-                await db
-                    .update(evaluationQuestions)
-                    .set({
-                        ragAnswer: ragResponse.text,
-                        nonRagAnswer: nonRagResponse.text,
-                        retrievedContexts: contextResult.chunks.map((c) => c.content),
-                        relevantChunkIds: question.relevantChunkIds || null,
-                        // Core RAGAS metrics
-                        ragFaithfulness: ragMetrics.faithfulness,
-                        ragAnswerRelevancy: ragMetrics.answerRelevancy,
-                        ragContextPrecision: ragMetrics.contextPrecision,
-                        ragContextRecall: ragMetrics.contextRecall,
-                        ragContextRelevancy: ragMetrics.contextRelevancy, // NEW: RAGAS Context Relevancy
-                        ragAnswerCorrectness: ragMetrics.answerCorrectness,
-                        // Non-RAG metrics
-                        nonRagAnswerRelevancy: nonRagRelevancy,
-                        nonRagAnswerCorrectness: nonRagCorrectness,
-                        nonRagHallucinationRate: nonRagHallucination,
-                        // Domain-specific metrics
-                        ragAcademicRigor: ragMetrics.academicRigor,
-                        ragCitationAccuracy: ragMetrics.citationAccuracy,
-                        ragTerminologyCorrectness: ragMetrics.terminologyCorrectness,
-                        // Hallucination metrics
-                        ragHallucinationRate: ragMetrics.hallucinationRate,
-                        ragFactualConsistency: ragMetrics.factualConsistency,
-                        ragSourceAttribution: ragMetrics.sourceAttribution,
-                        ragContradictionScore: ragMetrics.contradictionScore,
-                        // Retrieval metrics
-                        retrievalNdcg: ragMetrics.retrievalNdcg,
-                        retrievalMrr: ragMetrics.retrievalMrr,
-                        retrievalPrecision: ragMetrics.retrievalPrecision,
-                        // Latency metrics
-                        ragLatencyMs: ragLatency,
-                        nonRagLatencyMs: nonRagLatency,
-                        ragRetrievalLatencyMs: Math.round(ragMetrics.retrievalLatencyMs),
-                        ragRerankingLatencyMs: Math.round(ragMetrics.rerankingLatencyMs),
-                        ragGenerationLatencyMs: Math.round(ragMetrics.generationLatencyMs),
-                        ragAgentReasoningLatencyMs: Math.round(ragMetrics.agentReasoningLatencyMs),
-                        ragToolCallLatencyMs: Math.round(ragMetrics.toolCallLatencyMs),
-                        ragTokensPerSecond: ragMetrics.tokensPerSecond,
-                        // Metadata
-                        retrievalMethod: contextResult.retrievalStrategy,
-                    })
-                    .where(eq(evaluationQuestions.id, question.id));
+                    // Update question with all results including hallucination and domain metrics
+                    await db
+                        .update(evaluationQuestions)
+                        .set({
+                            ragAnswer: ragResponse.text,
+                            nonRagAnswer: nonRagResponse.text,
+                            retrievedContexts: contextResult.chunks.map((c) => c.content),
+                            relevantChunkIds: question.relevantChunkIds || null,
+                            // Core RAGAS metrics
+                            ragFaithfulness: ragMetrics.faithfulness,
+                            ragAnswerRelevancy: ragMetrics.answerRelevancy,
+                            ragContextPrecision: ragMetrics.contextPrecision,
+                            ragContextRecall: ragMetrics.contextRecall,
+                            ragContextRelevancy: ragMetrics.contextRelevancy, // NEW: RAGAS Context Relevancy
+                            ragAnswerCorrectness: ragMetrics.answerCorrectness,
+                            // Non-RAG metrics
+                            nonRagAnswerRelevancy: nonRagRelevancy,
+                            nonRagAnswerCorrectness: nonRagCorrectness,
+                            nonRagHallucinationRate: nonRagHallucination,
+                            // Domain-specific metrics
+                            ragAcademicRigor: ragMetrics.academicRigor,
+                            ragCitationAccuracy: ragMetrics.citationAccuracy,
+                            ragTerminologyCorrectness: ragMetrics.terminologyCorrectness,
+                            // Hallucination metrics
+                            ragHallucinationRate: ragMetrics.hallucinationRate,
+                            ragFactualConsistency: ragMetrics.factualConsistency,
+                            ragSourceAttribution: ragMetrics.sourceAttribution,
+                            ragContradictionScore: ragMetrics.contradictionScore,
+                            // Retrieval metrics
+                            retrievalNdcg: ragMetrics.retrievalNdcg,
+                            retrievalMrr: ragMetrics.retrievalMrr,
+                            retrievalPrecision: ragMetrics.retrievalPrecision,
+                            // Latency metrics
+                            ragLatencyMs: ragLatency,
+                            nonRagLatencyMs: nonRagLatency,
+                            ragRetrievalLatencyMs: Math.round(ragMetrics.retrievalLatencyMs),
+                            ragRerankingLatencyMs: Math.round(ragMetrics.rerankingLatencyMs),
+                            ragGenerationLatencyMs: Math.round(ragMetrics.generationLatencyMs),
+                            ragAgentReasoningLatencyMs: Math.round(ragMetrics.agentReasoningLatencyMs),
+                            ragToolCallLatencyMs: Math.round(ragMetrics.toolCallLatencyMs),
+                            ragTokensPerSecond: ragMetrics.tokensPerSecond,
+                            // Metadata
+                            retrievalMethod: contextResult.retrievalStrategy,
+                        })
+                        .where(eq(evaluationQuestions.id, question.id));
 
-                completedCount += 1;
+                    completedCount += 1;
+                    const questionLatency = Date.now() - questionStartTime;
+                    questionTimings.push(questionLatency);
 
-                // Update run progress
-                await db
-                    .update(evaluationRuns)
-                    .set({ completedQuestions: completedCount })
-                    .where(eq(evaluationRuns.id, id));
+                    // Update run progress with enhanced metrics
+                    const elapsedMs = Date.now() - startTime;
+                    const eta = calculateETA(completedCount, questions.length, elapsedMs);
 
-                console.log(
-                    `[Evaluation Run] Question completed - faithfulness: ${ragMetrics.faithfulness.toFixed(3)}, correctness: ${ragMetrics.answerCorrectness.toFixed(3)}, hallucination: ${ragMetrics.hallucinationRate.toFixed(3)}`
-                );
-            } catch (error) {
-                console.error(`[Evaluation Run] Error evaluating question ${question.id}:`, error);
-            }
-        }
+                    await db
+                        .update(evaluationRuns)
+                        .set({ completedQuestions: completedCount })
+                        .where(eq(evaluationRuns.id, id));
 
-        // Mark run as completed
+                    console.log(
+                        `[Evaluation Run] Question ${index + 1} completed - faithfulness: ${ragMetrics.faithfulness.toFixed(3)}, correctness: ${ragMetrics.answerCorrectness.toFixed(3)}, ETA: ${Math.round(eta / 1000)}s`
+                    );
+                } catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    console.error(`[Evaluation Run] FAILED Question ${question.id}: ${errorMessage}`);
+                    errorCount += 1;
+                    // Continue processing other questions even if one fails
+                }
+            },
+            DEFAULT_CONCURRENCY
+        );
+
+        // Mark run as completed with summary
         await db
             .update(evaluationRuns)
             .set({
@@ -275,16 +296,28 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
             })
             .where(eq(evaluationRuns.id, id));
 
-        console.log(`[Evaluation Run] Completed - ${completedCount}/${questions.length} questions processed`);
+        console.log(
+            `[Evaluation Run] Completed - ${completedCount}/${questions.length} questions processed, ${errorCount} errors`
+        );
 
-        return Response.json({ success: true, completedQuestions: completedCount });
+        return Response.json({
+            success: true,
+            completedQuestions: completedCount,
+            errorCount,
+            totalQuestions: questions.length,
+        });
     } catch (error) {
-        console.error("[Evaluation Run] Error:", error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`[Evaluation Run] CRITICAL ERROR: ${errorMessage}`);
 
-        // Mark run as failed
-        const { id } = await params;
-        await db.update(evaluationRuns).set({ status: "failed" }).where(eq(evaluationRuns.id, id));
+        // Ensure run is marked as failed even on unexpected errors
+        try {
+            const { id } = await params;
+            await db.update(evaluationRuns).set({ status: "failed" }).where(eq(evaluationRuns.id, id));
+        } catch (updateError) {
+            console.error("[Evaluation Run] Failed to update run status:", updateError);
+        }
 
-        return Response.json({ error: "Evaluation failed" }, { status: 500 });
+        return Response.json({ error: "Evaluation failed", details: errorMessage }, { status: 500 });
     }
 }

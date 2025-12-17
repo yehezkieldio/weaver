@@ -30,7 +30,8 @@ import { cosineSimilarity, generateText } from "ai";
 import { CHAT_MODEL, telemetryConfig } from "@/lib/ai";
 import { generateEmbedding } from "@/lib/ai/embeddings";
 import { runAgenticRag } from "./agentic-rag";
-import { buildRagPrompt, retrieveContext, SYSTEM_PROMPTS } from "./context-builder";
+import { buildRagPrompt, SYSTEM_PROMPTS } from "./context-builder";
+import { extractJsonArray, getCachedEmbedding } from "./evaluation-utils";
 import { hybridRetrieve } from "./hybrid-retrieval";
 import type { RerankerStrategy } from "./reranker";
 
@@ -261,6 +262,8 @@ export interface AblationResult {
         contexts: string[];
         latencyMs: number;
     }[];
+    /** Per-question metrics for statistical analysis (ANOVA requires arrays, not averages) */
+    perQuestionMetrics: EvaluationMetrics[];
 }
 
 // Language detection helper - always returns Indonesian
@@ -308,9 +311,10 @@ Contoh format: ["Klaim pertama", "Klaim kedua", "Klaim ketiga"]`,
         });
 
         let claims: string[];
-        try {
-            claims = JSON.parse(claimsText.replace(/```json\n?|\n?```/g, "").trim());
-        } catch {
+        const extractedClaims = extractJsonArray(claimsText);
+        if (extractedClaims && extractedClaims.length > 0) {
+            claims = extractedClaims;
+        } else {
             // Fallback: treat whole answer as single claim
             console.log("[calculateFaithfulness] Could not parse claims, using answer as single claim");
             claims = [answer.substring(0, 500)];
@@ -351,7 +355,10 @@ Contoh format: ["Klaim pertama", "Klaim kedua", "Klaim ketiga"]`,
         );
         return result;
     } catch (error) {
-        console.error("[calculateFaithfulness] Calculation error:", error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(
+            `[calculateFaithfulness] FAILED - answer length: ${answer.length}, contexts: ${contexts.length}, error: ${errorMessage}`
+        );
         return 0;
     }
 }
@@ -394,43 +401,44 @@ Contoh format: ["Pertanyaan 1?", "Pertanyaan 2?", "Pertanyaan 3?"]`,
             temperature: 0.3,
         });
 
-        let syntheticQuestions: string[];
-        try {
-            syntheticQuestions = JSON.parse(questionsText.replace(/```json\n?|\n?```/g, "").trim());
-        } catch {
+        const extractedQuestions = extractJsonArray(questionsText);
+        if (!extractedQuestions) {
             console.log(
                 "[calculateAnswerRelevancy] Could not parse synthetic questions, falling back to embedding comparison"
             );
             // Fallback to simple embedding comparison
             const [questionEmbed, answerEmbed] = await Promise.all([
-                generateEmbedding(question),
-                generateEmbedding(answer),
+                getCachedEmbedding(question),
+                getCachedEmbedding(answer),
             ]);
             return cosineSimilarity(questionEmbed.embedding, answerEmbed.embedding);
         }
+        const syntheticQuestions: string[] = extractedQuestions;
 
         if (syntheticQuestions.length === 0) {
             console.log("[calculateAnswerRelevancy] No synthetic questions generated, using fallback");
             const [questionEmbed, answerEmbed] = await Promise.all([
-                generateEmbedding(question),
-                generateEmbedding(answer),
+                getCachedEmbedding(question),
+                getCachedEmbedding(answer),
             ]);
             return cosineSimilarity(questionEmbed.embedding, answerEmbed.embedding);
         }
 
-        // Step 2: Compute embeddings for all questions
+        // Step 2: Compute embeddings for all questions (using cache for efficiency)
         console.log(
             `[calculateAnswerRelevancy] Computing embeddings for ${syntheticQuestions.length} synthetic questions`
         );
         const [originalEmbed, ...syntheticEmbeds] = await Promise.all([
-            generateEmbedding(question),
-            ...syntheticQuestions.map((q: string) => generateEmbedding(q)),
+            getCachedEmbedding(question),
+            ...syntheticQuestions.map((q: string) => getCachedEmbedding(q)),
         ]);
 
         // Step 3: Calculate average cosine similarity
-        const similarities = syntheticEmbeds.map((e) => cosineSimilarity(originalEmbed.embedding, e.embedding));
+        const similarities = syntheticEmbeds.map((e: { embedding: number[] }) =>
+            cosineSimilarity(originalEmbed.embedding, e.embedding)
+        );
 
-        const avgSimilarity = similarities.reduce((a, b) => a + b, 0) / similarities.length;
+        const avgSimilarity = similarities.reduce((a: number, b: number) => a + b, 0) / similarities.length;
         console.log(
             `[calculateAnswerRelevancy] Result: ${avgSimilarity.toFixed(3)} (avg of ${similarities.length} similarities)`
         );
@@ -1192,6 +1200,7 @@ export async function runAblationStudy(
             metrics: avgMetrics,
             latencyProfile: latencyTracker.getProfile(),
             sampleResults,
+            perQuestionMetrics: allMetrics, // Store per-question data for ANOVA
         });
 
         console.log(
@@ -1274,18 +1283,14 @@ async function executeRagPipeline(
         // This marker is for tracking purposes
     }
 
-    // Step 3: Build context and generate response
-    const contextResult = await retrieveContext(question, {
-        topK: config.topK,
-        strategy: config.retrievalStrategy,
-        language: config.language,
-        useReranker: config.useReranker,
-        rerankerStrategy: config.rerankerStrategy as RerankerStrategy | undefined,
-    });
+    // Step 3: Build context string and generate response
+    // NOTE: Previously called retrieveContext here which was DUPLICATE retrieval.
+    // Now we build the context directly from hybridRetrieve results.
+    const contextString = contexts.join("\n\n---\n\n");
 
     latencyTracker.mark("generation");
 
-    const ragPrompt = buildRagPrompt(SYSTEM_PROMPTS.rag, contextResult.context, question);
+    const ragPrompt = buildRagPrompt(SYSTEM_PROMPTS.rag, contextString, question);
 
     const ragResponse = await generateText({
         model: CHAT_MODEL,

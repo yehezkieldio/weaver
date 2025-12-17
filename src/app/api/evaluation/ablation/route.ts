@@ -142,7 +142,7 @@ export async function POST(request: Request) {
             },
         });
 
-        // Format results for storage
+        // Format results for storage with per-question metrics for ANOVA
         const results = ablationResults.map((result) => ({
             configName: result.config.name,
             metrics: {
@@ -165,6 +165,15 @@ export async function POST(request: Request) {
                 generationLatencyMs: result.metrics.generationLatencyMs,
                 agentReasoningLatencyMs: result.metrics.agentReasoningLatencyMs,
             },
+            // Store per-question metrics for valid ANOVA testing (not just averages)
+            perQuestionMetrics: result.perQuestionMetrics.map((m) => ({
+                faithfulness: m.faithfulness,
+                answerRelevancy: m.answerRelevancy,
+                contextPrecision: m.contextPrecision,
+                contextRecall: m.contextRecall,
+                answerCorrectness: m.answerCorrectness,
+                hallucinationRate: m.hallucinationRate,
+            })),
         }));
 
         // Generate comprehensive report
@@ -187,7 +196,12 @@ export async function POST(request: Request) {
             study: { ...study, results, report, status: "completed" },
         });
     } catch (error) {
-        console.error("[POST /api/evaluation/ablation] Ablation study error:", error);
-        return Response.json({ error: "Failed to run ablation study" }, { status: 500 });
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`[POST /api/evaluation/ablation] FAILED: ${errorMessage}`);
+
+        // Try to mark any in-progress study as failed
+        // Note: We don't have study ID here if creation failed, so this is best-effort
+
+        return Response.json({ error: "Failed to run ablation study", details: errorMessage }, { status: 500 });
     }
 }
