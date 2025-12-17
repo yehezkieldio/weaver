@@ -214,14 +214,15 @@ export async function GET(request: NextRequest) {
                         useAgenticMode: config?.useAgenticMode ?? true,
                         useGuardrails: config?.useGuardrails ?? true,
                         topK: config?.topK ?? 5,
-                        avgFaithfulness: metrics.avgFaithfulness ?? null,
-                        avgAnswerRelevancy: metrics.avgAnswerRelevancy ?? null,
-                        avgContextPrecision: metrics.avgContextPrecision ?? null,
-                        avgContextRecall: metrics.avgContextRecall ?? null,
-                        avgAnswerCorrectness: metrics.avgAnswerCorrectness ?? null,
-                        avgHallucinationRate: metrics.avgHallucinationRate ?? null,
-                        avgLatencyMs: metrics.avgLatencyMs ?? null,
-                        avgTokensPerSecond: metrics.avgTokensPerSecond ?? null,
+                        avgFaithfulness: metrics.faithfulness ?? null,
+                        avgAnswerRelevancy: metrics.answerRelevancy ?? null,
+                        avgContextPrecision: metrics.contextPrecision ?? null,
+                        avgContextRecall: metrics.contextRecall ?? null,
+                        avgContextRelevancy: metrics.contextRelevancy ?? null,
+                        avgAnswerCorrectness: metrics.answerCorrectness ?? null,
+                        avgHallucinationRate: metrics.hallucinationRate ?? null,
+                        avgLatencyMs: metrics.totalLatencyMs ?? null,
+                        avgTokensPerSecond: metrics.tokensPerSecond ?? null,
                     };
                 }
             );

@@ -26,6 +26,7 @@ interface EvaluationData {
         answerRelevancy: number;
         contextPrecision: number;
         contextRecall: number;
+        contextRelevancy: number;
         answerCorrectness: number;
         hallucinationRate: number;
         latencyMs: number;
@@ -52,6 +53,7 @@ interface AblationData {
         answerRelevancy: number[];
         contextPrecision: number[];
         contextRecall: number[];
+        contextRelevancy: number[];
         answerCorrectness: number[];
         hallucinationRate: number[];
         latencyMs: number[];
@@ -95,6 +97,7 @@ async function fetchEvaluationRunData(runId: string): Promise<EvaluationData[]> 
                 answerRelevancy: q.ragAnswerRelevancy ?? 0,
                 contextPrecision: q.ragContextPrecision ?? 0,
                 contextRecall: q.ragContextRecall ?? 0,
+                contextRelevancy: q.ragContextRelevancy ?? 0,
                 answerCorrectness: q.ragAnswerCorrectness ?? 0,
                 hallucinationRate: q.ragHallucinationRate ?? 0,
                 latencyMs: q.ragLatencyMs ?? 0,
@@ -142,6 +145,7 @@ async function fetchAblationStudyData(studyId: string): Promise<AblationData[]> 
             answerRelevancy: number;
             contextPrecision: number;
             contextRecall: number;
+            contextRelevancy: number;
             answerCorrectness: number;
             hallucinationRate: number;
             totalLatencyMs?: number;
@@ -160,6 +164,7 @@ async function fetchAblationStudyData(studyId: string): Promise<AblationData[]> 
                     answerRelevancy: [],
                     contextPrecision: [],
                     contextRecall: [],
+                    contextRelevancy: [],
                     answerCorrectness: [],
                     hallucinationRate: [],
                     latencyMs: [],
@@ -184,6 +189,7 @@ async function fetchAblationStudyData(studyId: string): Promise<AblationData[]> 
                     if (perQ.answerRelevancy !== undefined) config.scores.answerRelevancy.push(perQ.answerRelevancy);
                     if (perQ.contextPrecision !== undefined) config.scores.contextPrecision.push(perQ.contextPrecision);
                     if (perQ.contextRecall !== undefined) config.scores.contextRecall.push(perQ.contextRecall);
+                    if (perQ.contextRelevancy !== undefined) config.scores.contextRelevancy.push(perQ.contextRelevancy);
                     if (perQ.answerCorrectness !== undefined)
                         config.scores.answerCorrectness.push(perQ.answerCorrectness);
                     if (perQ.hallucinationRate !== undefined)
@@ -210,6 +216,8 @@ async function fetchAblationStudyData(studyId: string): Promise<AblationData[]> 
                     config.scores.contextPrecision.push(result.metrics.contextPrecision);
                 if (result.metrics.contextRecall !== undefined)
                     config.scores.contextRecall.push(result.metrics.contextRecall);
+                if (result.metrics.contextRelevancy !== undefined)
+                    config.scores.contextRelevancy.push(result.metrics.contextRelevancy);
                 if (result.metrics.answerCorrectness !== undefined)
                     config.scores.answerCorrectness.push(result.metrics.answerCorrectness);
                 if (result.metrics.hallucinationRate !== undefined)

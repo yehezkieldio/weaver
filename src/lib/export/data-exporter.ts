@@ -41,6 +41,7 @@ export interface RawEvaluationData {
     ragAnswerRelevancy: number | null;
     ragContextPrecision: number | null;
     ragContextRecall: number | null;
+    ragContextRelevancy: number | null;
     ragAnswerCorrectness: number | null;
     nonRagAnswerRelevancy: number | null;
     nonRagAnswerCorrectness: number | null;
@@ -90,6 +91,7 @@ export interface AblationRawData {
     avgAnswerRelevancy: number | null;
     avgContextPrecision: number | null;
     avgContextRecall: number | null;
+    avgContextRelevancy: number | null;
     avgAnswerCorrectness: number | null;
     avgHallucinationRate: number | null;
     avgLatencyMs: number | null;
@@ -107,6 +109,7 @@ const VARIABLE_LABELS: Record<string, { en: string; id: string }> = {
     ragAnswerRelevancy: { en: "RAG Answer Relevancy Score (0-1)", id: "Skor Relevansi Jawaban RAG (0-1)" },
     ragContextPrecision: { en: "RAG Context Precision Score (0-1)", id: "Skor Presisi Konteks RAG (0-1)" },
     ragContextRecall: { en: "RAG Context Recall Score (0-1)", id: "Skor Recall Konteks RAG (0-1)" },
+    ragContextRelevancy: { en: "RAG Context Relevancy Score (0-1)", id: "Skor Relevansi Konteks RAG (0-1)" },
     ragAnswerCorrectness: { en: "RAG Answer Correctness Score (0-1)", id: "Skor Kebenaran Jawaban RAG (0-1)" },
     nonRagAnswerRelevancy: { en: "Non-RAG Answer Relevancy Score (0-1)", id: "Skor Relevansi Jawaban Non-RAG (0-1)" },
     nonRagAnswerCorrectness: {
@@ -1154,6 +1157,7 @@ export function formatForExport(evaluationQuestions: Record<string, unknown>[]):
         ragAnswerRelevancy: q.ragAnswerRelevancy as number | null,
         ragContextPrecision: q.ragContextPrecision as number | null,
         ragContextRecall: q.ragContextRecall as number | null,
+        ragContextRelevancy: q.ragContextRelevancy as number | null,
         ragAnswerCorrectness: q.ragAnswerCorrectness as number | null,
         nonRagAnswerRelevancy: q.nonRagAnswerRelevancy as number | null,
         nonRagAnswerCorrectness: q.nonRagAnswerCorrectness as number | null,
