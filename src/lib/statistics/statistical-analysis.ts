@@ -1,4 +1,18 @@
 /**
+ * @fileoverview Statistical Analysis for RAG Evaluation
+ *
+ * This module provides rigorous statistical tests for evaluating RAG system performance.
+ * Uses jstat library for accurate p-value calculations via proper distribution CDFs.
+ *
+ * WHY jstat:
+ * - Provides accurate t-distribution, F-distribution, and chi-squared CDFs
+ * - Better than rough approximations for academic publication quality
+ * - Well-maintained library with proper statistical foundations
+ */
+
+import jStat from "jstat";
+
+/**
  * Statistical test result with interpretation
  *
  * WHY Bilingual Fields:
@@ -181,42 +195,24 @@ function tCriticalValue(df: number, alpha: number): number {
     return alphaValues[closestDf] || 1.96; // Default to z-score for large df
 }
 
-// Calculate p-value from t-statistic (approximation)
+/**
+ * Calculate p-value from t-statistic using jstat's Student's t-distribution CDF.
+ *
+ * WHY This Approach:
+ * - Uses proper cumulative distribution function instead of approximation
+ * - Two-tailed test appropriate for most hypothesis testing scenarios
+ * - Handles all degrees of freedom accurately
+ *
+ * @param t - The t-statistic value
+ * @param df - Degrees of freedom
+ * @returns Two-tailed p-value
+ */
 function tToPValue(t: number, df: number): number {
-    // Using approximation for p-value from t-distribution
-    const x = df / (df + t * t);
-
-    // Incomplete beta function approximation
-    const a = df / 2;
-    const b = 0.5;
-
-    // Simple approximation using normal distribution for large df
-    if (df > 30) {
-        // Use normal approximation
-        const z = Math.abs(t);
-        const p = Math.exp(-0.5 * z * z) / Math.sqrt(2 * Math.PI);
-        return 2 * p * (1 + 0.231_641_9 * z);
-    }
-
-    // For smaller df, use lookup table interpolation
-    const criticalValues = [
-        { t: 12.706, p: 0.05 },
-        { t: 4.303, p: 0.05 },
-        { t: 3.182, p: 0.05 },
-        { t: 2.776, p: 0.05 },
-        { t: 2.571, p: 0.05 },
-        { t: 2.228, p: 0.05 },
-        { t: 2.086, p: 0.05 },
-        { t: 2.042, p: 0.05 },
-        { t: 1.96, p: 0.05 },
-    ];
-
+    if (df <= 0) return 1;
+    // Two-tailed p-value: 2 * P(T > |t|) = 2 * (1 - CDF(|t|))
     const absT = Math.abs(t);
-    if (absT > 4) return 0.001;
-    if (absT > 3) return 0.01;
-    if (absT > 2) return 0.05;
-    if (absT > 1.5) return 0.15;
-    return 0.5;
+    const cdf = jStat.studentt.cdf(absT, df);
+    return 2 * (1 - cdf);
 }
 
 // Paired t-test
@@ -510,23 +506,55 @@ function translateEffectSize(effect: string): string {
     return translations[effect] || effect;
 }
 
-function fToPValue(f: number, _df1: number, _df2: number): number {
-    // Approximation for F-distribution p-value
-    if (f < 1) return 0.5;
-    if (f > 10) return 0.001;
-    if (f > 5) return 0.01;
-    if (f > 3) return 0.05;
-    if (f > 2) return 0.15;
-    return 0.3;
+/**
+ * Calculate p-value from F-statistic using jstat's F-distribution CDF.
+ *
+ * WHY This Approach:
+ * - Uses proper central F-distribution CDF
+ * - Correctly uses both degrees of freedom (df1 for numerator, df2 for denominator)
+ * - Accurate for ANOVA and variance ratio tests
+ *
+ * @param f - The F-statistic value
+ * @param df1 - Degrees of freedom for numerator (between groups)
+ * @param df2 - Degrees of freedom for denominator (within groups)
+ * @returns One-tailed p-value (upper tail)
+ */
+function fToPValue(f: number, df1: number, df2: number): number {
+    if (df1 <= 0 || df2 <= 0 || f < 0) return 1;
+    // One-tailed p-value: P(F > f) = 1 - CDF(f)
+    const cdf = jStat.centralF.cdf(f, df1, df2);
+    return 1 - cdf;
 }
 
-function qToPValue(q: number, _k: number, _df: number): number {
-    // Approximation for Studentized range distribution
-    if (q > 5) return 0.001;
-    if (q > 4) return 0.01;
-    if (q > 3.5) return 0.05;
-    if (q > 3) return 0.1;
-    return 0.5;
+/**
+ * Calculate p-value from q-statistic (Studentized range) using approximation.
+ *
+ * NOTE: jstat doesn't provide a direct Studentized range distribution.
+ * We use a conservative approximation based on the relationship between
+ * the Studentized range and the t-distribution for pairwise comparisons.
+ *
+ * For more accurate Tukey HSD p-values, consider using specialized libraries
+ * like 'studentized-range' or implementing the distribution directly.
+ *
+ * @param q - The Studentized range statistic (q = mean_diff / SE)
+ * @param k - Number of groups being compared
+ * @param df - Degrees of freedom (typically N - k for error term)
+ * @returns Approximate p-value for Tukey HSD test
+ */
+function qToPValue(q: number, k: number, df: number): number {
+    if (k <= 1 || df <= 0 || q < 0) return 1;
+
+    // Approximation: For large df, q/sqrt(2) is approximately t-distributed
+    // This is a conservative approximation that tends to give slightly larger p-values
+    const tApprox = q / Math.sqrt(2);
+
+    // Use Bonferroni-corrected t-test as approximation
+    // Number of pairwise comparisons: k*(k-1)/2
+    const numComparisons = (k * (k - 1)) / 2;
+    const rawPValue = tToPValue(tApprox, df);
+
+    // Apply Bonferroni correction (conservative)
+    return Math.min(1, rawPValue * numComparisons);
 }
 
 /**
