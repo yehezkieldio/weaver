@@ -1276,52 +1276,50 @@ function averageMetrics(metricsArray: EvaluationMetrics[]): EvaluationMetrics {
 export function generateAblationReport(results: AblationResult[]): string {
     let report = "# Laporan Studi Ablasi RAG\n\n";
     report += `Tanggal: ${new Date().toISOString()}\n\n`;
-    report += "## Ringkasan Eksekutif\n\n";
+    
+    // 1. Primary Metrics
+    report += "## 1. Primary Metrics (Kualitas & Akurasi)\n";
+    report += "Metrik utama yang menentukan keberhasilan output chatbot untuk pengguna akademik.\n\n";
+    report += "| Konfigurasi | Correctness | Faithfulness | Relevancy | Citation Acc | Hallucination |\n";
+    report += "|-------------|-------------|--------------|-----------|--------------|---------------|\n";
+    
+    for (const result of results) {
+        report += `| ${result.config.name} | `;
+        report += `${(result.metrics.answerCorrectness * 100).toFixed(1)}% | `;
+        report += `${(result.metrics.faithfulness * 100).toFixed(1)}% | `;
+        report += `${(result.metrics.answerRelevancy * 100).toFixed(1)}% | `;
+        report += `${(result.metrics.citationAccuracy * 100).toFixed(1)}% | `;
+        report += `${(result.metrics.hallucinationRate * 100).toFixed(1)}% |\n`;
+    }
 
-    // Find best config for each metric
-    const bestFaithfulness = results.reduce((best, r) =>
-        r.metrics.faithfulness > best.metrics.faithfulness ? r : best
-    );
-    const bestRelevancy = results.reduce((best, r) =>
-        r.metrics.answerRelevancy > best.metrics.answerRelevancy ? r : best
-    );
-    const lowestHallucination = results.reduce((best, r) =>
-        r.metrics.hallucinationRate < best.metrics.hallucinationRate ? r : best
-    );
-    const lowestLatency = results.reduce((best, r) =>
-        r.metrics.totalLatencyMs < best.metrics.totalLatencyMs ? r : best
-    );
-
-    report += `- **Faithfulness Terbaik**: ${bestFaithfulness.config.name} (${(bestFaithfulness.metrics.faithfulness * 100).toFixed(1)}%)\n`;
-    report += `- **Relevancy Terbaik**: ${bestRelevancy.config.name} (${(bestRelevancy.metrics.answerRelevancy * 100).toFixed(1)}%)\n`;
-    report += `- **Halusinasi Terendah**: ${lowestHallucination.config.name} (${(lowestHallucination.metrics.hallucinationRate * 100).toFixed(1)}%)\n`;
-    report += `- **Latensi Terendah**: ${lowestLatency.config.name} (${lowestLatency.metrics.totalLatencyMs.toFixed(0)}ms)\n\n`;
-
-    report += "## Hasil Detail\n\n";
-    report += "| Konfigurasi | Faithfulness | Relevancy | Precision | Hallucination | Latency (ms) | Agent Steps |\n";
-    report += "|-------------|--------------|-----------|-----------|------------|--------------|-------------|\n";
+    // 2. Secondary Metrics
+    report += "\n## 2. Secondary Metrics (Kualitas Retrieval & Konteks)\n";
+    report += "Diagnostik kinerja komponen retrieval dan kualitas konteks yang diambil.\n\n";
+    report += "| Konfigurasi | Ctx Precision | Ctx Recall | Ctx Relevancy | Retrieval NDCG | Fact Consistency |\n";
+    report += "|-------------|---------------|------------|---------------|----------------|------------------|\n";
 
     for (const result of results) {
         report += `| ${result.config.name} | `;
-        report += `${(result.metrics.faithfulness * 100).toFixed(1)}% | `;
-        report += `${(result.metrics.answerRelevancy * 100).toFixed(1)}% | `;
         report += `${(result.metrics.contextPrecision * 100).toFixed(1)}% | `;
-        report += `${(result.metrics.hallucinationRate * 100).toFixed(1)}% | `;
-        report += `${result.metrics.totalLatencyMs.toFixed(0)} | `;
-        report += `${result.metrics.totalAgentSteps} |\n`;
+        report += `${(result.metrics.contextRecall * 100).toFixed(1)}% | `;
+        report += `${(result.metrics.contextRelevancy * 100).toFixed(1)}% | `;
+        report += `${(result.metrics.retrievalNdcg * 100).toFixed(1)}% | `;
+        report += `${(result.metrics.factualConsistency * 100).toFixed(1)}% |\n`;
     }
 
-    report += "\n## Analisis Latensi\n\n";
-    report += "| Konfigurasi | Total | Retrieval | Reranking | Generation | Agent Reasoning |\n";
-    report += "|-------------|-------|-----------|-----------|------------|----------------|\n";
+    // 3. Supporting Analysis
+    report += "\n## 3. Supporting Analysis (Efisiensi & Latensi)\n";
+    report += "Analisis operasional sistem, breakdown latensi, dan penggunaan resource.\n\n";
+    report += "| Konfigurasi | Total Latency | Gen Latency | Ret Latency | Tokens/Sec | Agent Steps |\n";
+    report += "|-------------|---------------|-------------|-------------|------------|-------------|\n";
 
     for (const result of results) {
         report += `| ${result.config.name} | `;
         report += `${result.metrics.totalLatencyMs.toFixed(0)}ms | `;
-        report += `${result.metrics.retrievalLatencyMs.toFixed(0)}ms | `;
-        report += `${result.metrics.rerankingLatencyMs.toFixed(0)}ms | `;
         report += `${result.metrics.generationLatencyMs.toFixed(0)}ms | `;
-        report += `${result.metrics.agentReasoningLatencyMs.toFixed(0)}ms |\n`;
+        report += `${result.metrics.retrievalLatencyMs.toFixed(0)}ms | `;
+        report += `${result.metrics.tokensPerSecond.toFixed(1)} | `;
+        report += `${result.metrics.totalAgentSteps} |\n`;
     }
 
     return report;
