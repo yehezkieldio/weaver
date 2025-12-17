@@ -104,8 +104,13 @@ async function fetchEvaluationRunData(runId: string): Promise<EvaluationData[]> 
 }
 
 /**
- * Fetch ablation study data with all configurations and metrics
+ * Fetch ablation study data with all configurations and per-question metrics for ANOVA
+ *
+ * WHY this change: ANOVA requires per-question scores (not aggregated averages) to
+ * calculate within-group variance. The previous implementation only read aggregated
+ * metrics which resulted in single data points per config - invalid for statistical testing.
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Multi-metric extraction requires handling each metric field
 async function fetchAblationStudyData(studyId: string): Promise<AblationData[]> {
     const [study] = await db.select().from(ablationStudies).where(eq(ablationStudies.id, studyId));
 
@@ -113,13 +118,24 @@ async function fetchAblationStudyData(studyId: string): Promise<AblationData[]> 
         return [];
     }
 
-    // Group results by configuration
+    // Group results by configuration, extracting per-question metrics for ANOVA
     const configMap = new Map<string, AblationData>();
 
-    for (const result of study.results as unknown as Array<{
+    // Type for result with perQuestionMetrics (stored by ablation route)
+    interface AblationResultWithPerQuestion {
         configName: string;
         metrics: Record<string, number>;
-    }>) {
+        perQuestionMetrics?: Array<{
+            faithfulness: number;
+            answerRelevancy: number;
+            contextPrecision: number;
+            contextRecall: number;
+            answerCorrectness: number;
+            hallucinationRate: number;
+        }>;
+    }
+
+    for (const result of study.results as unknown as AblationResultWithPerQuestion[]) {
         if (!configMap.has(result.configName)) {
             configMap.set(result.configName, {
                 configName: result.configName,
@@ -137,19 +153,43 @@ async function fetchAblationStudyData(studyId: string): Promise<AblationData[]> 
 
         const config = configMap.get(result.configName);
         if (config) {
-            // Aggregate metrics - each result represents aggregated metrics for a config
-            // We'll use these as single data points
-            if (result.metrics.faithfulness !== undefined) config.scores.faithfulness.push(result.metrics.faithfulness);
-            if (result.metrics.answerRelevancy !== undefined)
-                config.scores.answerRelevancy.push(result.metrics.answerRelevancy);
-            if (result.metrics.contextPrecision !== undefined)
-                config.scores.contextPrecision.push(result.metrics.contextPrecision);
-            if (result.metrics.contextRecall !== undefined)
-                config.scores.contextRecall.push(result.metrics.contextRecall);
-            if (result.metrics.answerCorrectness !== undefined)
-                config.scores.answerCorrectness.push(result.metrics.answerCorrectness);
-            if (result.metrics.hallucinationRate !== undefined)
-                config.scores.hallucinationRate.push(result.metrics.hallucinationRate);
+            // FIXED: Extract per-question metrics (arrays) for valid ANOVA testing
+            // The perQuestionMetrics array contains individual scores for each question
+            if (result.perQuestionMetrics && result.perQuestionMetrics.length > 0) {
+                console.log(
+                    `[fetchAblationStudyData] Config "${result.configName}": Found ${result.perQuestionMetrics.length} per-question metrics`
+                );
+
+                for (const perQ of result.perQuestionMetrics) {
+                    if (perQ.faithfulness !== undefined) config.scores.faithfulness.push(perQ.faithfulness);
+                    if (perQ.answerRelevancy !== undefined) config.scores.answerRelevancy.push(perQ.answerRelevancy);
+                    if (perQ.contextPrecision !== undefined) config.scores.contextPrecision.push(perQ.contextPrecision);
+                    if (perQ.contextRecall !== undefined) config.scores.contextRecall.push(perQ.contextRecall);
+                    if (perQ.answerCorrectness !== undefined)
+                        config.scores.answerCorrectness.push(perQ.answerCorrectness);
+                    if (perQ.hallucinationRate !== undefined)
+                        config.scores.hallucinationRate.push(perQ.hallucinationRate);
+                }
+            } else {
+                // Fallback: use aggregated metrics if per-question not available (legacy data)
+                console.log(
+                    `[fetchAblationStudyData] Config "${result.configName}": No per-question metrics, falling back to aggregates`
+                );
+                if (result.metrics.faithfulness !== undefined)
+                    config.scores.faithfulness.push(result.metrics.faithfulness);
+                if (result.metrics.answerRelevancy !== undefined)
+                    config.scores.answerRelevancy.push(result.metrics.answerRelevancy);
+                if (result.metrics.contextPrecision !== undefined)
+                    config.scores.contextPrecision.push(result.metrics.contextPrecision);
+                if (result.metrics.contextRecall !== undefined)
+                    config.scores.contextRecall.push(result.metrics.contextRecall);
+                if (result.metrics.answerCorrectness !== undefined)
+                    config.scores.answerCorrectness.push(result.metrics.answerCorrectness);
+                if (result.metrics.hallucinationRate !== undefined)
+                    config.scores.hallucinationRate.push(result.metrics.hallucinationRate);
+            }
+
+            // Latency is not stored per-question, use aggregated
             if (result.metrics.totalLatencyMs !== undefined)
                 config.scores.latencyMs.push(result.metrics.totalLatencyMs);
         }
@@ -304,6 +344,34 @@ async function runAnalysis() {
         console.log(`\n${"=".repeat(60)}`);
         console.log("4. ONE-WAY ANOVA / ANOVA SATU ARAH (Ablation Study)");
         console.log("-".repeat(50));
+
+        // Validate data structure before ANOVA
+        console.log("\n[ANOVA Data Validation]");
+        const sampleSizes = ablationData.map((d) => ({
+            config: d.configName,
+            n: d.scores.faithfulness.length,
+        }));
+
+        for (const s of sampleSizes) {
+            console.log(`  Config "${s.config}": n = ${s.n} per-question scores`);
+        }
+
+        // Check if all groups have the same sample size (recommended for balanced ANOVA)
+        const uniqueSizes = [...new Set(sampleSizes.map((s) => s.n))];
+        if (uniqueSizes.length === 1) {
+            console.log(`  ✓ All configurations have equal sample sizes (n = ${uniqueSizes[0]})`);
+        } else {
+            console.log(
+                `  ⚠ Unequal sample sizes detected: ${uniqueSizes.join(", ")} - ANOVA still valid but unbalanced`
+            );
+        }
+
+        // Check minimum sample size for meaningful ANOVA
+        const minSampleSize = Math.min(...sampleSizes.map((s) => s.n));
+        if (minSampleSize < 2) {
+            console.log(`  ⚠ WARNING: Minimum sample size is ${minSampleSize}. ANOVA requires n >= 2 per group.`);
+            console.log("  This may indicate per-question metrics were not stored properly.");
+        }
 
         const ablationGroups = ablationData.map((d) => d.scores.faithfulness);
         const anovaResult = oneWayANOVA(ablationGroups);
