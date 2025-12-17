@@ -1,148 +1,180 @@
+# MuliaChat: Sistem Agentic RAG untuk Informasi Akademik Universitas Mulia
 
-## Ringkasan Eksekutif
+**MuliaChat** adalah platform *Question Answering* (QA) berbasis *Large Language Model* (LLM) yang dirancang khusus untuk domain akademik Universitas Mulia. Sistem ini mengimplementasikan arsitektur **Agentic Retrieval-Augmented Generation (RAG)** untuk mengatasi keterbatasan *hallucination* pada LLM standar dan memberikan jawaban yang akurat, terverifikasi, serta memiliki sitasi yang dapat dilacak ke dokumen resmi universitas.
 
-**MuliaChat** (nama sementara, tidak berafiliasi dengan Universitas Mulia) adalah platform percakapan berbasis AI yang dikembangkan sebagai studi kasus dan objek penelitian untuk penulisan paper ilmiah. Sistem ini dirancang untuk menguji dan mendokumentasikan proses perancangan, implementasi, serta evaluasi chatbot kontekstual berbasis dokumen akademik.
-
-Platform ini mengintegrasikan pendekatan **Retrieval-Augmented Generation (RAG)** dan **agentic multi-step reasoning** untuk menghasilkan jawaban yang akurat, terverifikasi, dan terdokumentasi secara sistematis dari sumber akademik relevan.
-
----
-
-## Informasi Paper Ilmiah
-
-- **Judul:** Implementasi Agentic Retrieval-Augmented Generation (RAG) untuk Sistem Tanya Jawab Universitas Mulia
-- **Kata kunci:** Retrieval-Augmented Generation, RAG, Agentic AI, Hybrid Retrieval, BM25, RAGAS, Natural Language Processing, Large Language Models
-- **Penulis:** Yehezkiel Dio Sinolungan<sup>1</sup>, Adryo Faresy Devera<sup>2</sup>, Andre Marthinus Lumempouw<sup>3</sup>
-  *<sup>1</sup>, <sup>2</sup>, <sup>3</sup> Program Studi Informatika, Fakultas Ilmu Komputer, Universitas Mulia*
-- **Tipe penelitian:** Eksperimental terapan
-- **Metodologi penelitian:** *Research and Development (R&D)* dengan pendekatan *Rapid Application Development (RAD)*
+Proyek ini dikembangkan sebagai objek penelitian untuk Skripsi/Tugas Akhir mahasiswa Program Studi Informatika, Fakultas Ilmu Komputer, Universitas Mulia.
 
 ---
 
-## Pendekatan Konseptual
+## 📄 Informasi Penelitian
 
-- **Isu utama:** Chatbot domain-spesifik di lingkungan universitas sering mengalami halusinasi jawaban dan kegagalan menjawab pertanyaan dengan konteks lokal.
-- **Tujuan penelitian:**
-  - Membuktikan keunggulan RAG berbasis agen dengan penalaran multi-langkah dibandingkan RAG satu-langkah pada kueri kontekstual universitas.
-  - Menentukan konfigurasi optimal (strategi pengambilan data, metode *re-ranking*, teknik *chunking*, mode agen) untuk menyeimbangkan kualitas jawaban dan latensi pada penerapan nyata.
-- **Metode utama:** Studi ablasi untuk mengukur kontribusi tiap komponen dengan menghilangkan atau memodifikasi komponen secara sistematis, lalu mengevaluasi dampaknya terhadap kinerja sistem.
-
----
-
-## Pilihan Desain dan Arsitektur
-
-- **Arsitektur sistem:**
-  - Agentic multi-step reasoning
-  - Integrasi *Large Language Model* (LLM) dengan *hybrid retrieval* (BM25 untuk pencarian leksikal, vector search untuk pencarian semantik)
-- **Pertimbangan desain:**
-  - Kompleksitas dan latensi dikorbankan demi kualitas jawaban
-  - Mode agen memiliki latensi 2–5× lebih tinggi, namun memberikan akurasi lebih baik untuk kueri multi-hop dan kontekstual
+- **Judul Penelitian:** Implementasi Agentic Retrieval-Augmented Generation (RAG) dengan Hybrid Retrieval dan Re-ranking untuk Sistem Tanya Jawab Akademik
+- **Peneliti:**
+  1. Yehezkiel Dio Sinolungan
+  2. Adryo Faresy Devera
+  3. Andre Marthinus Lumempouw
+- **Institusi:** Universitas Mulia, Balikpapan
+- **Fokus Penelitian:** Evaluasi komparatif antara arsitektur RAG standar vs Agentic RAG menggunakan metrik RAGAS dan uji signifikansi statistik.
 
 ---
 
-## Pemilihan Model dan Rancangan Eksperimen
+## 🚀 Fitur Utama
 
-Penelitian memanfaatkan layanan Microsoft Azure OpenAI untuk operasi LLM dan model Hugging Face *Transformers* untuk proses *re-ranking*.
+Sistem ini memiliki kapabilitas teknis tingkat lanjut yang membedakannya dari chatbot standar:
 
-- **GPT-4.1 Mini (`gpt-4.1-mini`)**
-  - Penggunaan: Generasi teks dan agen percakapan
-  - Justifikasi: Kemampuan instruksional kuat, latensi rendah, dan efisiensi biaya tinggi untuk interaksi real-time
-- **GPT-4o Mini (`gpt-4o-mini`)**
-  - Penggunaan: Evaluasi (*LLM-as-a-Judge*)
-  - Justifikasi: Model yang berbeda dari generator untuk memitigasi *self-preference bias* (kecenderungan model menilai outputnya sendiri lebih tinggi), memastikan objektivitas evaluasi
-- **`text-embedding-3-small`**
-  - Penggunaan: Pembuatan embedding dokumen
-  - Justifikasi: Keseimbangan kualitas representasi dan kecepatan komputasi
-- **`cross-encoder/ms-marco-MiniLM-L2-v2`**
-  - Penggunaan: *Cross-encoder scoring* untuk *re-ranking*
-  - Justifikasi: Efisien dan efektif untuk skenario *Information Retrieval* (IR) dan RAG
+### 1. Agentic Reasoning & Planning
+Alih-alih langsung menjawab, sistem menggunakan agen cerdas yang dapat:
+- **Dekomposisi Kueri:** Memecah pertanyaan kompleks menjadi sub-pertanyaan (misal: "Bandingkan biaya UKT prodi A dan B" menjadi dua pencarian terpisah).
+- **Eksekusi Tool Paralel:** Menjalankan pencarian informasi secara simultan untuk efisiensi latensi.
+- **Self-Correction:** Memverifikasi jawaban sebelum diberikan ke pengguna (*Verify Claim*).
+- **Sintesis Multi-Dokumen:** Menggabungkan informasi dari berbagai sumber (PDF, DOCX, Web) menjadi satu jawaban koheren.
 
-Penggunaan model dan layanan Azure memastikan konsistensi kinerja, skalabilitas, serta konfigurasi model yang terstandarisasi untuk eksperimen terkontrol. Replikasi hasil terjamin karena versi model, parameter, dan pipeline inferensi berada pada lingkungan eksekusi yang stabil dan terdokumentasi. Pendekatan ini menghilangkan variasi performa akibat perbedaan hardware atau optimisasi runtime, sehingga perbandingan antar konfigurasi pada studi ablasi berlangsung adil dan bebas bias teknis.
+### 2. Hybrid Retrieval Engine
+Menggabungkan dua paradigma pencarian untuk akurasi maksimal:
+- **Semantic Search (Vector):** Menggunakan embedding `text-embedding-3-small` (1536 dimensi) dengan penyimpanan di **PostgreSQL (pgvector)**. Menangkap makna kontekstual.
+- **Keyword Search (Lexical):** Implementasi **Okapi BM25** dengan parameter teroptimasi untuk Bahasa Indonesia (k1=1.2, b=0.75). Menangkap istilah spesifik (nama dosen, kode mata kuliah).
+- **Reciprocal Rank Fusion (RRF):** Menggabungkan hasil kedua metode dengan algoritma RRF (k=60) tanpa perlu normalisasi skor yang rumit.
 
-Untuk memitigasi bias preferensi diri (*self-preference bias*), penelitian berfokus pada pengukuran peningkatan relatif antar konfigurasi ablasi, bukan pada nilai absolut metrik.
+### 3. Advanced Document Processing
+Pipeline pengolahan dokumen yang tangguh:
+- **Multi-Format Support:** PDF (`unpdf`), DOCX (`mammoth`), TXT, Markdown.
+- **Adaptive Chunking:** Strategi pemecahan teks otomatis (Recursive, Semantic, Sentence Window, Hierarchical) berdasarkan karakteristik dokumen.
+- **Metadata Extraction:** Ekstraksi otomatis kode mata kuliah, nama dosen, bab/pasal, dan tipe dokumen.
+- **Indonesian NLP:** *Stemming* dan *stopword removal* khusus Bahasa Indonesia untuk meningkatkan akurasi BM25.
 
----
+### 4. Multi-Stage Re-ranking
+Meningkatkan presisi dokumen yang diambil dengan tahap penilaian ulang:
+- **Cross-Encoder:** Menggunakan model `ms-marco-MiniLM-L2-v2` untuk menilai relevansi kueri-dokumen secara mendalam.
+- **LLM-based Reranking:** (Opsional) Menggunakan GPT-4o-mini untuk penilaian *listwise* atau *pointwise*.
+- **Ensemble:** Kombinasi bobot dari berbagai metode reranking.
 
-## Pipeline Evaluasi dan Studi Ablasi
-
-Evaluasi dilakukan melalui pipeline multi-tahap:
-
-1. **Definisi konfigurasi:** Setiap konfigurasi didefinisikan dengan snapshot parameter lengkap untuk replikasi penuh.
-2. **Pemuatan set pertanyaan:** Sistem menyediakan pertanyaan informasi Universitas Mulia yang telah ditentukan.
-3. **Eksekusi pipeline RAG:** Untuk setiap pasangan konfigurasi-pertanyaan, engine mengeksekusi jalur yang sesuai.
-
----
-
-## Korpus Dokumen
-
-Pertanyaan evaluasi dan korpus dokumen diambil dari sumber resmi Universitas Mulia, meliputi:
-- Situs web resmi Universitas Mulia
-- Situs penerimaan mahasiswa baru Universitas Mulia
-- Kementerian Pendidikan Tinggi, Sains, dan Teknologi (PDDikti)
-- Wikipedia
-- Tata Tertib Kehidupan Kampus bagi Mahasiswa Universitas Mulia
-- Booklet Universitas Mulia
-- Panduan Skripsi Universitas Mulia
-- Peraturan Akademik Universitas Mulia
+### 5. Evaluasi & Analisis Statistik
+Modul evaluasi terintegrasi untuk keperluan akademik:
+- **RAGAS Metrics:** Faithfulness, Answer Relevancy, Context Precision/Recall, Answer Correctness.
+- **Hallucination Detection:** Deteksi otomatis fabrikasi fakta menggunakan *Natural Language Inference* (NLI).
+- **Studi Ablasi:** Kemampuan untuk menghidupkan/mematikan komponen (misal: matikan reranker) untuk mengukur kontribusi masing-masing fitur.
+- **Uji Statistik:** Perhitungan otomatis Paired t-test, ANOVA, dan Effect Size (Cohen's d) menggunakan library `jstat`.
 
 ---
 
-## Fitur Utama
+## 🛠️ Arsitektur Teknis
 
-- Agentic RAG dengan eksekusi tool paralel untuk penalaran multi-langkah
-- Hybrid retrieval menggabungkan pgvector dan BM25 dengan Reciprocal Rank Fusion
-- Adaptive chunking dengan seleksi strategi otomatis berdasarkan karakteristik dokumen
-- Advanced reranking dengan lima strategi berbeda (cross-encoder, LLM, ensemble)
-- Ekstraksi metadata domain-spesifik untuk >50 tipe dokumen universitas Indonesia
-- Quality-aware retrieval dengan penilaian kualitas chunk untuk pembobotan jawaban
-- Real-time streaming menggunakan Server-Sent Events untuk visibilitas langkah agen
-- Kerangka evaluasi komprehensif dengan metrik RAGAS dan studi ablasi
+### Stack Teknologi
+- **Framework:** Next.js 15 (App Router)
+- **Runtime:** Bun
+- **Database:** PostgreSQL dengan ekstensi `pgvector`
+- **ORM:** Drizzle ORM
+- **AI Provider:** Azure OpenAI (GPT-4.1-mini, GPT-4o-mini, Text-Embedding-3-Small)
+- **Styling:** Tailwind CSS + Shadcn/UI
+
+### Alur Kerja (Pipeline)
+1. **User Query:** Pengguna mengirim pertanyaan.
+2. **Guardrails:** Validasi input (PII, toksisitas, integritas akademik).
+3. **Agent Planning:** Model memutuskan tool yang dibutuhkan (Search, Expand Query, Decompose).
+4. **Hybrid Retrieval:**
+   - Vector Search (HNSW Index di Postgres)
+   - BM25 Search (In-memory scoring pada kandidat)
+   - Fusion (RRF)
+5. **Re-ranking:** Dokumen teratas dinilai ulang relevansinya.
+6. **Generation:** LLM menyusun jawaban dengan sitasi `[1]`, `[2]`.
+7. **Guardrails Output:** Validasi jawaban terhadap halusinasi.
 
 ---
 
-## Penjelasan Teknis Agentic RAG
+## 📊 Metodologi Evaluasi
 
-**Multi-step reasoning dengan eksekusi tool:**
-Pendekatan agentic RAG memungkinkan LLM menggunakan tool khusus untuk kueri kompleks. Berbeda dengan RAG standar (retrieval tunggal → generasi), mode agentic mendukung perencanaan, retrieval multi-tahap, verifikasi, dan sintesis.
+Sistem ini menyediakan dasbor evaluasi komprehensif (`/evaluation`) untuk menjalankan eksperimen terkontrol:
 
-**Tool utama dan fungsinya:**
-- search_documents: Hybrid retrieval untuk sub-pertanyaan
-- decompose_query: Memecah kueri kompleks menjadi sub-pertanyaan
-- expand_query: Menghasilkan sinonim akademik
-- verify_claim: Verifikasi klaim berbasis NLI
-- synthesize_answer: Sintesis jawaban multi-sumber
+1. **Dataset Pertanyaan:** Kumpulan pertanyaan standar (`ACADEMIC_QUESTIONS`) mencakup regulasi, prosedur, dan fakta kampus.
+2. **Metrics:**
+   - **Faithfulness:** Seberapa taat jawaban terhadap konteks (0-1).
+   - **Answer Relevancy:** Seberapa relevan jawaban terhadap pertanyaan (0-1).
+   - **Context Recall:** Seberapa lengkap informasi yang diambil (0-1).
+   - **Hallucination Rate:** Persentase informasi yang tidak berdasar.
+3. **Statistical Analysis:**
+   - **Paired t-test:** Membandingkan performa RAG vs Non-RAG pada pertanyaan yang sama.
+   - **One-way ANOVA:** Membandingkan berbagai strategi chunking/retrieval.
+   - **Bootstrap Confidence Interval:** Estimasi rentang kepercayaan untuk metrik rata-rata.
 
-**Hybrid retrieval dengan Reciprocal Rank Fusion:**
-Terdapat tiga mode retrieval:
-- Vector only
-- Keyword only
-- Hybrid (vector + keyword)
+---
 
-**pgVector semantic search:**
-Menggunakan cosine similarity pada embedding vektor di PostgreSQL (pgvector).
+## 📂 Struktur Folder
 
-**Okapi BM25:**
-Pencarian keyword BM25 menggunakan parameter teroptimasi untuk dokumen Indonesia:
-  - K1: 1.2 (standar dokumen panjang, repetisi sedang)
-  - B: 0.75 (normalisasi panjang dokumen)
-  - K3: 8
-  - DELTA: 1 (semua term berkontribusi positif)
+```
+/
+├── corpus/                 # Dokumen sumber (PDF/TXT) Universitas Mulia
+├── src/
+│   ├── app/                # Next.js App Router (Frontend + API)
+│   ├── components/         # Komponen UI (Chat, Evaluation, Upload)
+│   ├── lib/
+│   │   ├── ai/             # Konfigurasi Azure OpenAI
+│   │   ├── db/             # Schema Database & Koneksi
+│   │   ├── rag/            # Core RAG Logic
+│   │   │   ├── agentic-rag.ts      # Logika Agent
+│   │   │   ├── chunking.ts         # Strategi Chunking
+│   │   │   ├── hybrid-retrieval.ts # BM25 + Vector + RRF
+│   │   │   ├── reranker.ts         # Cross-Encoder & LLM Rerank
+│   │   │   ├── evaluation.ts       # Kalkulasi Metrik RAGAS
+│   │   │   └── guardrails.ts       # Safety Checks
+│   │   └── statistics/     # Analisis Statistik (jstat)
+```
 
-**Reciprocal Rank Fusion (RRF):**
-RRF menggabungkan ranking dari beberapa retriever tanpa normalisasi skor (k=60, sesuai literatur).
+---
 
-**Quality score boosting:**
-Setelah RRF, chunk disesuaikan ±15% berdasarkan kualitas, dihitung dari:
-  - Densitas informasi (unique words/total words)
-  - Pentingnya struktur
-  - Jumlah sitasi
-  - Konsentrasi kata kunci (per 100 kata)
-  - Kelengkapan (berakhir dengan terminator kalimat)
+## 🚀 Instalasi dan Penggunaan
 
-**Advanced reranking:**
-Lima pendekatan reranking dengan trade-off kecepatan dan kualitas:
-  - cross_encoder: HuggingFace cross-encoder (~100ms, baik, default produksi)
-  - llm (pointwise): GPT-4.1-mini paralel (~3-5s, sangat baik)
-  - llm_listwise: GPT-4.1-mini satu panggilan (~2-3s, sangat baik, efisien token)
-  - cohere: Cohere rerank API (~10-15s, sangat baik, kualitas maksimum)
-  - ensemble: cross_encoder + LLM (weighted, ~3-6s, kualitas-latensi optimal)
+### Prasyarat
+- Node.js atau Bun
+- PostgreSQL dengan ekstensi `vector` aktif
+- Akun Azure OpenAI
 
+### Langkah Instalasi
+1. **Clone Repository**
+   ```bash
+   git clone https://github.com/username/academic-research-rag-chatbot.git
+   cd academic-research-rag-chatbot
+   ```
+
+2. **Install Dependencies**
+   ```bash
+   bun install
+   ```
+
+3. **Konfigurasi Environment**
+   Salin `.env.example` ke `.env` dan isi kredensial:
+   ```env
+   DATABASE_URL="postgresql://user:pass@localhost:5432/muliachat"
+   AZURE_OPENAI_API_KEY="..."
+   AZURE_OPENAI_RESOURCE_NAME="..."
+   AZURE_OPENAI_CHAT_DEPLOYMENT="gpt-4.1-mini"
+   AZURE_OPENAI_EMBEDDING_DEPLOYMENT="text-embedding-3-small"
+   ```
+
+4. **Migrasi Database**
+   ```bash
+   bun run db:push
+   ```
+
+5. **Jalankan Server Development**
+   ```bash
+   bun dev
+   ```
+
+### Mengakses Dasbor
+- **Chat Interface:** http://localhost:3000
+- **Knowledge Base Management:** http://localhost:3000/manage
+- **Evaluation Dashboard:** http://localhost:3000/evaluation
+
+---
+
+## ⚠️ Batasan dan Pengembangan Lanjut
+
+- **Bahasa:** Saat ini dioptimalkan khusus untuk Bahasa Indonesia.
+- **Format Dokumen:** Tabel kompleks dalam PDF mungkin kehilangan struktur saat ekstraksi.
+- **Latensi:** Mode *Agentic* memiliki latensi lebih tinggi dibanding RAG standar karena langkah penalaran tambahan.
+
+---
+
+## 📝 Lisensi
+
+Proyek ini dilisensikan di bawah MIT License. Digunakan untuk keperluan pendidikan dan penelitian.
