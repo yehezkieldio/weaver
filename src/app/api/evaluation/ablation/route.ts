@@ -157,6 +157,9 @@ export async function POST(request: Request) {
                 factualConsistency: result.metrics.factualConsistency,
                 sourceAttribution: result.metrics.sourceAttribution,
                 contradictionScore: result.metrics.contradictionScore,
+                retrievalNdcg: result.metrics.retrievalNdcg,
+                retrievalMrr: result.metrics.retrievalMrr,
+                retrievalPrecision: result.metrics.retrievalPrecision,
                 totalLatencyMs: result.metrics.totalLatencyMs,
                 retrievalLatencyMs: result.metrics.retrievalLatencyMs,
                 rerankingLatencyMs: result.metrics.rerankingLatencyMs,
@@ -165,6 +168,9 @@ export async function POST(request: Request) {
                 planningLatencyMs: result.metrics.planningLatencyMs,
                 synthesisLatencyMs: result.metrics.synthesisLatencyMs,
                 avgStepLatencyMs: result.metrics.avgStepLatencyMs,
+                toolCallLatencyMs: result.metrics.toolCallLatencyMs,
+                tokensPerSecond: result.metrics.tokensPerSecond,
+                totalAgentSteps: result.metrics.totalAgentSteps,
             },
             // Store per-question metrics for valid ANOVA testing (not just averages)
             perQuestionMetrics: result.perQuestionMetrics.map((m) => ({

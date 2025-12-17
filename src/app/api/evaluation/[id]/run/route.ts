@@ -257,6 +257,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
                             ragToolCallLatencyMs: Math.round(ragMetrics.toolCallLatencyMs),
                             ragTokensPerSecond: ragMetrics.tokensPerSecond,
                             // Metadata
+                            agentStepsUsed: ragMetrics.totalAgentSteps,
                             retrievalMethod: contextResult.retrievalStrategy,
                         })
                         .where(eq(evaluationQuestions.id, question.id));

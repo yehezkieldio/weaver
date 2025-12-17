@@ -188,11 +188,13 @@ async function fetchAblationStudyData(studyId: string): Promise<AblationData[]> 
                         config.scores.answerCorrectness.push(perQ.answerCorrectness);
                     if (perQ.hallucinationRate !== undefined)
                         config.scores.hallucinationRate.push(perQ.hallucinationRate);
-                    
+
                     // Latency metrics
                     if (perQ.totalLatencyMs !== undefined) config.scores.latencyMs.push(perQ.totalLatencyMs);
-                    if (perQ.planningLatencyMs !== undefined) config.scores.planningLatencyMs.push(perQ.planningLatencyMs);
-                    if (perQ.synthesisLatencyMs !== undefined) config.scores.synthesisLatencyMs.push(perQ.synthesisLatencyMs);
+                    if (perQ.planningLatencyMs !== undefined)
+                        config.scores.planningLatencyMs.push(perQ.planningLatencyMs);
+                    if (perQ.synthesisLatencyMs !== undefined)
+                        config.scores.synthesisLatencyMs.push(perQ.synthesisLatencyMs);
                     if (perQ.avgStepLatencyMs !== undefined) config.scores.avgStepLatencyMs.push(perQ.avgStepLatencyMs);
                 }
             } else {
@@ -212,7 +214,7 @@ async function fetchAblationStudyData(studyId: string): Promise<AblationData[]> 
                     config.scores.answerCorrectness.push(result.metrics.answerCorrectness);
                 if (result.metrics.hallucinationRate !== undefined)
                     config.scores.hallucinationRate.push(result.metrics.hallucinationRate);
-                
+
                 // Latency is not stored per-question in legacy data, use aggregated
                 if (result.metrics.totalLatencyMs !== undefined)
                     config.scores.latencyMs.push(result.metrics.totalLatencyMs);
@@ -356,17 +358,17 @@ async function runAnalysis() {
             printDescriptiveStats(calculateDescriptiveStats(ragLatency));
         }
 
-        if (ragPlanning.some(v => v > 0)) {
+        if (ragPlanning.some((v) => v > 0)) {
             console.log("\nRAG Planning Latency (ms):");
             printDescriptiveStats(calculateDescriptiveStats(ragPlanning));
         }
 
-        if (ragSynthesis.some(v => v > 0)) {
+        if (ragSynthesis.some((v) => v > 0)) {
             console.log("\nRAG Synthesis Latency (ms):");
             printDescriptiveStats(calculateDescriptiveStats(ragSynthesis));
         }
-        
-        if (ragAvgStep.some(v => v > 0)) {
+
+        if (ragAvgStep.some((v) => v > 0)) {
             console.log("\nRAG Avg Step Latency (ms):");
             printDescriptiveStats(calculateDescriptiveStats(ragAvgStep));
         }
