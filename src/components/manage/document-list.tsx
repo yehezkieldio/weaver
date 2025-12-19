@@ -33,6 +33,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
+/**
+ * Format file size to human-readable string with appropriate unit
+ */
+function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+    return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
+}
+
 interface Document {
     id: string;
     title: string;
@@ -161,6 +171,7 @@ export function DocumentList() {
                             <TableHead>Dokumen</TableHead>
                             <TableHead>Tipe</TableHead>
                             <TableHead>Chunking</TableHead>
+                            <TableHead>Chunks</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead>Diunggah</TableHead>
                             <TableHead className="w-12.5" />
@@ -169,7 +180,7 @@ export function DocumentList() {
                     <TableBody>
                         {filteredDocs.length === 0 ? (
                             <TableRow>
-                                <TableCell className="py-8 text-center text-muted-foreground" colSpan={6}>
+                                <TableCell className="py-8 text-center text-muted-foreground" colSpan={7}>
                                     {searchQuery
                                         ? "Tidak ada dokumen yang cocok dengan pencarian Anda"
                                         : "Belum ada dokumen yang diunggah"}
@@ -217,10 +228,14 @@ export function DocumentList() {
                                             <Layers className="h-3 w-3" />
                                             {doc.chunkingStrategy || "recursive"}
                                         </Badge>
-                                        {doc.metadata?.chunksCount && (
-                                            <p className="mt-1 text-muted-foreground text-xs">
-                                                {doc.metadata.chunksCount} chunks
-                                            </p>
+                                    </TableCell>
+                                    <TableCell>
+                                        {doc.metadata?.chunksCount ? (
+                                            <span className="text-muted-foreground text-sm">
+                                                {doc.metadata.chunksCount.toLocaleString()}
+                                            </span>
+                                        ) : (
+                                            <span className="text-muted-foreground/50 text-sm">-</span>
                                         )}
                                     </TableCell>
                                     <TableCell>{getStatusBadge(doc.processingStatus)}</TableCell>
@@ -279,7 +294,7 @@ export function DocumentList() {
                                 </div>
                                 <div>
                                     <p className="text-muted-foreground">Ukuran Berkas</p>
-                                    <p className="font-medium">{(selectedDoc.fileSize / 1024 / 1024).toFixed(2)} MB</p>
+                                    <p className="font-medium">{formatFileSize(selectedDoc.fileSize)}</p>
                                 </div>
                                 <div>
                                     <p className="text-muted-foreground">Jenis Dokumen</p>

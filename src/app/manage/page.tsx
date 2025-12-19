@@ -1,5 +1,6 @@
-import { Database, FileText, Upload } from "lucide-react";
+import { BarChart3, Database, FileText, Upload } from "lucide-react";
 import { DocumentList } from "@/components/manage/document-list";
+import { DocumentStatistics } from "@/components/manage/document-statistics";
 import { DocumentUploader } from "@/components/manage/document-uploader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -30,6 +31,10 @@ export default function ManagePage() {
                                 <FileText className="h-4 w-4" />
                                 Perpustakaan Dokumen
                             </TabsTrigger>
+                            <TabsTrigger className="gap-2" value="statistics">
+                                <BarChart3 className="h-4 w-4" />
+                                Statistik
+                            </TabsTrigger>
                         </TabsList>
 
                         <TabsContent value="upload">
@@ -38,6 +43,10 @@ export default function ManagePage() {
 
                         <TabsContent value="documents">
                             <DocumentList />
+                        </TabsContent>
+
+                        <TabsContent value="statistics">
+                            <DocumentStatistics />
                         </TabsContent>
                     </Tabs>
                 </div>

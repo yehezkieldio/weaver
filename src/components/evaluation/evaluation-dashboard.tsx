@@ -22,7 +22,6 @@ import {
     Target,
     TrendingDown,
     TrendingUp,
-    Users,
     Zap,
 } from "lucide-react";
 import { useMemo, useState } from "react";

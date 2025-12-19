@@ -15,7 +15,7 @@ import {
     Upload,
     X,
 } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -53,6 +53,19 @@ function stageToStatus(stage: string): UploadFile["status"] {
     return "processing";
 }
 
+/**
+ * Format file size to human-readable string with appropriate unit
+ */
+function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+    return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
+}
+
+/** Maximum number of concurrent uploads */
+const CONCURRENT_UPLOAD_LIMIT = 3;
+
 export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
     const [files, setFiles] = useState<UploadFile[]>([]);
     const [chunkingStrategy, setChunkingStrategy] = useState<ChunkingStrategy>("auto");
@@ -60,6 +73,13 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
     const [tags, setTags] = useState("");
     const [documentType, setDocumentType] = useState<string>("auto");
     const [languageHint, setLanguageHint] = useState<LanguageHint>("id");
+
+    // Batch upload state
+    const [isProcessingBatch, setIsProcessingBatch] = useState(false);
+    const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
+
+    // Track which files are currently being uploaded to prevent duplicates
+    const uploadingIdsRef = useRef<Set<string>>(new Set());
 
     const generateFileId = useCallback(
         (file: File) =>
@@ -274,11 +294,50 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
     };
 
     const uploadAll = async () => {
-        for (let i = 0; i < files.length; i++) {
-            if (files[i].status === "pending") {
-                await uploadFile(files[i], i);
+        const pendingFiles = files.filter((f) => f.status === "pending");
+        if (pendingFiles.length === 0 || isProcessingBatch) return;
+
+        setIsProcessingBatch(true);
+        setBatchProgress({ current: 0, total: pendingFiles.length });
+
+        // Create a queue of pending file indices
+        const queue = pendingFiles.map((f) => files.findIndex((file) => file.id === f.id));
+        let completedCount = 0;
+
+        const processNext = async (): Promise<void> => {
+            const index = queue.shift();
+            if (index === undefined || index === -1) return;
+
+            const fileItem = files[index];
+            if (!fileItem || fileItem.status !== "pending") {
+                // Skip if already processed or invalid
+                return processNext();
             }
-        }
+
+            // Prevent duplicate processing
+            if (uploadingIdsRef.current.has(fileItem.id)) {
+                return processNext();
+            }
+            uploadingIdsRef.current.add(fileItem.id);
+
+            try {
+                await uploadFile(fileItem, index);
+            } finally {
+                uploadingIdsRef.current.delete(fileItem.id);
+                completedCount += 1;
+                setBatchProgress((p) => ({ ...p, current: completedCount }));
+            }
+
+            // Process next item in queue
+            await processNext();
+        };
+
+        // Start concurrent processes up to the limit
+        const initialBatch = Math.min(CONCURRENT_UPLOAD_LIMIT, queue.length);
+        await Promise.all(Array.from({ length: initialBatch }, () => processNext()));
+
+        setIsProcessingBatch(false);
+        setBatchProgress({ current: 0, total: 0 });
     };
 
     const pendingCount = files.filter((f) => f.status === "pending").length;
@@ -538,9 +597,23 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
                     <div className="flex items-center justify-between">
                         <h3 className="font-medium text-foreground">Berkas ({files.length})</h3>
                         {pendingCount > 0 && (
-                            <Button onClick={uploadAll} size="sm">
-                                Unggah Semua ({pendingCount})
-                            </Button>
+                            <div className="flex items-center gap-2">
+                                {isProcessingBatch && batchProgress.total > 0 && (
+                                    <span className="text-muted-foreground text-sm">
+                                        {batchProgress.current} / {batchProgress.total}
+                                    </span>
+                                )}
+                                <Button disabled={isProcessingBatch} onClick={uploadAll} size="sm">
+                                    {isProcessingBatch ? (
+                                        <>
+                                            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                            Mengunggah...
+                                        </>
+                                    ) : (
+                                        `Unggah Semua (${pendingCount})`
+                                    )}
+                                </Button>
+                            </div>
                         )}
                     </div>
 
@@ -558,7 +631,7 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
                                                 {fileItem.file.name}
                                             </p>
                                             <Badge className="text-xs" variant="outline">
-                                                {(fileItem.file.size / 1024 / 1024).toFixed(2)} MB
+                                                {formatFileSize(fileItem.file.size)}
                                             </Badge>
                                             <Badge className="text-xs" variant="secondary">
                                                 {chunkingStrategy}

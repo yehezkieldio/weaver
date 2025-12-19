@@ -813,7 +813,7 @@ export async function calculateAllMetrics(
     groundTruth: string,
     retrievedIds?: string[],
     relevantIds?: Set<string>,
-    domain?: string,
+    _domain?: string,
     latencyTracker?: ReturnType<typeof createLatencyTracker>
 ): Promise<EvaluationMetrics> {
     console.log(
@@ -1276,13 +1276,13 @@ function averageMetrics(metricsArray: EvaluationMetrics[]): EvaluationMetrics {
 export function generateAblationReport(results: AblationResult[]): string {
     let report = "# Laporan Studi Ablasi RAG\n\n";
     report += `Tanggal: ${new Date().toISOString()}\n\n`;
-    
+
     // 1. Primary Metrics
     report += "## 1. Primary Metrics (Kualitas & Akurasi)\n";
     report += "Metrik utama yang menentukan keberhasilan output chatbot untuk pengguna akademik.\n\n";
     report += "| Konfigurasi | Correctness | Faithfulness | Relevancy | Citation Acc | Hallucination |\n";
     report += "|-------------|-------------|--------------|-----------|--------------|---------------|\n";
-    
+
     for (const result of results) {
         report += `| ${result.config.name} | `;
         report += `${(result.metrics.answerCorrectness * 100).toFixed(1)}% | `;
