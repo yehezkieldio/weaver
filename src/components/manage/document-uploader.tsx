@@ -11,11 +11,12 @@ import {
     Loader2,
     RefreshCw,
     Sparkles,
+    Square,
     Type,
     Upload,
     X,
 } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { BatchProgressResponse } from "@/lib/rag/batch-manager";
 import { cn } from "@/lib/utils";
 
 type ChunkingStrategy = "auto" | "recursive" | "semantic" | "sentence_window" | "hierarchical";
@@ -37,20 +39,10 @@ interface UploadFile {
     error?: string;
     documentId?: string;
     progressMessage?: string;
-    estimatedTimeMs?: number;
 }
 
 interface DocumentUploaderProps {
     onUploadComplete?: () => void;
-}
-
-/**
- * Map SSE stage to UploadFile status
- */
-function stageToStatus(stage: string): UploadFile["status"] {
-    if (stage === "completed") return "completed";
-    if (stage === "failed") return "error";
-    return "processing";
 }
 
 /**
@@ -63,8 +55,8 @@ function formatFileSize(bytes: number): string {
     return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
 }
 
-/** Maximum number of concurrent uploads */
-const CONCURRENT_UPLOAD_LIMIT = 3;
+/** Polling interval in milliseconds */
+const POLL_INTERVAL_MS = 2000;
 
 export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
     const [files, setFiles] = useState<UploadFile[]>([]);
@@ -76,10 +68,12 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
 
     // Batch upload state
     const [isProcessingBatch, setIsProcessingBatch] = useState(false);
+    const [batchId, setBatchId] = useState<string | null>(null);
     const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
 
-    // Track which files are currently being uploaded to prevent duplicates
-    const uploadingIdsRef = useRef<Set<string>>(new Set());
+    // Polling and abort control
+    const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const abortControllerRef = useRef<AbortController | null>(null);
 
     const generateFileId = useCallback(
         (file: File) =>
@@ -96,6 +90,16 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
         en: "EN",
         id: "ID",
     };
+
+    // Cleanup polling on unmount
+    useEffect(
+        () => () => {
+            if (pollIntervalRef.current) {
+                clearInterval(pollIntervalRef.current);
+            }
+        },
+        []
+    );
 
     const onDrop = useCallback(
         (acceptedFiles: File[]) => {
@@ -124,6 +128,212 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
         setFiles((prev) => prev.filter((_, i) => i !== index));
     };
 
+    /**
+     * Poll batch progress and update file states
+     */
+    const pollBatchProgress = useCallback(async (currentBatchId: string) => {
+        try {
+            const response = await fetch(`/api/documents/batch/${currentBatchId}`);
+            if (!response.ok) {
+                console.error("[DocumentUploader] Failed to poll batch progress");
+                return;
+            }
+
+            const data: BatchProgressResponse = await response.json();
+
+            // Update file states based on batch progress
+            setFiles((prev) => {
+                const updated = [...prev];
+                for (const item of data.items) {
+                    const fileIndex = updated.findIndex((f) => f.documentId === item.documentId);
+                    if (fileIndex !== -1) {
+                        const file = updated[fileIndex];
+                        // Map batch status to file status
+                        let newStatus = file.status;
+                        if (item.status === "completed") {
+                            newStatus = "completed";
+                        } else if (item.status === "failed") {
+                            newStatus = "error";
+                        } else if (item.status === "processing") {
+                            newStatus = "processing";
+                        }
+                        updated[fileIndex] = {
+                            ...file,
+                            progress: item.progress,
+                            status: newStatus,
+                            error: item.error,
+                        };
+                    }
+                }
+                return updated;
+            });
+
+            setBatchProgress({
+                current: data.completedDocuments + data.failedDocuments,
+                total: data.totalDocuments,
+            });
+
+            // Stop polling if batch is complete or cancelled
+            if (data.status === "completed" || data.status === "cancelled") {
+                if (pollIntervalRef.current) {
+                    clearInterval(pollIntervalRef.current);
+                    pollIntervalRef.current = null;
+                }
+                setIsProcessingBatch(false);
+                setBatchId(null);
+            }
+        } catch (error) {
+            console.error("[DocumentUploader] Polling error:", error);
+        }
+    }, []);
+
+    /**
+     * Start polling for batch progress
+     */
+    const startPolling = useCallback(
+        (currentBatchId: string) => {
+            // Clear any existing poll interval
+            if (pollIntervalRef.current) {
+                clearInterval(pollIntervalRef.current);
+            }
+
+            // Poll immediately
+            pollBatchProgress(currentBatchId);
+
+            // Then poll at interval
+            pollIntervalRef.current = setInterval(() => {
+                pollBatchProgress(currentBatchId);
+            }, POLL_INTERVAL_MS);
+        },
+        [pollBatchProgress]
+    );
+
+    /**
+     * Cancel the current batch upload
+     */
+    const cancelBatch = useCallback(async () => {
+        if (!batchId) return;
+
+        try {
+            await fetch(`/api/documents/batch/${batchId}`, { method: "DELETE" });
+        } catch (error) {
+            console.error("[DocumentUploader] Failed to cancel batch:", error);
+        }
+
+        // Stop polling
+        if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+        }
+
+        // Abort any pending requests
+        abortControllerRef.current?.abort();
+
+        setIsProcessingBatch(false);
+        setBatchId(null);
+        setBatchProgress({ current: 0, total: 0 });
+    }, [batchId]);
+
+    /**
+     * Upload all pending files using batch API
+     */
+    const uploadAll = async () => {
+        const pendingFiles = files.filter((f) => f.status === "pending");
+        if (pendingFiles.length === 0 || isProcessingBatch) return;
+
+        setIsProcessingBatch(true);
+        abortControllerRef.current = new AbortController();
+
+        // Mark all files as uploading
+        setFiles((prev) =>
+            prev.map((f) => (f.status === "pending" ? { ...f, status: "uploading" as const, progress: 5 } : f))
+        );
+
+        try {
+            // Create FormData with all files
+            const formData = new FormData();
+            for (const fileItem of pendingFiles) {
+                formData.append("files", fileItem.file);
+            }
+            formData.append("chunkingStrategy", chunkingStrategy);
+            formData.append("documentType", documentType);
+            formData.append("languageHint", languageHint);
+            if (category) formData.append("category", category);
+            if (tags) formData.append("tags", tags);
+
+            // Upload to batch endpoint
+            const response = await fetch("/api/documents/batch", {
+                method: "POST",
+                body: formData,
+                signal: abortControllerRef.current.signal,
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || "Batch upload failed");
+            }
+
+            const result = await response.json();
+
+            // Update files with document IDs from response
+            setFiles((prev) => {
+                const updated = [...prev];
+                for (const doc of result.documents) {
+                    // Match by filename
+                    const fileIndex = updated.findIndex(
+                        (f) => f.file.name === doc.fileName && f.status === "uploading"
+                    );
+                    if (fileIndex !== -1) {
+                        updated[fileIndex] = {
+                            ...updated[fileIndex],
+                            documentId: doc.id,
+                            status: doc.status === "failed" ? "error" : "processing",
+                            progress: doc.status === "failed" ? 0 : 15,
+                            error: doc.error,
+                        };
+                    }
+                }
+                return updated;
+            });
+
+            // Start polling for progress
+            if (result.batchId) {
+                setBatchId(result.batchId);
+                setBatchProgress({ current: 0, total: pendingFiles.length });
+                startPolling(result.batchId);
+            } else {
+                setIsProcessingBatch(false);
+            }
+
+            // Call onUploadComplete when batch is done (handled by polling)
+        } catch (error) {
+            if (error instanceof Error && error.name === "AbortError") {
+                // Upload was cancelled
+                setFiles((prev) =>
+                    prev.map((f) => (f.status === "uploading" ? { ...f, status: "pending" as const, progress: 0 } : f))
+                );
+            } else {
+                // Mark all uploading files as error
+                setFiles((prev) =>
+                    prev.map((f) =>
+                        f.status === "uploading"
+                            ? {
+                                  ...f,
+                                  status: "error" as const,
+                                  error: error instanceof Error ? error.message : "Upload failed",
+                              }
+                            : f
+                    )
+                );
+            }
+            setIsProcessingBatch(false);
+            setBatchId(null);
+        }
+    };
+
+    /**
+     * Upload a single file (for individual upload buttons)
+     */
     const uploadFile = async (fileItem: UploadFile, index: number) => {
         setFiles((prev) => prev.map((f, i) => (i === index ? { ...f, status: "uploading", progress: 10 } : f)));
 
@@ -135,8 +345,6 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
             formData.append("languageHint", languageHint);
             if (category) formData.append("category", category);
             if (tags) formData.append("tags", tags);
-
-            setFiles((prev) => prev.map((f, i) => (i === index ? { ...f, progress: 20 } : f)));
 
             const response = await fetch("/api/documents/upload", {
                 method: "POST",
@@ -151,67 +359,74 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
             const result = await response.json();
             const documentId = result.document.id;
 
+            // Mark as processing and start checking status via document list SWR
             setFiles((prev) =>
                 prev.map((f, i) =>
                     i === index
                         ? {
                               ...f,
                               status: "processing",
-                              progress: 25,
+                              progress: 50,
                               documentId,
-                              progressMessage: "Starting processing...",
+                              progressMessage: "Processing document...",
                           }
                         : f
                 )
             );
 
-            // Subscribe to SSE for real-time progress
-            const eventSource = new EventSource(`/api/documents/${documentId}/progress`);
-
-            eventSource.onmessage = (event) => {
+            // Simple polling for individual file (fallback for single uploads)
+            const checkStatus = async () => {
                 try {
-                    const data = JSON.parse(event.data);
-                    setFiles((prev) =>
-                        prev.map((f, i) =>
-                            i === index
-                                ? {
-                                      ...f,
-                                      progress: Math.max(25, data.progress),
-                                      progressMessage: data.message,
-                                      estimatedTimeMs: data.estimatedTimeMs,
-                                      status: stageToStatus(data.stage),
-                                      error: data.error,
-                                  }
-                                : f
-                        )
-                    );
-
-                    if (data.stage === "completed" || data.stage === "failed") {
-                        eventSource.close();
-                        if (data.stage === "completed") {
-                            onUploadComplete?.();
+                    const statusResponse = await fetch(`/api/documents?id=${documentId}`);
+                    if (statusResponse.ok) {
+                        const statusData = await statusResponse.json();
+                        const doc = statusData.documents?.[0] || statusData.document;
+                        if (doc) {
+                            if (doc.processingStatus === "completed") {
+                                setFiles((prev) =>
+                                    prev.map((f, i) => (i === index ? { ...f, status: "completed", progress: 100 } : f))
+                                );
+                                onUploadComplete?.();
+                                return true;
+                            }
+                            if (doc.processingStatus === "failed") {
+                                setFiles((prev) =>
+                                    prev.map((f, i) =>
+                                        i === index
+                                            ? {
+                                                  ...f,
+                                                  status: "error",
+                                                  error: doc.processingError || "Processing failed",
+                                              }
+                                            : f
+                                    )
+                                );
+                                return true;
+                            }
                         }
                     }
                 } catch {
-                    // Ignore parse errors (heartbeats)
+                    // Ignore polling errors
                 }
+                return false;
             };
 
-            eventSource.onerror = () => {
-                eventSource.close();
-                // Check final status via API
-                fetch(`/api/documents/${documentId}/progress`)
-                    .then((res) => res.json())
-                    .then((data) => {
-                        if (data.stage === "completed") {
-                            setFiles((prev) =>
-                                prev.map((f, i) => (i === index ? { ...f, status: "completed", progress: 100 } : f))
-                            );
-                            onUploadComplete?.();
-                        }
-                    })
-                    .catch(() => {});
-            };
+            // Poll status every 3 seconds for up to 5 minutes
+            let attempts = 0;
+            const maxAttempts = 100;
+            const interval = setInterval(async () => {
+                attempts += 1;
+                const done = await checkStatus();
+                if (done || attempts >= maxAttempts) {
+                    clearInterval(interval);
+                    if (attempts >= maxAttempts) {
+                        setFiles((prev) =>
+                            prev.map((f, i) => (i === index ? { ...f, status: "completed", progress: 100 } : f))
+                        );
+                        onUploadComplete?.();
+                    }
+                }
+            }, 3000);
         } catch (error) {
             setFiles((prev) =>
                 prev.map((f, i) =>
@@ -250,38 +465,44 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
                 throw new Error(error.error || "Retry failed");
             }
 
-            // Subscribe to progress
-            const eventSource = new EventSource(`/api/documents/${fileItem.documentId}/progress`);
-
-            eventSource.onmessage = (event) => {
+            // Poll status using simple approach
+            const checkStatus = async () => {
                 try {
-                    const data = JSON.parse(event.data);
-                    setFiles((prev) =>
-                        prev.map((f, i) =>
-                            i === index
-                                ? {
-                                      ...f,
-                                      progress: data.progress,
-                                      progressMessage: data.message,
-                                      status: stageToStatus(data.stage),
-                                      error: data.error,
-                                  }
-                                : f
-                        )
-                    );
-
-                    if (data.stage === "completed" || data.stage === "failed") {
-                        eventSource.close();
-                        if (data.stage === "completed") {
+                    const statusResponse = await fetch(`/api/documents?id=${fileItem.documentId}`);
+                    if (statusResponse.ok) {
+                        const statusData = await statusResponse.json();
+                        const doc = statusData.documents?.[0] || statusData.document;
+                        if (doc?.processingStatus === "completed") {
+                            setFiles((prev) =>
+                                prev.map((f, i) => (i === index ? { ...f, status: "completed", progress: 100 } : f))
+                            );
                             onUploadComplete?.();
+                            return true;
+                        }
+                        if (doc?.processingStatus === "failed") {
+                            setFiles((prev) =>
+                                prev.map((f, i) =>
+                                    i === index
+                                        ? { ...f, status: "error", error: doc.processingError || "Retry failed" }
+                                        : f
+                                )
+                            );
+                            return true;
                         }
                     }
                 } catch {
-                    // Ignore parse errors
+                    // Ignore
                 }
+                return false;
             };
 
-            eventSource.onerror = () => eventSource.close();
+            // Poll for up to 5 minutes
+            let attempts = 0;
+            const interval = setInterval(async () => {
+                attempts += 1;
+                const done = await checkStatus();
+                if (done || attempts >= 100) clearInterval(interval);
+            }, 3000);
         } catch (error) {
             setFiles((prev) =>
                 prev.map((f, i) =>
@@ -291,53 +512,6 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
                 )
             );
         }
-    };
-
-    const uploadAll = async () => {
-        const pendingFiles = files.filter((f) => f.status === "pending");
-        if (pendingFiles.length === 0 || isProcessingBatch) return;
-
-        setIsProcessingBatch(true);
-        setBatchProgress({ current: 0, total: pendingFiles.length });
-
-        // Create a queue of pending file indices
-        const queue = pendingFiles.map((f) => files.findIndex((file) => file.id === f.id));
-        let completedCount = 0;
-
-        const processNext = async (): Promise<void> => {
-            const index = queue.shift();
-            if (index === undefined || index === -1) return;
-
-            const fileItem = files[index];
-            if (!fileItem || fileItem.status !== "pending") {
-                // Skip if already processed or invalid
-                return processNext();
-            }
-
-            // Prevent duplicate processing
-            if (uploadingIdsRef.current.has(fileItem.id)) {
-                return processNext();
-            }
-            uploadingIdsRef.current.add(fileItem.id);
-
-            try {
-                await uploadFile(fileItem, index);
-            } finally {
-                uploadingIdsRef.current.delete(fileItem.id);
-                completedCount += 1;
-                setBatchProgress((p) => ({ ...p, current: completedCount }));
-            }
-
-            // Process next item in queue
-            await processNext();
-        };
-
-        // Start concurrent processes up to the limit
-        const initialBatch = Math.min(CONCURRENT_UPLOAD_LIMIT, queue.length);
-        await Promise.all(Array.from({ length: initialBatch }, () => processNext()));
-
-        setIsProcessingBatch(false);
-        setBatchProgress({ current: 0, total: 0 });
     };
 
     const pendingCount = files.filter((f) => f.status === "pending").length;
@@ -603,15 +777,26 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
                                         {batchProgress.current} / {batchProgress.total}
                                     </span>
                                 )}
-                                <Button disabled={isProcessingBatch} onClick={uploadAll} size="sm">
-                                    {isProcessingBatch ? (
-                                        <>
-                                            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                                            Mengunggah...
-                                        </>
-                                    ) : (
-                                        `Unggah Semua (${pendingCount})`
-                                    )}
+                                {isProcessingBatch ? (
+                                    <Button onClick={cancelBatch} size="sm" variant="destructive">
+                                        <Square className="mr-1 h-3 w-3" />
+                                        Hentikan
+                                    </Button>
+                                ) : (
+                                    <Button onClick={uploadAll} size="sm">
+                                        Unggah Semua ({pendingCount})
+                                    </Button>
+                                )}
+                            </div>
+                        )}
+                        {isProcessingBatch && pendingCount === 0 && (
+                            <div className="flex items-center gap-2">
+                                <span className="text-muted-foreground text-sm">
+                                    {batchProgress.current} / {batchProgress.total}
+                                </span>
+                                <Button onClick={cancelBatch} size="sm" variant="destructive">
+                                    <Square className="mr-1 h-3 w-3" />
+                                    Hentikan
                                 </Button>
                             </div>
                         )}
@@ -649,12 +834,6 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
                                                         <p className="text-muted-foreground text-xs">
                                                             {fileItem.progressMessage}
                                                         </p>
-                                                        {fileItem.estimatedTimeMs && fileItem.estimatedTimeMs > 0 && (
-                                                            <p className="text-muted-foreground text-xs">
-                                                                ~{Math.ceil(fileItem.estimatedTimeMs / 1000)} detik
-                                                                tersisa
-                                                            </p>
-                                                        )}
                                                     </div>
                                                 )}
                                             </div>
@@ -666,7 +845,7 @@ export function DocumentUploader({ onUploadComplete }: DocumentUploaderProps) {
                                     </div>
 
                                     <div className="flex items-center gap-2">
-                                        {fileItem.status === "pending" && (
+                                        {fileItem.status === "pending" && !isProcessingBatch && (
                                             <Button
                                                 onClick={() => uploadFile(fileItem, index)}
                                                 size="sm"
