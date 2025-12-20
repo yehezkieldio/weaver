@@ -163,19 +163,17 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
                     const ragStartTime = Date.now();
 
                     // Use stored configuration for retrieval
-                    console.log(
-                        `[Evaluation Run] DEBUG - Calling retrieveContext with: strategy=${retrievalStrategy}, useReranker=${useReranker}, rerankerStrategy=${rerankerStrategy}`
-                    );
+                    // NOTE: Do NOT pass minSimilarity here!
+                    // minSimilarity (0.3) is for cosine similarity (0-1 range)
+                    // hybridRetrieve uses RRF fusion with much smaller scores (0.01-0.05 range)
+                    // Let hybridRetrieve use its RRF-appropriate default minScore (0.01)
                     const contextResult = await retrieveContext(question.question, {
                         topK: 5,
-                        minSimilarity: 0.3, // Lower threshold for better recall
+                        // minSimilarity intentionally omitted - would break RRF score filtering
                         strategy: retrievalStrategy,
                         useReranker,
                         rerankerStrategy,
                     });
-                    console.log(
-                        `[Evaluation Run] DEBUG - retrieveContext returned: chunks=${contextResult.chunks.length}, context length=${contextResult.context.length}, strategy=${contextResult.retrievalStrategy}`
-                    );
                     // Mark retrieval phase AFTER retrieval completes
                     latencyTracker.mark("retrieval");
 
@@ -212,19 +210,8 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
                     });
                     const nonRagLatency = Date.now() - nonRagStartTime;
 
-                    // Log what we're passing to metric calculations
-                    const contextsForMetrics = contextResult.chunks.map((c) => c.content);
-                    console.log(
-                        `[Evaluation Run] Calculating metrics - answer: ${ragResponse.text.length} chars, contexts: ${contextsForMetrics.length}, ground truth: ${question.groundTruth.length} chars`
-                    );
-                    console.log(
-                        `[Evaluation Run] DEBUG - First context preview: ${contextsForMetrics[0]?.substring(0, 100) || "EMPTY"}`
-                    );
-                    console.log(
-                        `[Evaluation Run] DEBUG - relevantChunkIds: ${question.relevantChunkIds ? question.relevantChunkIds.length : "null"}`
-                    );
-
                     // Calculate RAGAS metrics for RAG response (includes all hallucination metrics)
+                    const contextsForMetrics = contextResult.chunks.map((c) => c.content);
                     const ragMetrics = await calculateAllMetrics(
                         question.question,
                         ragResponse.text,
@@ -234,10 +221,6 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
                         question.relevantChunkIds ? new Set(question.relevantChunkIds) : undefined, // relevantIds from ground truth labels
                         "universitas-mulia",
                         latencyTracker
-                    );
-
-                    console.log(
-                        `[Evaluation Run] DEBUG - ragMetrics faithfulness: ${ragMetrics.faithfulness}, hallucinationRate: ${ragMetrics.hallucinationRate}`
                     );
 
                     // Calculate metrics for non-RAG response

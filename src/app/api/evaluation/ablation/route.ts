@@ -178,6 +178,7 @@ export async function POST(request: Request) {
                 answerRelevancy: m.answerRelevancy,
                 contextPrecision: m.contextPrecision,
                 contextRecall: m.contextRecall,
+                contextRelevancy: m.contextRelevancy, // NEW: RAGAS Context Relevancy
                 answerCorrectness: m.answerCorrectness,
                 hallucinationRate: m.hallucinationRate,
             })),
