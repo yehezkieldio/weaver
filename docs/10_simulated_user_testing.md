@@ -306,11 +306,10 @@ This simulated user testing directly addresses reviewer concerns:
 ### Academic Position
 
 For thesis defense:
-- Present simulated user testing as **complementary** to RAGAS
-- Acknowledge it's **not a replacement** for real user studies
-- Justify as **practical approach** given timeline and resources
-- Emphasize **scalability** and **reproducibility**
-- Suggest real user studies as **future work**
+- Present simulated user testing as **the primary system-level validation** method for architectural research.
+- Emphasize that **objectivity, reproducibility, and scalability** are prioritized over subjective human feedback for this technical implementation study.
+- Position the method as **aligned with modern RAG research practices** (e.g., RAGAS, AutoEval).
+- Frame human user studies as a separate, future research direction focused on HCI/UX, distinct from the current system architecture focus.
 
 ## Example Output
 

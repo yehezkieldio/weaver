@@ -656,7 +656,10 @@ Evaluasi tingkat sistem menggunakan **Simulated User Testing** untuk memvalidasi
 **Lokasi Dokumen Detail**: `docs/10_simulated_user_testing.md`
 
 ### 8.1 Tujuan
-Mengatasi kesenjangan metodologi antara metrik komponen (RAGAS) dengan klaim "Implementasi Sistem" pada judul penelitian. Memastikan sistem berfungsi baik dalam skenario percakapan multi-turn yang realistis.
+Tujuan utama dari evaluasi ini adalah menyediakan validasi tingkat sistem yang **ilmiah, terukur, dan bebas bias**. Berbeda dengan *human user testing* konvensional yang seringkali subjektif dan sulit direplikasi, Simulated User Testing memungkinkan:
+1.  **Validasi Klaim "Implementasi"**: Membuktikan sistem berfungsi secara *end-to-end* dalam skenario realistis.
+2.  **Reproduktifitas Penuh**: Setiap sesi tes dapat diulang dengan input yang identik untuk memverifikasi perbaikan.
+3.  **Stress Testing**: Menguji ketahanan sistem terhadap ratusan variasi percakapan tanpa kelelahan evaluator.
 
 ### 8.2 Metrik Utama
 *   **Task Completion Rate**: Persentase percakapan di mana pengguna (simulasi) berhasil mendapatkan informasi yang dicari.

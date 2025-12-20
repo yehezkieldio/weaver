@@ -95,13 +95,17 @@ Berfokus pada kualitas retrieval dan generation per pertanyaan individual:
 - **Hallucination Rate:** Persentase informasi yang tidak berdasar.
 
 ### 2. System-Level Evaluation (Simulated User)
-Mengevaluasi implementasi sistem secara menyeluruh menggunakan **LLM-based User Simulation** untuk mengatasi gap antara metrik komponen dan klaim "Implementasi":
+Mengevaluasi implementasi sistem secara menyeluruh menggunakan **LLM-based User Simulation**. Pendekatan ini dipilih untuk memastikan evaluasi yang:
+- **Objektif**: Menghilangkan bias subjektif evaluator manusia.
+- **Reproducible**: Dapat diulang dengan kondisi yang sama persis.
+- **Scalable**: Dapat menguji ratusan skenario percakapan secara otomatis.
+
+Evaluasi ini mencakup:
 - **Metodologi:** Menggunakan persona (Mahasiswa Baru, Mahasiswa Tingkat Akhir, Dosen) untuk melakukan percakapan multi-turn.
 - **Metrics:**
   - **Task Completion Rate:** Keberhasilan pengguna mencapai tujuan informasi.
   - **Conversation Coherence:** Kualitas alur percakapan antar giliran.
   - **Context Retention:** Kemampuan sistem mengingat konteks sebelumnya.
-- **Justifikasi:** Memvalidasi aspek interaksi UI/UX dan alur percakapan yang tidak tertangkap oleh RAGAS.
 
 ### 3. Statistical Analysis
 - **Paired t-test:** Membandingkan performa RAG vs Non-RAG pada pertanyaan yang sama.

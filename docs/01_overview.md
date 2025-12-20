@@ -148,6 +148,8 @@ Sistem ini dibangun berdasarkan fondasi penelitian berikut:
 
 ## 7. Metrik Evaluasi
 
+Sistem ini mengadopsi pendekatan **Automated-First Evaluation** yang memprioritaskan objektivitas dan reproduktifitas. Evaluasi dilakukan tanpa keterlibatan manusia (*human-in-the-loop*) untuk menghindari bias subjektif dan memungkinkan pengujian skala besar yang konsisten.
+
 Sistem mengimplementasikan framework evaluasi berbasis RAGAS:
 
 ### 7.1 Core RAGAS Metrics

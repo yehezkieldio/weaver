@@ -147,13 +147,15 @@ Domain informasi akademik universitas Indonesia memiliki karakteristik unik yang
 
 ### 6.2 Limitasi Metodologis
 
-1. **LLM-as-Judge Bias**: Metrik otomatis mungkin memiliki bias sistematis yang berbeda dari human judgment.
+1. **Fokus pada Automated Evaluation**: Meskipun evaluasi kegunaan berpusat pada manusia (*human-centered usability evaluation*) bernilai, penelitian ini secara sengaja memprioritaskan evaluasi otomatis dan terukur (*automated and reproducible evaluation*) untuk memastikan skalabilitas, objektivitas, dan keterulangan hasil (*repeatability*). Pendekatan ini sejalan dengan praktik evaluasi terkini dalam penelitian *Retrieval-Augmented Generation* modern di mana metrik sistem (RAGAS + Simulated User) menjadi standar primer.
 
-2. **Sample Size**: Jumlah pertanyaan evaluasi (50) mungkin tidak cukup untuk generalisasi broad.
+2. **LLM-as-Judge Bias**: Metrik otomatis mungkin memiliki bias sistematis yang berbeda dari human judgment. Hal ini dimitigasi dengan penggunaan model *state-of-the-art* (GPT-4o) sebagai evaluator.
 
-3. **Document Corpus**: Evaluasi terbatas pada dokumen yang di-upload; tidak mencakup semua dokumen universitas.
+3. **Sample Size**: Jumlah pertanyaan evaluasi (50) mungkin tidak cukup untuk generalisasi broad, namun valid secara statistik untuk *comparative analysis*.
 
-4. **Temporal Validity**: Informasi akademik berubah setiap semester; evaluasi mencerminkan snapshot waktu tertentu.
+4. **Document Corpus**: Evaluasi terbatas pada dokumen yang di-upload; tidak mencakup semua dokumen universitas.
+
+5. **Temporal Validity**: Informasi akademik berubah setiap semester; evaluasi mencerminkan snapshot waktu tertentu.
 
 ### 6.3 Mitigasi Limitasi
 
