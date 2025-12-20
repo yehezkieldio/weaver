@@ -1,4 +1,5 @@
 import { parseArgs } from "node:util";
+import consola from "consola";
 
 // Regex constants for validation
 const REGEX_UNIVERSITAS_MULIA = /Universitas Mulia/i;
@@ -83,8 +84,8 @@ const TEST_CASES: TestCase[] = [
     },
 ];
 
-console.log("\n📦 Starting Blackbox Test Suite");
-console.log(`Target: ${BASE_URL}\n`);
+consola.start("Starting Blackbox Test Suite");
+consola.info(`Target: ${BASE_URL}\n`);
 
 async function runTest(testCase: TestCase): Promise<boolean> {
     process.stdout.write(`Testing ${testCase.id}: ${testCase.description}... `);
@@ -132,23 +133,23 @@ async function runTest(testCase: TestCase): Promise<boolean> {
         const cleanText = fullText.replace(/^\d+:/gm, "").replace(/"/g, "").replace(/\n/g, " ");
 
         if (VERBOSE) {
-            console.log(`\n[Response]: ${cleanText.substring(0, 100)}...`);
+            consola.debug(`[Response]: ${cleanText.substring(0, 100)}...`);
         }
 
         const passed = testCase.validate(cleanText);
 
         if (passed) {
-            console.log("✅ PASS");
+            consola.success("PASS");
             return true;
         }
 
-        console.log("❌ FAIL");
-        console.log(`   Expected matches for: ${testCase.expectedKeywords.join(", ")}`);
-        console.log(`   Got: ${cleanText.substring(0, 200)}...`);
+        consola.error("FAIL");
+        consola.info(`   Expected matches for: ${testCase.expectedKeywords.join(", ")}`);
+        consola.info(`   Got: ${cleanText.substring(0, 200)}...`);
         return false;
     } catch (error) {
-        console.log("❌ ERROR");
-        console.log(`   ${error}`);
+        consola.error("ERROR");
+        consola.error(`   ${error}`);
         return false;
     }
 }
@@ -162,12 +163,12 @@ async function main() {
         }
     }
 
-    console.log("\n----------------------------------------");
-    console.log(`Test Summary: ${passed}/${TEST_CASES.length} passed`);
+    consola.info("\n----------------------------------------");
+    consola.info(`Test Summary: ${passed}/${TEST_CASES.length} passed`);
 
     if (passed !== TEST_CASES.length) {
         process.exit(1);
     }
 }
 
-main().catch(console.error);
+main().catch((err) => consola.error(err));

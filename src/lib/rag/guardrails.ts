@@ -590,10 +590,10 @@ export async function validateInput(
         useLLMSentiment?: boolean;
     }
 ): Promise<GuardrailResult> {
-    console.log(`[validateInput] Starting input validation - input length: ${input.length}`);
+    consola.debug(`[validateInput] Starting input validation - input length: ${input.length}`);
     const violations: GuardrailViolation[] = [];
     const modifiedContent = checkPIIPatterns(input, violations);
-    console.log(
+    consola.debug(
         `[validateInput] PII check complete - violations found: ${violations.filter((v) => v.type === "pii_detection").length}`
     );
 
@@ -601,26 +601,26 @@ export async function validateInput(
     let requiresEscalation = false;
 
     checkPromptInjection(input, violations);
-    console.log(
+    consola.debug(
         `[validateInput] Prompt injection check complete - violations: ${violations.filter((v) => v.type === "prompt_injection").length}`
     );
 
     checkToxicity(input, violations);
-    console.log(
+    consola.debug(
         `[validateInput] Toxicity check complete - violations: ${violations.filter((v) => v.type === "toxicity").length}`
     );
 
     checkAcademicIntegrity(input, violations);
-    console.log(
+    consola.debug(
         `[validateInput] Academic integrity check complete - violations: ${violations.filter((v) => v.type === "academic_integrity").length}`
     );
 
     if (options?.checkNegativeReactions !== false) {
-        console.log("[validateInput] Checking for negative reactions");
+        consola.debug("[validateInput] Checking for negative reactions");
         const negativeReaction = await detectNegativeReaction(input);
 
         if (negativeReaction.detected) {
-            console.log(
+            consola.debug(
                 `[validateInput] Negative reaction detected - type: ${negativeReaction.type}, confidence: ${negativeReaction.confidence.toFixed(2)}`
             );
             suggestedResponse = negativeReaction.suggestedResponse;
@@ -635,15 +635,15 @@ export async function validateInput(
             });
 
             if (negativeReaction.type === "frustration" && negativeReaction.confidence > 0.8) {
-                console.log("[validateInput] High confidence frustration detected - escalation required");
+                consola.debug("[validateInput] High confidence frustration detected - escalation required");
                 requiresEscalation = true;
             }
         }
 
         if (options?.useLLMSentiment && !negativeReaction.detected) {
-            console.log("[validateInput] Running LLM sentiment analysis");
+            consola.debug("[validateInput] Running LLM sentiment analysis");
             const sentiment = await analyzeSentimentLLM(input);
-            console.log(
+            consola.debug(
                 `[validateInput] LLM sentiment: ${sentiment.sentiment}, intensity: ${sentiment.intensity.toFixed(2)}`
             );
 
@@ -651,7 +651,7 @@ export async function validateInput(
                 (sentiment.sentiment === "frustrated" || sentiment.sentiment === "confused") &&
                 sentiment.intensity > 0.6
             ) {
-                console.log(`[validateInput] Significant ${sentiment.sentiment} sentiment detected`);
+                consola.debug(`[validateInput] Significant ${sentiment.sentiment} sentiment detected`);
                 violations.push({
                     rule: `sentiment_${sentiment.sentiment}`,
                     type: "feedback_sentiment",
@@ -665,7 +665,7 @@ export async function validateInput(
                 });
 
                 if (sentiment.suggestedAction === "escalate") {
-                    console.log("[validateInput] LLM sentiment analysis recommends escalation");
+                    consola.debug("[validateInput] LLM sentiment analysis recommends escalation");
                     requiresEscalation = true;
                 }
             }
@@ -673,13 +673,13 @@ export async function validateInput(
     }
 
     checkTopicRelevance(input, violations);
-    console.log(
+    consola.debug(
         `[validateInput] Topic relevance check complete - violations: ${violations.filter((v) => v.type === "topic_relevance").length}`
     );
 
     const maxSeverity = calculateMaxSeverity(violations);
     const hasBlockingViolation = violations.some((v) => v.action === "blocked");
-    console.log(
+    consola.debug(
         `[validateInput] Validation summary - passed: ${!hasBlockingViolation}, maxSeverity: ${maxSeverity}, totalViolations: ${violations.length}`
     );
 
@@ -743,14 +743,14 @@ export async function validateOutput(
         query: string;
     }
 ): Promise<GuardrailResult> {
-    console.log(`[validateOutput] Starting output validation - output length: ${output.length}`);
+    consola.debug(`[validateOutput] Starting output validation - output length: ${output.length}`);
     const violations: GuardrailViolation[] = [];
 
     // 1. PII Detection in output
-    console.log("[validateOutput] Checking for PII in output");
+    consola.debug("[validateOutput] Checking for PII in output");
     for (const [piiType, pattern] of Object.entries(PII_PATTERNS)) {
         if (pattern.test(output)) {
-            console.log(`[validateOutput] PII detected - type: ${piiType}`);
+            consola.debug(`[validateOutput] PII detected - type: ${piiType}`);
             violations.push({
                 rule: `output_pii_${piiType}`,
                 type: "pii_detection",
@@ -762,10 +762,10 @@ export async function validateOutput(
     }
 
     // 2. Toxicity in output
-    console.log("[validateOutput] Checking output for toxicity");
+    consola.debug("[validateOutput] Checking output for toxicity");
     for (const pattern of TOXICITY_PATTERNS) {
         if (pattern.test(output)) {
-            console.log("[validateOutput] Toxicity detected in output");
+            consola.debug("[validateOutput] Toxicity detected in output");
             violations.push({
                 rule: "output_toxicity",
                 type: "toxicity",
@@ -778,7 +778,7 @@ export async function validateOutput(
 
     // 3. Hallucination detection (if context provided and conditions met)
     if (context.retrievedChunks && context.retrievedChunks.length > 0) {
-        console.log(
+        consola.debug(
             `[validateOutput] Running hallucination detection with ${context.retrievedChunks.length} context chunks`
         );
         // Optimize: only check for hallucinations if answer contains risky content
@@ -787,7 +787,7 @@ export async function validateOutput(
             skipIfLowRisk: true, // Skip if answer doesn't contain risky claims
         });
         if (hallucinations.hasHallucination) {
-            console.log(`[validateOutput] Hallucination detected - reason: ${hallucinations.reason}`);
+            consola.debug(`[validateOutput] Hallucination detected - reason: ${hallucinations.reason}`);
             violations.push({
                 rule: "hallucination",
                 type: "hallucination",
@@ -796,13 +796,13 @@ export async function validateOutput(
                 action: "flagged",
             });
         } else {
-            console.log("[validateOutput] Hallucination check passed");
+            consola.debug("[validateOutput] Hallucination check passed");
         }
     }
 
     // 4. Citation verification (with flexible APA format matching)
     if (context.retrievedChunks) {
-        console.log("[validateOutput] Verifying citations");
+        consola.debug("[validateOutput] Verifying citations");
         violations.push(...verifyCitations(output, context.retrievedChunks));
     }
 
@@ -817,7 +817,7 @@ export async function validateOutput(
     );
 
     const hasBlockingViolation = violations.some((v) => v.action === "blocked");
-    console.log(
+    consola.debug(
         `[validateOutput] Validation summary - passed: ${!hasBlockingViolation}, severity: ${maxSeverity}, violations: ${violations.length}`
     );
 

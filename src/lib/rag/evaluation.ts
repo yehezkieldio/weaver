@@ -285,17 +285,17 @@ function detectLanguage(_text: string): "id" {
  * - Aligns with academic NLI-based factuality research
  */
 export async function calculateFaithfulness(answer: string, contexts: string[]): Promise<number> {
-    console.log(
+    consola.debug(
         `[calculateFaithfulness] RAGAS-faithful calculation - answer: ${answer.length} chars, contexts: ${contexts.length}`
     );
     if (!answer || contexts.length === 0) {
-        console.log("[calculateFaithfulness] Skipping - empty answer or contexts");
+        consola.debug("[calculateFaithfulness] Skipping - empty answer or contexts");
         return 0;
     }
 
     try {
         // Step 1: Decompose answer into individual claims
-        console.log("[calculateFaithfulness] Step 1: Decomposing answer into claims");
+        consola.debug("[calculateFaithfulness] Step 1: Decomposing answer into claims");
         const { text: claimsText } = await generateText({
             model: JUDGE_MODEL,
             prompt: `Pecah jawaban berikut menjadi klaim-klaim faktual individual. Setiap klaim harus merupakan pernyataan tunggal yang dapat diverifikasi.
@@ -314,16 +314,16 @@ Contoh format: ["Klaim pertama", "Klaim kedua", "Klaim ketiga"]`,
             claims = extractedClaims;
         } else {
             // Fallback: treat whole answer as single claim
-            console.log("[calculateFaithfulness] Could not parse claims, using answer as single claim");
+            consola.debug("[calculateFaithfulness] Could not parse claims, using answer as single claim");
             claims = [answer.substring(0, 500)];
         }
 
         if (claims.length === 0) {
-            console.log("[calculateFaithfulness] No claims found, returning 1.0");
+            consola.debug("[calculateFaithfulness] No claims found, returning 1.0");
             return 1.0; // No claims to verify = faithful by default
         }
 
-        console.log(`[calculateFaithfulness] Step 2: Verifying ${claims.length} claims against context`);
+        consola.debug(`[calculateFaithfulness] Step 2: Verifying ${claims.length} claims against context`);
 
         // Step 2: Check each claim against contexts using NLI
         const contextText = contexts.join("\n\n");
@@ -348,13 +348,13 @@ Contoh format: ["Klaim pertama", "Klaim kedua", "Klaim ketiga"]`,
         }
 
         const result = supportedCount / claims.length;
-        console.log(
+        consola.debug(
             `[calculateFaithfulness] Result: ${result.toFixed(3)} (${supportedCount}/${claims.length} claims supported)`
         );
         return result;
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error(
+        consola.error(
             `[calculateFaithfulness] FAILED - answer length: ${answer.length}, contexts: ${contexts.length}, error: ${errorMessage}`
         );
         return 0;
@@ -382,7 +382,7 @@ export async function calculateAnswerRelevancy(question: string, answer: string,
     if (!(question && answer)) return 0;
 
     try {
-        console.log(
+        consola.debug(
             `[calculateAnswerRelevancy] RAGAS-faithful calculation - generating ${numQuestions} synthetic questions`
         );
 
@@ -401,7 +401,7 @@ Contoh format: ["Pertanyaan 1?", "Pertanyaan 2?", "Pertanyaan 3?"]`,
 
         const extractedQuestions = extractJsonArray(questionsText);
         if (!extractedQuestions) {
-            console.log(
+            consola.debug(
                 "[calculateAnswerRelevancy] Could not parse synthetic questions, falling back to embedding comparison"
             );
             // Fallback to simple embedding comparison
@@ -414,7 +414,7 @@ Contoh format: ["Pertanyaan 1?", "Pertanyaan 2?", "Pertanyaan 3?"]`,
         const syntheticQuestions: string[] = extractedQuestions;
 
         if (syntheticQuestions.length === 0) {
-            console.log("[calculateAnswerRelevancy] No synthetic questions generated, using fallback");
+            consola.debug("[calculateAnswerRelevancy] No synthetic questions generated, using fallback");
             const [questionEmbed, answerEmbed] = await Promise.all([
                 getCachedEmbedding(question),
                 getCachedEmbedding(answer),
@@ -423,7 +423,7 @@ Contoh format: ["Pertanyaan 1?", "Pertanyaan 2?", "Pertanyaan 3?"]`,
         }
 
         // Step 2: Compute embeddings for all questions (using cache for efficiency)
-        console.log(
+        consola.debug(
             `[calculateAnswerRelevancy] Computing embeddings for ${syntheticQuestions.length} synthetic questions`
         );
         const [originalEmbed, ...syntheticEmbeds] = await Promise.all([
@@ -437,13 +437,13 @@ Contoh format: ["Pertanyaan 1?", "Pertanyaan 2?", "Pertanyaan 3?"]`,
         );
 
         const avgSimilarity = similarities.reduce((a: number, b: number) => a + b, 0) / similarities.length;
-        console.log(
+        consola.debug(
             `[calculateAnswerRelevancy] Result: ${avgSimilarity.toFixed(3)} (avg of ${similarities.length} similarities)`
         );
 
         return avgSimilarity;
     } catch (error) {
-        console.error("[calculateAnswerRelevancy] Calculation error:", error);
+        consola.error("[calculateAnswerRelevancy] Calculation error:", error);
         return 0;
     }
 }
@@ -478,7 +478,7 @@ Jawab HANYA dengan angka antara 0 dan 1.`;
         const score = Number.parseFloat(text.trim());
         return Number.isNaN(score) ? 0 : Math.min(1, Math.max(0, score));
     } catch (error) {
-        console.error("Context precision calculation error:", error);
+        consola.error("Context precision calculation error:", error);
         return 0;
     }
 }
@@ -508,7 +508,7 @@ Jawab HANYA dengan angka antara 0 dan 1.
         const score = Number.parseFloat(text.trim());
         return Number.isNaN(score) ? 0 : Math.min(1, Math.max(0, score));
     } catch (error) {
-        console.error("Context recall calculation error:", error);
+        consola.error("Context recall calculation error:", error);
         return 0;
     }
 }
@@ -532,7 +532,7 @@ export async function calculateContextRelevancy(question: string, contexts: stri
     if (!question || contexts.length === 0) return 0;
 
     try {
-        console.log(`[calculateContextRelevancy] Evaluating ${contexts.length} contexts for query relevancy`);
+        consola.debug(`[calculateContextRelevancy] Evaluating ${contexts.length} contexts for query relevancy`);
 
         // Evaluate each context's relevance to the question in parallel
         const relevancePromises = contexts.map(async (context) => {
@@ -560,12 +560,12 @@ Jawab HANYA dengan angka.`,
         const relevanceScores = await Promise.all(relevancePromises);
         const avgRelevancy = relevanceScores.reduce((a, b) => a + b, 0) / relevanceScores.length;
 
-        console.log(
+        consola.debug(
             `[calculateContextRelevancy] Result: ${avgRelevancy.toFixed(3)} (avg of ${relevanceScores.length} contexts)`
         );
         return avgRelevancy;
     } catch (error) {
-        console.error("[calculateContextRelevancy] Calculation error:", error);
+        consola.error("[calculateContextRelevancy] Calculation error:", error);
         return 0;
     }
 }
@@ -602,7 +602,7 @@ Jawab HANYA dengan angka antara 0 dan 1.`;
 
         return semanticSimilarity * 0.3 + validFactualScore * 0.7;
     } catch (error) {
-        console.error("Answer correctness calculation error:", error);
+        consola.error("Answer correctness calculation error:", error);
         return 0;
     }
 }
@@ -634,7 +634,7 @@ Berikan skor 0-1. Jawab HANYA dengan angka.`;
         const score = Number.parseFloat(text.trim());
         return Number.isNaN(score) ? 0 : Math.min(1, Math.max(0, score));
     } catch (error) {
-        console.error("Citation accuracy calculation error:", error);
+        consola.error("Citation accuracy calculation error:", error);
         return 0;
     }
 }
@@ -667,7 +667,7 @@ Jawab HANYA dengan angka.`;
         const score = Number.parseFloat(text.trim());
         return Number.isNaN(score) ? 0.5 : Math.min(1, Math.max(0, score));
     } catch (error) {
-        console.error("Hallucination rate calculation error:", error);
+        consola.error("Hallucination rate calculation error:", error);
         return 0.5;
     }
 }
@@ -700,7 +700,7 @@ Berikan skor 0-1 berdasarkan tingkat entailment. Jawab HANYA dengan angka.`;
         const score = Number.parseFloat(text.trim());
         return Number.isNaN(score) ? 0.5 : Math.min(1, Math.max(0, score));
     } catch (error) {
-        console.error("Factual consistency calculation error:", error);
+        consola.error("Factual consistency calculation error:", error);
         return 0.5;
     }
 }
@@ -733,7 +733,7 @@ Berikan skor 0-1. Jawab HANYA dengan angka.`;
         const score = Number.parseFloat(text.trim());
         return Number.isNaN(score) ? 0.5 : Math.min(1, Math.max(0, score));
     } catch (error) {
-        console.error("Source attribution calculation error:", error);
+        consola.error("Source attribution calculation error:", error);
         return 0.5;
     }
 }
@@ -767,7 +767,7 @@ Jawab HANYA dengan angka.`;
         const score = Number.parseFloat(text.trim());
         return Number.isNaN(score) ? 0.5 : Math.min(1, Math.max(0, score));
     } catch (error) {
-        console.error("Contradiction score calculation error:", error);
+        consola.error("Contradiction score calculation error:", error);
         return 0.5;
     }
 }
@@ -816,7 +816,7 @@ export async function calculateAllMetrics(
     _domain?: string,
     latencyTracker?: ReturnType<typeof createLatencyTracker>
 ): Promise<EvaluationMetrics> {
-    console.log(
+    consola.debug(
         `[calculateAllMetrics] Starting metric calculation - question: "${question.substring(0, 60)}...", answer length: ${answer.length}`
     );
     const [
@@ -848,7 +848,7 @@ export async function calculateAllMetrics(
         calculateContradictionScore(answer, contexts),
     ]);
 
-    console.log(
+    consola.debug(
         `[calculateAllMetrics] Core metrics calculated - faithfulness: ${faithfulness.toFixed(3)}, relevancy: ${answerRelevancy.toFixed(3)}`
     );
 
@@ -856,7 +856,7 @@ export async function calculateAllMetrics(
     const retrievalNdcg = retrievedIds && relevantIds ? calculateNDCG(retrievedIds, relevantIds) : 0;
     const retrievalMrr = retrievedIds && relevantIds ? calculateMRR(retrievedIds, relevantIds) : 0;
     const retrievalPrecision = retrievedIds && relevantIds ? calculateRetrievalPrecision(retrievedIds, relevantIds) : 0;
-    console.log(
+    consola.debug(
         `[calculateAllMetrics] Retrieval metrics - NDCG: ${retrievalNdcg.toFixed(3)}, MRR: ${retrievalMrr.toFixed(3)}, Precision: ${retrievalPrecision.toFixed(3)}`
     );
 
@@ -876,7 +876,7 @@ export async function calculateAllMetrics(
         tokenEfficiency,
     } = aggregateLatencyAndTokenMetrics(latencyTracker, answer, contexts);
 
-    console.log(
+    consola.debug(
         `[calculateAllMetrics] Latency metrics - total: ${totalLatencyMs}ms, generation: ${generationLatencyMs}ms, hallucination rate: ${hallucinationRate.toFixed(3)}`
     );
 
@@ -1047,13 +1047,13 @@ export async function runAblationStudy(
     const results: AblationResult[] = [];
     const { onProgress } = options;
 
-    console.log(
+    consola.debug(
         `[runAblationStudy] Starting ablation study with ${configs.length} configs and ${questions.length} questions`
     );
 
     for (let configIdx = 0; configIdx < configs.length; configIdx++) {
         const config = configs[configIdx];
-        console.log(`[runAblationStudy] Testing config ${configIdx + 1}/${configs.length}: ${config.name}`);
+        consola.debug(`[runAblationStudy] Testing config ${configIdx + 1}/${configs.length}: ${config.name}`);
 
         const latencyTracker = createLatencyTracker();
         latencyTracker.start();
@@ -1065,7 +1065,7 @@ export async function runAblationStudy(
             const { question, groundTruth } = questions[qIdx];
             const questionStartTime = Date.now();
 
-            console.log(
+            consola.debug(
                 `[runAblationStudy] [${config.name}] Question ${qIdx + 1}/${questions.length}: "${question.substring(0, 50)}..."`
             );
 
@@ -1083,11 +1083,11 @@ export async function runAblationStudy(
                 contexts = pipelineResult.contexts;
                 retrievedIds = pipelineResult.retrievedIds;
 
-                console.log(
+                consola.debug(
                     `[runAblationStudy] [${config.name}] Answer generated - length: ${answer.length}, contexts: ${contexts.length}`
                 );
             } catch (error) {
-                console.error(`[runAblationStudy] [${config.name}] Error processing question:`, error);
+                consola.error(`[runAblationStudy] [${config.name}] Error processing question:`, error);
                 // On error, use empty results but continue with study
                 answer = `[Error] Failed to generate answer for: ${question}`;
                 contexts = [];
@@ -1123,12 +1123,12 @@ export async function runAblationStudy(
             perQuestionMetrics: allMetrics, // Store per-question data for ANOVA
         });
 
-        console.log(
+        consola.debug(
             `[runAblationStudy] Config ${config.name} completed - avgFaithfulness: ${avgMetrics.faithfulness.toFixed(3)}, avgCorrectness: ${avgMetrics.answerCorrectness.toFixed(3)}`
         );
     }
 
-    console.log(`[runAblationStudy] Ablation study completed - ${results.length} configurations tested`);
+    consola.debug(`[runAblationStudy] Ablation study completed - ${results.length} configurations tested`);
     return results;
 }
 
@@ -1143,7 +1143,7 @@ async function executeRagPipeline(
 ): Promise<{ answer: string; contexts: string[]; retrievedIds: string[] }> {
     // Baseline: No RAG - pure LLM response
     if (!config.useRag) {
-        console.log(`[executeRagPipeline] Using baseline (no RAG) for: ${config.name}`);
+        consola.debug(`[executeRagPipeline] Using baseline (no RAG) for: ${config.name}`);
         latencyTracker.mark("generation");
 
         const { text } = await generateText({
@@ -1159,7 +1159,7 @@ async function executeRagPipeline(
 
     // Agentic RAG mode: Use the full agentic pipeline with tools
     if (config.useAgenticMode) {
-        console.log(`[executeRagPipeline] Using agentic RAG for: ${config.name}`);
+        consola.debug(`[executeRagPipeline] Using agentic RAG for: ${config.name}`);
         latencyTracker.mark("planning");
 
         const agenticResult = await runAgenticRag(question, {
@@ -1180,7 +1180,7 @@ async function executeRagPipeline(
     }
 
     // Standard RAG mode: Retrieval + Generation
-    console.log(`[executeRagPipeline] Using standard RAG for: ${config.name}`);
+    consola.debug(`[executeRagPipeline] Using standard RAG for: ${config.name}`);
 
     // Step 1: Retrieval
     latencyTracker.mark("retrieval", { documentsProcessed: config.topK });

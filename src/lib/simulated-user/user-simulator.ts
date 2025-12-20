@@ -98,7 +98,7 @@ Generate the response:`;
             reasoning: parsed.reasoning || "",
         };
     } catch (error) {
-        console.error("Error generating user message:", error);
+        consola.error("Error generating user message:", error);
         // Fallback: generate a simple clarification question
         return {
             message:
@@ -190,7 +190,7 @@ Just output the follow-up question, nothing else.`;
 
         return text.trim();
     } catch (error) {
-        console.error("Error generating follow-up:", error);
+        consola.error("Error generating follow-up:", error);
         // Fallback
         return persona.language === "id"
             ? "Bisakah Anda memberikan informasi lebih detail?"
@@ -263,7 +263,7 @@ Consider:
             goalAchievement: parsed.goalAchievementScore || 0,
         };
     } catch (error) {
-        console.error("Error evaluating conversation completion:", error);
+        consola.error("Error evaluating conversation completion:", error);
         // Default to continuing if we can't evaluate
         return {
             shouldContinue: conversationHistory.length < maxTurns,

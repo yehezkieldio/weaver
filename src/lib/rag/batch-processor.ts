@@ -84,7 +84,7 @@ export function categorizeBySize(fileSize: number): FileSizeCategory {
  * const processor = new BatchProcessor();
  * processor.addDocument(docId1, fileSize1);
  * processor.addDocument(docId2, fileSize2);
- * await processor.processAll((progress) => console.log(progress));
+ * await processor.processAll((progress) => consola.debug(progress));
  * ```
  */
 export class BatchProcessor {

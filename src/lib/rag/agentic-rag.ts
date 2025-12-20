@@ -31,6 +31,7 @@
  */
 
 import { generateText, NoSuchToolError, stepCountIs, streamText, tool } from "ai";
+import consola from "consola";
 import { z } from "zod";
 import { CHAT_MODEL, telemetryConfig } from "@/lib/ai";
 import { detectNegativeReaction, type GuardrailResult, validateInput, validateOutput } from "./guardrails";
@@ -197,7 +198,7 @@ function createSearchTool(language: "id", streamingState?: StreamingState) {
             topK: z.number().min(1).max(20).default(5),
         }),
         execute: async ({ query, strategy, topK }) => {
-            console.log(
+            consola.debug(
                 `[searchTool] Executing search - query: "${query.substring(0, 80)}...", strategy: ${strategy}, topK: ${topK}`
             );
             const results = await hybridRetrieve(query, {
@@ -207,7 +208,7 @@ function createSearchTool(language: "id", streamingState?: StreamingState) {
                 useReranker: true,
                 rerankerStrategy: "cross_encoder",
             });
-            console.log(
+            consola.debug(
                 `[searchTool] Retrieved ${results.length} results with average score ${(results.reduce((sum, r) => sum + r.fusedScore, 0) / results.length).toFixed(3)}`
             );
 
@@ -223,7 +224,7 @@ function createSearchTool(language: "id", streamingState?: StreamingState) {
                         newChunks += 1;
                     }
                 }
-                console.log(
+                consola.debug(
                     `[searchTool] Added ${newChunks} new chunks to streaming state (total: ${streamingState.retrievedChunks.length})`
                 );
             }
@@ -391,25 +392,25 @@ export async function runAgenticRag(
         streamCallback,
     } = options;
 
-    console.log(
+    consola.debug(
         `[runAgenticRag] Starting agentic RAG pipeline - sessionId: ${sessionId}, strategy: ${retrievalStrategy}, guardrails: ${enableGuardrails}`
     );
-    console.log(`[runAgenticRag] Query: ${query.substring(0, 100)}...`);
+    consola.debug(`[runAgenticRag] Query: ${query.substring(0, 100)}...`);
 
     const startTime = Date.now();
     const language = "id" as const; // Always Indonesian
     const streamingState = getOrCreateStreamingState(sessionId);
-    console.log(`[runAgenticRag] Using language: ${language}`);
+    consola.debug(`[runAgenticRag] Using language: ${language}`);
 
     // Validate input
-    console.log(`[runAgenticRag] Starting input validation with guardrails enabled: ${enableGuardrails}`);
+    consola.debug(`[runAgenticRag] Starting input validation with guardrails enabled: ${enableGuardrails}`);
     const { passed, steps, guardrailResults } = await validateInputWithGuardrails(query, enableGuardrails);
-    console.log(
+    consola.debug(
         `[runAgenticRag] Input validation result: passed=${passed}, violations=${guardrailResults.input?.violations.length || 0}`
     );
 
     if (!passed) {
-        console.warn("[runAgenticRag] Input validation failed - returning early with policy violation message");
+        consola.warn("[runAgenticRag] Input validation failed - returning early with policy violation message");
         return {
             answer: "Maaf, permintaan Anda tidak dapat diproses karena melanggar kebijakan konten.",
             steps: [],
@@ -425,7 +426,7 @@ export async function runAgenticRag(
     const agentTools = createAgentTools(language, streamingState);
 
     try {
-        console.log(`[runAgenticRag] Executing agent workflow with maxSteps: ${maxSteps}`);
+        consola.debug(`[runAgenticRag] Executing agent workflow with maxSteps: ${maxSteps}`);
         const result = await executeAgentWorkflow(
             query,
             language,
@@ -437,7 +438,7 @@ export async function runAgenticRag(
             steps,
             streamCallback
         );
-        console.log(
+        consola.debug(
             `[runAgenticRag] Agent workflow completed - steps: ${steps.length}, retrieved chunks: ${streamingState.retrievedChunks.length}`
         );
 
@@ -453,11 +454,11 @@ export async function runAgenticRag(
         calculateStepDurations(steps);
         const totalLatencyMs = Date.now() - startTime;
 
-        console.log(`[runAgenticRag] Pipeline completed successfully in ${totalLatencyMs}ms`);
-        console.log(
+        consola.debug(`[runAgenticRag] Pipeline completed successfully in ${totalLatencyMs}ms`);
+        consola.debug(
             `[runAgenticRag] Answer length: ${result.text.length}, citations: ${streamingState.citationManager.getCitations().length}`
         );
-        console.log(`[runAgenticRag] Answer Preview: ${result.text.substring(0, 50)}...`);
+        consola.debug(`[runAgenticRag] Answer Preview: ${result.text.substring(0, 50)}...`);
 
         return {
             answer: result.text,
@@ -470,7 +471,7 @@ export async function runAgenticRag(
             reasoning: result.reasoning?.map((r) => r.text) || undefined,
         };
     } catch (error) {
-        console.error("[runAgenticRag] Error in agent workflow:", error);
+        consola.error("[runAgenticRag] Error in agent workflow:", error);
         return handleAgentError(error, language, steps, streamingState, guardrailResults, startTime);
     }
 }
@@ -518,8 +519,8 @@ async function executeAgentWorkflow(
     const systemWithLanguage = `${AGENTIC_SYSTEM_PROMPT}\n\n[PENEGAK BAHASA] Selalu jawab HANYA dalam Bahasa Indonesia.`;
 
     // Log language + top chunk languages to help debug accidental language switching
-    console.log(`[executeAgentWorkflow] Expected response language: ${language}`);
-    console.log(
+    consola.debug(`[executeAgentWorkflow] Expected response language: ${language}`);
+    consola.debug(
         `[executeAgentWorkflow] Top retrieved chunk languages: ${streamingState.retrievedChunks
             .slice(0, 5)
             .map((c) => detectQueryLanguage(c.content))
@@ -552,7 +553,7 @@ async function executeAgentWorkflow(
     try {
         const detected = detectQueryLanguage(result.text || "");
         if (detected && detected !== language) {
-            console.warn(
+            consola.warn(
                 `[executeAgentWorkflow] Language mismatch detected: expected=${language}, actual=${detected}. Attempting forced re-synthesis.`
             );
 
@@ -571,16 +572,16 @@ async function executeAgentWorkflow(
                 });
 
                 if (synthText && synthText.trim().length > 0) {
-                    console.log("[executeAgentWorkflow] Forced re-synthesis succeeded; using synthesized answer.");
+                    consola.debug("[executeAgentWorkflow] Forced re-synthesis succeeded; using synthesized answer.");
                     const newResult = { ...result, text: synthText } as typeof result;
                     return newResult;
                 }
             } catch (synthErr) {
-                console.error("[executeAgentWorkflow] Forced re-synthesis failed:", synthErr);
+                consola.error("[executeAgentWorkflow] Forced re-synthesis failed:", synthErr);
             }
         }
     } catch (err) {
-        console.error("[executeAgentWorkflow] Failed to detect language of model output:", err);
+        consola.error("[executeAgentWorkflow] Failed to detect language of model output:", err);
     }
 
     return result;
@@ -611,16 +612,16 @@ function processStepFinish(
     streamCallback?: (step: AgentStep) => void
 ): void {
     const { text, toolCalls, toolResults, finishReason, usage } = stepResult;
-    console.log(
+    consola.debug(
         `[processStepFinish] Processing step - finishReason: ${finishReason}, toolCalls: ${toolCalls?.length || 0}, tokens: ${usage?.totalTokens || 0}`
     );
 
     // Record tool calls
     if (toolCalls && toolCalls.length > 0) {
-        console.log(`[processStepFinish] Recording ${toolCalls.length} tool calls`);
+        consola.debug(`[processStepFinish] Recording ${toolCalls.length} tool calls`);
         for (const call of toolCalls) {
             const toolResult = toolResults?.find((r) => r.toolCallId === call.toolCallId);
-            console.log(
+            consola.debug(
                 `[processStepFinish] Tool: ${call.toolName} - input: ${JSON.stringify(call.input).substring(0, 100)}...`
             );
             const agentStep: AgentStep = {
@@ -721,7 +722,7 @@ function handleAgentError(
     startTime: number
 ): AgenticRagResult {
     if (NoSuchToolError.isInstance(error)) {
-        console.error("Tool not found:", error.toolName);
+        consola.error("Tool not found:", error.toolName);
         return {
             answer: "Maaf, terjadi kesalahan: alat yang diminta tidak tersedia.",
             steps,
@@ -789,8 +790,8 @@ export async function streamAgenticRag(
 
     const systemWithLanguage = `${AGENTIC_SYSTEM_PROMPT}\n\n[PENEGAK BAHASA] Selalu jawab HANYA dalam Bahasa Indonesia.`;
 
-    console.log(`[streamAgenticRag] Using enforced language: ${language}`);
-    console.log(
+    consola.debug(`[streamAgenticRag] Using enforced language: ${language}`);
+    consola.debug(
         `[streamAgenticRag] Top-of-context chunk languages: ${streamingState.retrievedChunks
             .slice(0, 5)
             .map((c) => detectQueryLanguage(c.content))
@@ -871,7 +872,7 @@ export async function streamAgenticRagWithProgress(
     const streamingState = getOrCreateStreamingState(sessionId);
     const steps: AgentStep[] = [];
 
-    console.log(`[streamAgenticRagWithProgress] Starting with sessionId: ${sessionId}`);
+    consola.debug(`[streamAgenticRagWithProgress] Starting with sessionId: ${sessionId}`);
 
     // Input validation
     if (enableGuardrails) {
@@ -882,7 +883,7 @@ export async function streamAgenticRagWithProgress(
     }
 
     // Initial retrieval for context
-    console.log("[streamAgenticRagWithProgress] Performing initial retrieval...");
+    consola.debug("[streamAgenticRagWithProgress] Performing initial retrieval...");
     const initialResults = await hybridRetrieve(query, {
         strategy: retrievalStrategy,
         topK: 5,
@@ -902,7 +903,7 @@ export async function streamAgenticRagWithProgress(
         onChunksRetrieved(initialResults);
     }
 
-    console.log(`[streamAgenticRagWithProgress] Initial retrieval found ${initialResults.length} chunks`);
+    consola.debug(`[streamAgenticRagWithProgress] Initial retrieval found ${initialResults.length} chunks`);
 
     const context = streamingState.retrievedChunks.map((c) => `[${c.documentTitle}]: ${c.content}`).join("\n\n");
 
@@ -911,7 +912,7 @@ export async function streamAgenticRagWithProgress(
 
     const systemWithLanguage = `${AGENTIC_SYSTEM_PROMPT}\n\n[PENEGAK BAHASA] Selalu jawab HANYA dalam Bahasa Indonesia.`;
 
-    console.log("[streamAgenticRagWithProgress] Starting LLM stream with tools...");
+    consola.debug("[streamAgenticRagWithProgress] Starting LLM stream with tools...");
 
     const llmStream = streamText({
         model: CHAT_MODEL,
@@ -932,7 +933,7 @@ export async function streamAgenticRagWithProgress(
         },
         onStepFinish: ({ toolCalls, toolResults, usage }) => {
             if (toolCalls && toolCalls.length > 0) {
-                console.log(`[streamAgenticRagWithProgress] Step finished with ${toolCalls.length} tool calls`);
+                consola.debug(`[streamAgenticRagWithProgress] Step finished with ${toolCalls.length} tool calls`);
 
                 for (const call of toolCalls) {
                     const toolResult = toolResults?.find((r) => r.toolCallId === call.toolCallId);
@@ -1003,7 +1004,7 @@ function createAgentToolsWithCallbacks(
                 topK: z.number().min(1).max(20).default(5),
             }),
             execute: async ({ query, strategy, topK }) => {
-                console.log(`[searchTool] Executing search - query: "${query.substring(0, 80)}..."`);
+                consola.debug(`[searchTool] Executing search - query: "${query.substring(0, 80)}..."`);
 
                 const results = await hybridRetrieve(query, {
                     strategy,
@@ -1029,7 +1030,7 @@ function createAgentToolsWithCallbacks(
                     onChunksRetrieved(newChunks);
                 }
 
-                console.log(
+                consola.debug(
                     `[searchTool] Found ${results.length} results, ${newChunks.length} new (total: ${streamingState.retrievedChunks.length})`
                 );
 

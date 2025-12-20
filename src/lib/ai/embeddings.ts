@@ -78,7 +78,7 @@ export async function generateEmbedding(text: string): Promise<EmbeddingResult> 
         });
         return { embedding, usage: { tokens: usage?.tokens || 0 } };
     } catch (error) {
-        console.error("Error generating embedding:", error);
+        consola.error("Error generating embedding:", error);
         throw error;
     }
 }
@@ -127,7 +127,7 @@ export async function generateEmbeddings(texts: string[]): Promise<EmbeddingResu
             usage: { tokens: Math.floor((usage?.tokens || 0) / texts.length) },
         }));
     } catch (error) {
-        console.error("Error generating embeddings:", error);
+        consola.error("Error generating embeddings:", error);
         throw error;
     }
 }

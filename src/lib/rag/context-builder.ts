@@ -90,7 +90,7 @@ export async function retrieveContext(
         rerankerStrategy?: "cross_encoder" | "llm" | "llm_listwise" | "cohere" | "ensemble" | "none";
     } = {}
 ): Promise<ContextResult> {
-    console.log(`[retrieveContext] Starting context retrieval - query: "${query.substring(0, 80)}..."`);
+    consola.debug(`[retrieveContext] Starting context retrieval - query: "${query.substring(0, 80)}..."`);
     const {
         topK = 5,
         minSimilarity = 0.3,
@@ -103,12 +103,12 @@ export async function retrieveContext(
         rerankerStrategy = "cross_encoder",
     } = options;
 
-    console.log(
+    consola.debug(
         `[retrieveContext] Options - topK: ${topK}, strategy: ${strategy}, maxTokens: ${maxTokens}, language: ${language}`
     );
 
     // Use hybrid retrieval with language support
-    console.log("[retrieveContext] Executing hybrid retrieval");
+    consola.debug("[retrieveContext] Executing hybrid retrieval");
     const results = await hybridRetrieve(query, {
         topK: topK * 2,
         minScore: minSimilarity,
@@ -119,7 +119,7 @@ export async function retrieveContext(
         useReranker: options.useReranker ?? true,
         rerankerStrategy: options.rerankerStrategy ?? "cross_encoder",
     });
-    console.log(`[retrieveContext] Hybrid retrieval returned ${results.length} results`);
+    consola.debug(`[retrieveContext] Hybrid retrieval returned ${results.length} results`);
 
     // Convert to RetrievedChunk format
     const chunksWithScores: RetrievedChunk[] = results.map((r) => ({
@@ -140,7 +140,7 @@ export async function retrieveContext(
     let totalTokens = 0;
     const selectedChunks: RetrievedChunk[] = [];
 
-    console.log(`[retrieveContext] Building context with token limit ${maxTokens}`);
+    consola.debug(`[retrieveContext] Building context with token limit ${maxTokens}`);
     for (const chunk of chunksWithScores.slice(0, topK)) {
         const contentToUse = chunk.metadata?.sentenceWindowContext || chunk.content;
         const chunkText = `\n\n---\nSource: ${chunk.documentTitle} (Score: ${chunk.fusedScore?.toFixed(3)})\n${contentToUse}`;
@@ -149,7 +149,7 @@ export async function retrieveContext(
         const chunkTokens = encode(chunkText).length;
 
         if (totalTokens + chunkTokens > maxTokens) {
-            console.log("[retrieveContext] Token limit reached - stopping context building");
+            consola.debug("[retrieveContext] Token limit reached - stopping context building");
             break;
         }
 
@@ -159,7 +159,7 @@ export async function retrieveContext(
     }
 
     const detectedLanguage = language === "auto" ? detectQueryLanguage(query) : language;
-    console.log(
+    consola.debug(
         `[retrieveContext] Context building complete - chunks: ${selectedChunks.length}, tokens: ${totalTokens}`
     );
 

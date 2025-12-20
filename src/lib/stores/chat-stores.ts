@@ -305,7 +305,7 @@ export const useChatStore = create<ChatStore>()(
                         });
                     }
                 } catch (error) {
-                    console.error("Failed to save ephemeral session:", error);
+                    consola.error("Failed to save ephemeral session:", error);
                 }
             },
 
@@ -436,7 +436,7 @@ export const useChatStore = create<ChatStore>()(
                         });
                     }
                 } catch (error) {
-                    console.error("Failed to resync sessions:", error);
+                    consola.error("Failed to resync sessions:", error);
                 } finally {
                     set((state) => {
                         state.isSyncing = false;

@@ -1,4 +1,5 @@
 import { parseArgs } from "node:util";
+import consola from "consola";
 
 // Parse command line arguments
 const { values } = parseArgs({
@@ -30,10 +31,10 @@ const CONCURRENCY = Number.parseInt(values.concurrency || "10", 10);
 const TOTAL_REQUESTS = Number.parseInt(values.requests || "50", 10);
 const VERBOSE = values.verbose;
 
-console.log("\n🚀 Starting Stress Test");
-console.log(`Target: ${BASE_URL}`);
-console.log(`Concurrency: ${CONCURRENCY}`);
-console.log(`Total Requests: ${TOTAL_REQUESTS}\n`);
+consola.start("Starting Stress Test");
+consola.info(`Target: ${BASE_URL}`);
+consola.info(`Concurrency: ${CONCURRENCY}`);
+consola.info(`Total Requests: ${TOTAL_REQUESTS}\n`);
 
 interface TestResult {
     id: number;
@@ -65,7 +66,7 @@ async function runRequest(id: number): Promise<TestResult> {
     const startTime = performance.now();
 
     try {
-        if (VERBOSE) console.log(`[Req ${id}] Starting: "${question}"`);
+        if (VERBOSE) consola.debug(`[Req ${id}] Starting: "${question}"`);
 
         const response = await fetch(BASE_URL, {
             method: "POST",
@@ -99,7 +100,7 @@ async function runRequest(id: number): Promise<TestResult> {
         const endTime = performance.now();
         const latency = endTime - startTime;
 
-        if (VERBOSE) console.log(`[Req ${id}] Completed in ${latency.toFixed(2)}ms`);
+        if (VERBOSE) consola.debug(`[Req ${id}] Completed in ${latency.toFixed(2)}ms`);
 
         return {
             id,
@@ -111,7 +112,7 @@ async function runRequest(id: number): Promise<TestResult> {
         const latency = endTime - startTime;
         const errorMessage = error instanceof Error ? error.message : String(error);
 
-        if (VERBOSE) console.error(`[Req ${id}] Failed: ${errorMessage}`);
+        if (VERBOSE) consola.debug(`[Req ${id}] Failed: ${errorMessage}`);
 
         return {
             id,
@@ -159,7 +160,7 @@ async function main() {
     }
 
     const totalTime = performance.now() - startTime;
-    console.log(`\n\n✅ Stress Test Completed in ${(totalTime / 1000).toFixed(2)}s`);
+    consola.success(`Stress Test Completed in ${(totalTime / 1000).toFixed(2)}s`);
 
     // Analyze results
     const successful = results.filter((r) => r.status === "success");
@@ -172,22 +173,24 @@ async function main() {
     const p95 = latencies[Math.floor(latencies.length * 0.95)] || 0;
     const p99 = latencies[Math.floor(latencies.length * 0.99)] || 0;
 
-    console.log("\n📊 Results Summary:");
-    console.log("----------------------------------------");
-    console.log(`Total Requests:   ${TOTAL_REQUESTS}`);
-    console.log(`Successful:       ${successful.length} (${((successful.length / TOTAL_REQUESTS) * 100).toFixed(1)}%)`);
-    console.log(`Failed:           ${failed.length} (${((failed.length / TOTAL_REQUESTS) * 100).toFixed(1)}%)`);
-    console.log(`Throughput:       ${(successful.length / (totalTime / 1000)).toFixed(2)} req/s`);
-    console.log("\n⏱️  Latency Metrics (ms):");
-    console.log(`Min:              ${min.toFixed(2)}`);
-    console.log(`Average:          ${avg.toFixed(2)}`);
-    console.log(`P95:              ${p95.toFixed(2)}`);
-    console.log(`P99:              ${p99.toFixed(2)}`);
-    console.log(`Max:              ${max.toFixed(2)}`);
-    console.log("----------------------------------------");
+    consola.info("\n📊 Results Summary:");
+    consola.info("----------------------------------------");
+    consola.info(`Total Requests:   ${TOTAL_REQUESTS}`);
+    consola.info(
+        `Successful:       ${successful.length} (${((successful.length / TOTAL_REQUESTS) * 100).toFixed(1)}%)`
+    );
+    consola.info(`Failed:           ${failed.length} (${((failed.length / TOTAL_REQUESTS) * 100).toFixed(1)}%)`);
+    consola.info(`Throughput:       ${(successful.length / (totalTime / 1000)).toFixed(2)} req/s`);
+    consola.info("\n⏱️  Latency Metrics (ms):");
+    consola.info(`Min:              ${min.toFixed(2)}`);
+    consola.info(`Average:          ${avg.toFixed(2)}`);
+    consola.info(`P95:              ${p95.toFixed(2)}`);
+    consola.info(`P99:              ${p99.toFixed(2)}`);
+    consola.info(`Max:              ${max.toFixed(2)}`);
+    consola.info("----------------------------------------");
 
     if (failed.length > 0) {
-        console.log("\n❌ Error Analysis:");
+        consola.warn("\n❌ Error Analysis:");
         const errors = new Map<string, number>();
         for (const r of failed) {
             const msg = r.error || "Unknown error";
@@ -195,10 +198,10 @@ async function main() {
         }
 
         for (const [msg, count] of errors) {
-            console.log(`- ${count}x: ${msg}`);
+            consola.warn(`- ${count}x: ${msg}`);
         }
         process.exit(1);
     }
 }
 
-main().catch(console.error);
+main().catch((err) => consola.error(err));

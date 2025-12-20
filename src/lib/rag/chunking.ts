@@ -28,6 +28,7 @@
 
 import { randomUUID } from "node:crypto";
 import { cosineSimilarity } from "ai";
+import consola from "consola";
 import { generateEmbedding } from "@/lib/ai/embeddings";
 import {
     createEmbeddingCache,
@@ -293,38 +294,38 @@ const ID_SECTION_PATTERNS = {
 // Main chunking function
 export async function chunkDocument(text: string, options: ChunkOptions = {}): Promise<Chunk[]> {
     const opts = { ...DEFAULT_OPTIONS, ...options };
-    console.log(
+    consola.debug(
         `[chunkDocument] Starting chunking - strategy: ${opts.strategy}, chunkSize: ${opts.chunkSize}, text length: ${text.length}`
     );
 
     const language = opts.language === "auto" || !opts.language ? detectChunkingLanguage(text) : opts.language;
-    console.log(`[chunkDocument] Detected/specified language: ${language}`);
+    consola.debug(`[chunkDocument] Detected/specified language: ${language}`);
 
     if (language === "id" && opts.strategy === "recursive") {
         opts.separators = INDONESIAN_ACADEMIC_SEPARATORS as string[];
-        console.log("[chunkDocument] Using Indonesian academic separators for recursive strategy");
+        consola.debug("[chunkDocument] Using Indonesian academic separators for recursive strategy");
     }
 
     let chunks: Chunk[] = [];
     switch (opts.strategy) {
         case "semantic":
-            console.log("[chunkDocument] Executing semantic chunking");
+            consola.debug("[chunkDocument] Executing semantic chunking");
             chunks = await semanticChunking(text, opts);
             break;
         case "sentence_window":
-            console.log("[chunkDocument] Executing sentence window chunking");
+            consola.debug("[chunkDocument] Executing sentence window chunking");
             chunks = sentenceWindowChunking(text, opts);
             break;
         case "hierarchical":
-            console.log("[chunkDocument] Executing hierarchical chunking");
+            consola.debug("[chunkDocument] Executing hierarchical chunking");
             chunks = hierarchicalChunking(text, opts, language);
             break;
         default:
-            console.log("[chunkDocument] Executing recursive chunking");
+            consola.debug("[chunkDocument] Executing recursive chunking");
             chunks = recursiveChunking(text, opts);
     }
 
-    console.log(
+    consola.debug(
         `[chunkDocument] Chunking complete - total chunks: ${chunks.length}, avg size: ${(text.length / chunks.length).toFixed(0)} chars`
     );
     return chunks;
@@ -332,7 +333,7 @@ export async function chunkDocument(text: string, options: ChunkOptions = {}): P
 
 export function recursiveChunking(text: string, options: ChunkOptions = {}): Chunk[] {
     const opts = { ...DEFAULT_OPTIONS, ...options };
-    console.log(
+    consola.debug(
         `[recursiveChunking] Starting recursive chunking - text: ${text.length} chars, chunkSize: ${opts.chunkSize}`
     );
     const chunks: Chunk[] = [];
@@ -403,7 +404,7 @@ export function recursiveChunking(text: string, options: ChunkOptions = {}): Chu
         }
     }
 
-    console.log(`[recursiveChunking] Recursive chunking complete - ${chunks.length} chunks created`);
+    consola.debug(`[recursiveChunking] Recursive chunking complete - ${chunks.length} chunks created`);
     return chunks;
 }
 
@@ -438,13 +439,13 @@ function createSemanticChunk(
 // OPTIMIZED: Uses sliding window approach for 3-5x faster embedding generation
 export async function semanticChunking(text: string, options: ChunkOptions = {}): Promise<Chunk[]> {
     const opts = { ...DEFAULT_OPTIONS, ...options };
-    console.log(
+    consola.debug(
         `[semanticChunking] Starting semantic chunking - text: ${text.length} chars, threshold: ${opts.semanticThreshold}`
     );
     const sentences = splitIntoSentences(text);
-    console.log(`[semanticChunking] Split text into ${sentences.length} sentences`);
+    consola.debug(`[semanticChunking] Split text into ${sentences.length} sentences`);
     if (sentences.length === 0) {
-        console.log("[semanticChunking] No sentences found, returning empty");
+        consola.debug("[semanticChunking] No sentences found, returning empty");
         return [];
     }
 
@@ -460,14 +461,14 @@ export async function semanticChunking(text: string, options: ChunkOptions = {})
 
     // Create sliding windows (3-5x fewer than individual sentences)
     const windows = createSlidingWindows(sentences, windowConfig);
-    console.log(
+    consola.debug(
         `[semanticChunking] Created ${windows.length} sliding windows (vs ${sentences.length} sentences) - ${((1 - windows.length / sentences.length) * 100).toFixed(0)}% reduction`
     );
 
     // Generate embeddings for windows only (not individual sentences)
-    console.log(`[semanticChunking] Generating embeddings for ${windows.length} windows`);
+    consola.debug(`[semanticChunking] Generating embeddings for ${windows.length} windows`);
     const windowEmbeddings = await generateWindowEmbeddings(windows, embeddingCache);
-    console.log("[semanticChunking] Window embeddings generated, finding semantic breakpoints");
+    consola.debug("[semanticChunking] Window embeddings generated, finding semantic breakpoints");
 
     // Find semantic breakpoints by comparing adjacent windows
     const breakpoints: number[] = [0];
@@ -485,8 +486,8 @@ export async function semanticChunking(text: string, options: ChunkOptions = {})
 
     // Remove duplicate breakpoints and sort
     const uniqueBreakpoints = [...new Set(breakpoints)].sort((a, b) => a - b);
-    console.log(`[semanticChunking] Found ${uniqueBreakpoints.length} semantic breakpoints (topic changes)`);
-    console.log(`[semanticChunking] Cache stats: ${JSON.stringify(getCacheStats(embeddingCache))}`);
+    consola.debug(`[semanticChunking] Found ${uniqueBreakpoints.length} semantic breakpoints (topic changes)`);
+    consola.debug(`[semanticChunking] Cache stats: ${JSON.stringify(getCacheStats(embeddingCache))}`);
 
     // Extract headings with offsets for context awareness
     const headingsWithOffsets = extractHeadingsWithOffsets(text);
@@ -524,11 +525,11 @@ export async function semanticChunking(text: string, options: ChunkOptions = {})
     }
 
     // If chunks are too large, recursively split them
-    console.log(`[semanticChunking] Created ${chunks.length} semantic chunks, checking for oversized chunks`);
+    consola.debug(`[semanticChunking] Created ${chunks.length} semantic chunks, checking for oversized chunks`);
     const finalChunks: Chunk[] = [];
     for (const chunk of chunks) {
         if (chunk.content.length > opts.chunkSize * 1.5) {
-            console.log(`[semanticChunking] Oversized chunk (${chunk.content.length} chars), splitting recursively`);
+            consola.debug(`[semanticChunking] Oversized chunk (${chunk.content.length} chars), splitting recursively`);
             const subChunks = recursiveChunking(chunk.content, { ...opts, strategy: "recursive" });
             for (const sub of subChunks) {
                 finalChunks.push({
@@ -549,7 +550,7 @@ export async function semanticChunking(text: string, options: ChunkOptions = {})
         }
     }
 
-    console.log(`[semanticChunking] Semantic chunking complete - final chunks: ${finalChunks.length}`);
+    consola.debug(`[semanticChunking] Semantic chunking complete - final chunks: ${finalChunks.length}`);
     return finalChunks;
 }
 
@@ -773,7 +774,7 @@ function safeOffsetTracking(
     const offsetWarning = offsetJump > 2000 && foundIndex >= 0;
 
     if (offsetWarning) {
-        console.warn(
+        consola.warn(
             `[Offset Safety] Unexpected jump of ${offsetJump} chars at index ~${startOffset}. ` +
                 `This may indicate duplicate content or text modification. Content: ${content.slice(0, 50)}...`
         );

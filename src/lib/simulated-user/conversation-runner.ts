@@ -18,6 +18,7 @@
  */
 
 import { generateId } from "ai";
+import consola from "consola";
 import { db } from "@/lib/db";
 import { chatSessions } from "@/lib/db/schema";
 import {
@@ -127,7 +128,7 @@ async function callChatAPI(
             latencyMs,
         };
     } catch (error) {
-        console.error("Error calling chat API:", error);
+        consola.error("Error calling chat API:", error);
         const latencyMs = Date.now() - startTime;
 
         return {
@@ -165,13 +166,13 @@ export async function runConversationScenario(
     let taskCompleted = false;
     let completionReason: "success" | "max_turns_reached" | "user_gave_up" | "error" = "max_turns_reached";
 
-    console.log(`\n🎭 Starting scenario: ${scenario.name}`);
-    console.log(`👤 Persona: ${scenario.persona.name}`);
-    console.log(`🎯 Goal: ${scenario.initialGoal}\n`);
+    consola.debug(`\n🎭 Starting scenario: ${scenario.name}`);
+    consola.debug(`👤 Persona: ${scenario.persona.name}`);
+    consola.debug(`🎯 Goal: ${scenario.initialGoal}\n`);
 
     // Run conversation turns
     for (let turnNumber = 1; turnNumber <= maxTurns; turnNumber++) {
-        console.log(`\n--- Turn ${turnNumber} ---`);
+        consola.debug(`\n--- Turn ${turnNumber} ---`);
 
         // Generate user message
         let userMessage: string;
@@ -182,7 +183,7 @@ export async function runConversationScenario(
             const templateTurn = scenario.conversationTemplate[turnNumber - 1];
             userMessage = getUserMessageFromTemplate(templateTurn);
             isTemplatedTurn = true;
-            console.log("📝 Using template message");
+            consola.debug("📝 Using template message");
         } else {
             // Generate using LLM-as-a-User
             const simulatorConfig: UserSimulatorConfig = {
@@ -197,21 +198,21 @@ export async function runConversationScenario(
             const generated = await generateUserMessage(simulatorConfig);
             userMessage = generated.message;
 
-            console.log(`🤖 Generated message (satisfaction: ${generated.reasoning})`);
+            consola.debug(`🤖 Generated message (satisfaction: ${generated.reasoning})`);
 
             if (generated.taskComplete) {
                 taskCompleted = true;
                 completionReason = "success";
-                console.log("✅ User satisfied, ending conversation");
+                consola.debug("✅ User satisfied, ending conversation");
                 break;
             }
         }
 
-        console.log(`👤 User: ${userMessage}`);
+        consola.debug(`👤 User: ${userMessage}`);
 
         // Call chat API
         const apiResult = await callChatAPI(sessionId, userMessage, useAgenticMode);
-        console.log(`🤖 Assistant (${apiResult.latencyMs}ms): ${apiResult.response.substring(0, 100)}...`);
+        consola.debug(`🤖 Assistant (${apiResult.latencyMs}ms): ${apiResult.response.substring(0, 100)}...`);
 
         // Add to history
         conversationHistory.push({ role: "user", content: userMessage });
@@ -237,7 +238,7 @@ export async function runConversationScenario(
                 conversationHistory.slice(0, -2) // Exclude current turn
             );
         } catch (error) {
-            console.warn("LLM context retention failed, using keyword fallback:", error);
+            consola.warn("LLM context retention failed, using keyword fallback:", error);
             contextRetained = evaluateContextRetention(apiResult.response, requiredContext);
         }
 
@@ -258,7 +259,7 @@ export async function runConversationScenario(
 
         turns.push(turnResult);
 
-        console.log(`📊 Coherence: ${coherenceScore.toFixed(2)}, Context: ${contextRetained ? "✓" : "✗"}`);
+        consola.debug(`📊 Coherence: ${coherenceScore.toFixed(2)}, Context: ${contextRetained ? "✓" : "✗"}`);
 
         // Check if we should continue
         if (!isTemplatedTurn) {
@@ -271,7 +272,7 @@ export async function runConversationScenario(
             if (!shouldContinue.shouldContinue) {
                 taskCompleted = shouldContinue.goalAchievement >= 0.7;
                 completionReason = taskCompleted ? "success" : "user_gave_up";
-                console.log(`\n🏁 Conversation ended: ${shouldContinue.reason}`);
+                consola.debug(`\n🏁 Conversation ended: ${shouldContinue.reason}`);
                 break;
             }
         }
@@ -280,7 +281,7 @@ export async function runConversationScenario(
         if (useTemplate && scenario.conversationTemplate && turnNumber >= scenario.conversationTemplate.length) {
             taskCompleted = true;
             completionReason = "success";
-            console.log("\n✅ Template completed successfully");
+            consola.debug("\n✅ Template completed successfully");
             break;
         }
     }
@@ -302,13 +303,13 @@ export async function runConversationScenario(
     // Evaluate success criteria
     const criteriaEval = evaluateSuccessCriteria(result, scenario.successCriteria);
 
-    console.log("\n📈 Final Metrics:");
-    console.log(`   Task Completed: ${taskCompleted ? "✅" : "❌"}`);
-    console.log(`   Turns: ${turns.length}`);
-    console.log(`   Avg Coherence: ${metrics.averageCoherenceScore.toFixed(2)}`);
-    console.log(`   Context Retention: ${(metrics.contextRetentionRate * 100).toFixed(0)}%`);
-    console.log(`   Info Coverage: ${(metrics.informationCoverageRate * 100).toFixed(0)}%`);
-    console.log(`   Success Criteria Met: ${criteriaEval.met ? "✅" : "❌"}`);
+    consola.debug("\n📈 Final Metrics:");
+    consola.debug(`   Task Completed: ${taskCompleted ? "✅" : "❌"}`);
+    consola.debug(`   Turns: ${turns.length}`);
+    consola.debug(`   Avg Coherence: ${metrics.averageCoherenceScore.toFixed(2)}`);
+    consola.debug(`   Context Retention: ${(metrics.contextRetentionRate * 100).toFixed(0)}%`);
+    consola.debug(`   Info Coverage: ${(metrics.informationCoverageRate * 100).toFixed(0)}%`);
+    consola.debug(`   Success Criteria Met: ${criteriaEval.met ? "✅" : "❌"}`);
 
     return result;
 }
@@ -319,16 +320,16 @@ export async function runConversationScenario(
 export async function runSimulatedUserTests(config: SimulatedUserTestConfig): Promise<SystemLevelMetrics> {
     const { scenarios, repetitionsPerScenario = 1, useAgenticMode = true } = config;
 
-    console.log("\n🚀 Starting Simulated User Testing");
-    console.log(`   Scenarios: ${scenarios.length}`);
-    console.log(`   Repetitions per scenario: ${repetitionsPerScenario}`);
-    console.log(`   Agentic mode: ${useAgenticMode ? "enabled" : "disabled"}\n`);
+    consola.debug("\n🚀 Starting Simulated User Testing");
+    consola.debug(`   Scenarios: ${scenarios.length}`);
+    consola.debug(`   Repetitions per scenario: ${repetitionsPerScenario}`);
+    consola.debug(`   Agentic mode: ${useAgenticMode ? "enabled" : "disabled"}\n`);
 
     const allResults: SimulatedConversationResult[] = [];
 
     for (const scenario of scenarios) {
         for (let rep = 0; rep < repetitionsPerScenario; rep++) {
-            console.log(
+            consola.debug(
                 `\n${"=".repeat(80)}\nScenario ${scenarios.indexOf(scenario) + 1}/${scenarios.length}, Repetition ${rep + 1}/${repetitionsPerScenario}`
             );
 

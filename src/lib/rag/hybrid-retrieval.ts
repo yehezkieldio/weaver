@@ -469,13 +469,13 @@ function performBM25Search(
     language: "en" | "id"
 ): { id: string; rank: number; score: number }[] {
     if (chunks.length === 0) {
-        console.log("[performBM25Search] No chunks provided for BM25 search");
+        consola.debug("[performBM25Search] No chunks provided for BM25 search");
         return [];
     }
 
-    console.log(`[performBM25Search] Starting BM25 search on ${chunks.length} chunks, language: ${language}`);
+    consola.debug(`[performBM25Search] Starting BM25 search on ${chunks.length} chunks, language: ${language}`);
     const queryTerms = tokenize(query, language);
-    console.log(
+    consola.debug(
         `[performBM25Search] Query terms after tokenization (${queryTerms.length}): ${queryTerms.slice(0, 5).join(", ")}...`
     );
     const queryTermFreqs = getQueryTermFreqs(queryTerms);
@@ -495,7 +495,7 @@ function performBM25Search(
     }
 
     const avgDocLength = totalLength / chunks.length;
-    console.log(
+    consola.debug(
         `[performBM25Search] Avg doc length: ${avgDocLength.toFixed(2)}, total unique terms: ${docFrequencies.size}`
     );
 
@@ -515,7 +515,7 @@ function performBM25Search(
         .sort((a, b) => b.score - a.score)
         .map((item, idx) => ({ ...item, rank: idx + 1 }));
 
-    console.log(`[performBM25Search] BM25 scoring complete, top score: ${scored[0]?.score.toFixed(3) || "N/A"}`);
+    consola.debug(`[performBM25Search] BM25 scoring complete, top score: ${scored[0]?.score.toFixed(3) || "N/A"}`);
     return scored;
 }
 
@@ -700,7 +700,7 @@ ${result.content}`;
                     continue;
                 }
             } catch (error) {
-                console.warn(`[expandToParentContext] Failed to fetch parent chunk ${parentChunkId}:`, error);
+                consola.warn(`[expandToParentContext] Failed to fetch parent chunk ${parentChunkId}:`, error);
             }
         }
 
@@ -759,10 +759,10 @@ async function performKeywordCandidateSearch(query: string, topK: number, langua
  */
 export async function hybridRetrieve(query: string, options: HybridRetrievalOptions = {}): Promise<RetrievalResult[]> {
     const retrievalId = crypto.randomUUID().slice(0, 8);
-    console.log(`[hybridRetrieve:${retrievalId}] Starting hybrid retrieval pipeline`);
+    consola.debug(`[hybridRetrieve:${retrievalId}] Starting hybrid retrieval pipeline`);
     console.time(`hybridRetrieve:${retrievalId}`);
     const opts = { ...DEFAULT_OPTIONS, ...options };
-    console.log(
+    consola.debug(
         `[hybridRetrieve:${retrievalId}] Options - strategy: ${opts.strategy}, topK: ${opts.topK}, language: ${opts.language}`
     );
 
@@ -775,9 +775,9 @@ export async function hybridRetrieve(query: string, options: HybridRetrievalOpti
 
     // 1. Vector Search Phase
     if (opts.strategy === "vector" || opts.strategy === "hybrid") {
-        console.log(`[hybridRetrieve:${retrievalId}] Performing vector search`);
+        consola.debug(`[hybridRetrieve:${retrievalId}] Performing vector search`);
         const vectorResults = await performVectorSearch(query, opts.topK);
-        console.log(`[hybridRetrieve:${retrievalId}] Vector search returned ${vectorResults.length} results`);
+        consola.debug(`[hybridRetrieve:${retrievalId}] Vector search returned ${vectorResults.length} results`);
 
         for (const result of vectorResults) {
             chunkMap.set(result.id, result.chunk);
@@ -792,7 +792,7 @@ export async function hybridRetrieve(query: string, options: HybridRetrievalOpti
 
     // 2. Keyword Search Phase (Candidate Selection)
     if (opts.strategy === "keyword" || opts.strategy === "hybrid") {
-        console.log(`[hybridRetrieve:${retrievalId}] Performing keyword candidate search`);
+        consola.debug(`[hybridRetrieve:${retrievalId}] Performing keyword candidate search`);
 
         // If we haven't detected language yet (e.g. keyword only strategy), try to detect from query
         if (detectedLanguage === "en" && opts.language === "auto") {
@@ -802,7 +802,7 @@ export async function hybridRetrieve(query: string, options: HybridRetrievalOpti
         }
 
         const keywordCandidates = await performKeywordCandidateSearch(query, opts.topK, detectedLanguage);
-        console.log(`[hybridRetrieve:${retrievalId}] Keyword search returned ${keywordCandidates.length} candidates`);
+        consola.debug(`[hybridRetrieve:${retrievalId}] Keyword search returned ${keywordCandidates.length} candidates`);
 
         for (const chunk of keywordCandidates) {
             if (!chunkMap.has(chunk.chunkId)) {
@@ -815,21 +815,21 @@ export async function hybridRetrieve(query: string, options: HybridRetrievalOpti
         }
     }
 
-    console.log(`[hybridRetrieve:${retrievalId}] Total unique candidates: ${chunkMap.size}`);
-    console.log(`[hybridRetrieve:${retrievalId}] Detected language: ${detectedLanguage}`);
+    consola.debug(`[hybridRetrieve:${retrievalId}] Total unique candidates: ${chunkMap.size}`);
+    consola.debug(`[hybridRetrieve:${retrievalId}] Detected language: ${detectedLanguage}`);
 
     if (chunkMap.size === 0) {
-        console.log(`[hybridRetrieve:${retrievalId}] No results found`);
+        consola.debug(`[hybridRetrieve:${retrievalId}] No results found`);
         console.timeEnd(`hybridRetrieve:${retrievalId}`);
         return [];
     }
 
     // 3. BM25 Scoring Phase
     if (opts.strategy === "keyword" || opts.strategy === "hybrid") {
-        console.log(`[hybridRetrieve:${retrievalId}] Performing BM25 scoring on ${chunkMap.size} chunks`);
+        consola.debug(`[hybridRetrieve:${retrievalId}] Performing BM25 scoring on ${chunkMap.size} chunks`);
         const chunksForBM25 = Array.from(chunkMap.values());
         bm25RankingResults.push(...performBM25Search(query, chunksForBM25, detectedLanguage));
-        console.log(`[hybridRetrieve:${retrievalId}] BM25 scoring complete`);
+        consola.debug(`[hybridRetrieve:${retrievalId}] BM25 scoring complete`);
     }
 
     const finalScores = combineRankings(
@@ -845,7 +845,7 @@ export async function hybridRetrieve(query: string, options: HybridRetrievalOpti
 
     // Log score distribution for debugging
     const allScores = results.map((r) => r.fusedScore).sort((a, b) => b - a);
-    console.log(
+    consola.debug(
         `[hybridRetrieve:${retrievalId}] Score distribution - max: ${allScores[0]?.toFixed(4) || "N/A"}, min: ${allScores.at(-1)?.toFixed(4) || "N/A"}`
     );
 
@@ -854,13 +854,13 @@ export async function hybridRetrieve(query: string, options: HybridRetrievalOpti
         .filter((r) => r.fusedScore >= opts.minScore)
         .slice(0, opts.topK);
 
-    console.log(
+    consola.debug(
         `[hybridRetrieve:${retrievalId}] Final results: ${finalResults.length} (min score: ${opts.minScore}, topK: ${opts.topK})`
     );
 
     // Apply reranking if enabled
     if (opts.useReranker && opts.rerankerStrategy !== "none" && finalResults.length > 0) {
-        console.log(
+        consola.debug(
             `[hybridRetrieve:${retrievalId}] Applying reranker - strategy: ${opts.rerankerStrategy}, topK: ${opts.rerankerTopK}`
         );
         const reranked = await rerank(query, finalResults, {
@@ -869,7 +869,7 @@ export async function hybridRetrieve(query: string, options: HybridRetrievalOpti
             minScore: opts.rerankerMinScore,
             language: detectedLanguage,
         });
-        console.log(`[hybridRetrieve:${retrievalId}] Reranking complete - results: ${reranked.length}`);
+        consola.debug(`[hybridRetrieve:${retrievalId}] Reranking complete - results: ${reranked.length}`);
         // Convert reranked results back to RetrievalResult format
         const rerankedResults: RetrievalResult[] = reranked.map((r) => ({
             chunkId: r.chunkId,
@@ -886,7 +886,7 @@ export async function hybridRetrieve(query: string, options: HybridRetrievalOpti
 
         // Apply context expansion if enabled
         if (opts.useContextExpansion) {
-            console.log(`[hybridRetrieve:${retrievalId}] Applying parent-child context expansion`);
+            consola.debug(`[hybridRetrieve:${retrievalId}] Applying parent-child context expansion`);
             const expanded = await expandToParentContext(rerankedResults);
             console.timeEnd(`hybridRetrieve:${retrievalId}`);
             return expanded;
@@ -898,7 +898,7 @@ export async function hybridRetrieve(query: string, options: HybridRetrievalOpti
 
     // Apply context expansion if enabled (non-reranked path)
     if (opts.useContextExpansion) {
-        console.log(`[hybridRetrieve:${retrievalId}] Applying parent-child context expansion`);
+        consola.debug(`[hybridRetrieve:${retrievalId}] Applying parent-child context expansion`);
         const expanded = await expandToParentContext(finalResults);
         console.timeEnd(`hybridRetrieve:${retrievalId}`);
         return expanded;

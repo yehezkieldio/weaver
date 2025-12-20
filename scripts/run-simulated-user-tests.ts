@@ -17,6 +17,7 @@
  */
 
 import { writeFileSync } from "node:fs";
+import consola from "consola";
 import { runSimulatedUserTests } from "@/lib/simulated-user/conversation-runner";
 import { ALL_SCENARIOS } from "@/lib/simulated-user/scenarios";
 import type { SimulatedUserTestConfig, SystemLevelMetrics } from "@/lib/simulated-user/types";
@@ -199,7 +200,7 @@ This simulated user testing directly addresses the methodology gap identified in
  * Main execution
  */
 async function main() {
-    console.log("🚀 Simulated User Testing for MuliaChat RAG System\n");
+    consola.start("Simulated User Testing for MuliaChat RAG System\n");
 
     const args = parseArgs();
 
@@ -209,21 +210,21 @@ async function main() {
     if (args.scenarioId) {
         const scenario = ALL_SCENARIOS.find((s) => s.id === args.scenarioId);
         if (!scenario) {
-            console.error(`❌ Scenario not found: ${args.scenarioId}`);
-            console.log("\nAvailable scenarios:");
+            consola.error(`Scenario not found: ${args.scenarioId}`);
+            consola.info("\nAvailable scenarios:");
             for (const s of ALL_SCENARIOS) {
-                console.log(`  - ${s.id}: ${s.name}`);
+                consola.info(`  - ${s.id}: ${s.name}`);
             }
             process.exit(1);
         }
         scenarios = [scenario];
-        console.log(`📋 Running single scenario: ${scenario.name}\n`);
+        consola.info(`Running single scenario: ${scenario.name}\n`);
     } else if (args.quick) {
         // Quick mode: run first 3 scenarios
         scenarios = ALL_SCENARIOS.slice(0, 3);
-        console.log(`⚡ Quick mode: Running ${scenarios.length} scenarios\n`);
+        consola.info(`Quick mode: Running ${scenarios.length} scenarios\n`);
     } else {
-        console.log(`📋 Running all ${scenarios.length} scenarios\n`);
+        consola.info(`Running all ${scenarios.length} scenarios\n`);
     }
 
     const config: SimulatedUserTestConfig = {
@@ -236,12 +237,12 @@ async function main() {
         saveDetailedLogs: true,
     };
 
-    console.log("Configuration:");
-    console.log(`  Scenarios: ${config.scenarios.length}`);
-    console.log(`  Repetitions: ${config.repetitionsPerScenario}`);
-    console.log(`  Agentic Mode: ${config.useAgenticMode ? "enabled" : "disabled"}`);
-    console.log(`  Max Turns: ${config.maxTurnsPerConversation}`);
-    console.log();
+    consola.info("Configuration:");
+    consola.info(`  Scenarios: ${config.scenarios.length}`);
+    consola.info(`  Repetitions: ${config.repetitionsPerScenario}`);
+    consola.info(`  Agentic Mode: ${config.useAgenticMode ? "enabled" : "disabled"}`);
+    consola.info(`  Max Turns: ${config.maxTurnsPerConversation}`);
+    consola.log("");
 
     const startTime = new Date();
 
@@ -258,18 +259,18 @@ async function main() {
         const reportPath = `/tmp/simulated-user-testing-report-${Date.now()}.md`;
         writeFileSync(reportPath, report, "utf-8");
 
-        console.log(`\n${"=".repeat(80)}`);
-        console.log("📊 FINAL RESULTS");
-        console.log("=".repeat(80));
-        console.log(`\nTask Completion Rate: ${(metrics.overallTaskCompletionRate * 100).toFixed(1)}%`);
-        console.log(`Successful Scenarios: ${metrics.successfulScenarios}/${metrics.totalScenarios}`);
-        console.log(`Average Coherence: ${metrics.averageCoherenceScore.toFixed(2)}`);
-        console.log(`Average Latency: ${metrics.averageLatencyMs.toFixed(0)}ms`);
-        console.log(`P95 Latency: ${metrics.p95LatencyMs.toFixed(0)}ms`);
-        console.log(`\n📄 Report saved to: ${reportPath}`);
-        console.log("\n✅ Simulated user testing completed successfully!");
+        consola.info(`\n${"=".repeat(80)}`);
+        consola.info("📊 FINAL RESULTS");
+        consola.info("=".repeat(80));
+        consola.info(`\nTask Completion Rate: ${(metrics.overallTaskCompletionRate * 100).toFixed(1)}%`);
+        consola.info(`Successful Scenarios: ${metrics.successfulScenarios}/${metrics.totalScenarios}`);
+        consola.info(`Average Coherence: ${metrics.averageCoherenceScore.toFixed(2)}`);
+        consola.info(`Average Latency: ${metrics.averageLatencyMs.toFixed(0)}ms`);
+        consola.info(`P95 Latency: ${metrics.p95LatencyMs.toFixed(0)}ms`);
+        consola.info(`\n📄 Report saved to: ${reportPath}`);
+        consola.success("\nSimulated user testing completed successfully!");
     } catch (error) {
-        console.error("\n❌ Error running simulated user tests:", error);
+        consola.error("\nError running simulated user tests:", error);
         process.exit(1);
     }
 }

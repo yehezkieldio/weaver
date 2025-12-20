@@ -1,16 +1,17 @@
 import { generateText } from "ai";
+import consola from "consola";
 import { CHAT_MODEL, JUDGE_MODEL } from "@/lib/ai";
 import { generateEmbedding } from "@/lib/ai/embeddings";
 
 async function run(): Promise<void> {
-    console.log("Starting lightweight AI model tests...");
+    consola.start("Starting lightweight AI model tests...");
 
     // Check embedding
     try {
         const e = await generateEmbedding("test");
-        console.log("Embedding OK — dimension:", e.embedding.length, "tokens:", e.usage.tokens);
+        consola.success("Embedding OK — dimension:", e.embedding.length, "tokens:", e.usage.tokens);
     } catch (err) {
-        console.error("Embedding failed:", err);
+        consola.error("Embedding failed:", err);
     }
 
     await generateText({
@@ -19,7 +20,7 @@ async function run(): Promise<void> {
         maxOutputTokens: 5,
         temperature: 0,
     });
-    console.log("Chat model call OK.");
+    consola.success("Chat model call OK.");
 
     await generateText({
         model: JUDGE_MODEL,
@@ -27,9 +28,9 @@ async function run(): Promise<void> {
         maxOutputTokens: 5,
         temperature: 0,
     });
-    console.log("Judge model call OK.");
+    consola.success("Judge model call OK.");
 
-    console.log("\nFinished. Keep in mind these calls are real API requests — prompts were kept intentionally tiny.");
+    consola.info("\nFinished. Keep in mind these calls are real API requests — prompts were kept intentionally tiny.");
 }
 
 // run when executed directly
@@ -37,7 +38,7 @@ if (require.main === module) {
     run()
         .then(() => process.exit(0))
         .catch((e) => {
-            console.error("Test runner failed:", e);
+            consola.error("Test runner failed:", e);
             process.exit(1);
         });
 }

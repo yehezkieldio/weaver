@@ -38,11 +38,11 @@ export async function getCachedEmbedding(text: string): Promise<{ embedding: num
     const cached = embeddingCache.get(cacheKey);
     if (cached) {
         cached.lastUsed = Date.now();
-        console.log(`[EmbeddingCache] HIT for text: "${text.substring(0, 50)}..."`);
+        consola.debug(`[EmbeddingCache] HIT for text: "${text.substring(0, 50)}..."`);
         return { embedding: cached.embedding };
     }
 
-    console.log(`[EmbeddingCache] MISS for text: "${text.substring(0, 50)}..."`);
+    consola.debug(`[EmbeddingCache] MISS for text: "${text.substring(0, 50)}..."`);
     const result = await generateEmbedding(text);
 
     // Evict oldest entry if cache is full
@@ -73,7 +73,7 @@ export async function getCachedEmbedding(text: string): Promise<{ embedding: num
  */
 export function clearEmbeddingCache(): void {
     embeddingCache.clear();
-    console.log("[EmbeddingCache] Cache cleared");
+    consola.debug("[EmbeddingCache] Cache cleared");
 }
 
 /**
@@ -156,7 +156,7 @@ export function extractJsonArray(text: string): string[] | null {
         }
     }
 
-    console.warn(`[extractJsonArray] Failed to extract JSON array from: "${text.substring(0, 100)}..."`);
+    consola.warn(`[extractJsonArray] Failed to extract JSON array from: "${text.substring(0, 100)}..."`);
     return null;
 }
 
@@ -280,7 +280,7 @@ export async function processBatches<T, R>(
         const batchNumber = Math.floor(i / concurrency) + 1;
         const totalBatches = Math.ceil(items.length / concurrency);
 
-        console.log(`[processBatches] Processing batch ${batchNumber}/${totalBatches} (${batch.length} items)`);
+        consola.debug(`[processBatches] Processing batch ${batchNumber}/${totalBatches} (${batch.length} items)`);
 
         const batchResults = await Promise.all(batch.map((item, batchIndex) => processor(item, i + batchIndex)));
 

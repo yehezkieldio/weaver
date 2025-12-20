@@ -1,14 +1,15 @@
+import consola from "consola";
 import { ACADEMIC_QUESTIONS, type EvaluationQuestion } from "@/lib/evaluation-questions";
 import { retrieveContext } from "@/lib/rag/context-builder";
 
 async function main() {
-    console.log("Generating relevant chunk IDs for ACADEMIC_QUESTIONS...");
-    console.log("---------------------------------------------------------");
+    consola.start("Generating relevant chunk IDs for ACADEMIC_QUESTIONS...");
+    consola.info("---------------------------------------------------------");
 
     const updatedQuestions: EvaluationQuestion[] = [];
 
     for (const [index, q] of ACADEMIC_QUESTIONS.entries()) {
-        console.log(`[${index + 1}/${ACADEMIC_QUESTIONS.length}] Processing: ${q.question.substring(0, 50)}...`);
+        consola.info(`[${index + 1}/${ACADEMIC_QUESTIONS.length}] Processing: ${q.question.substring(0, 50)}...`);
 
         // Use ground truth to find the chunks that contain the answer (Gold Standard)
         // We use hybrid strategy with a higher topK to cast a wider net, then we'll take the top ones.
@@ -20,14 +21,14 @@ async function main() {
 
         const chunkIds = result.chunks.map((c) => c.chunkId);
 
-        console.log(`   -> Found ${chunkIds.length} relevant chunks`);
+        consola.info(`   -> Found ${chunkIds.length} relevant chunks`);
         if (chunkIds.length > 0) {
-            console.log(`   -> IDs: ${chunkIds.join(", ")}`);
+            consola.debug(`   -> IDs: ${chunkIds.join(", ")}`);
             // log the titles to verify
             const titles = [...new Set(result.chunks.map((c) => c.documentTitle))];
-            console.log(`   -> Sources: ${titles.join(", ")}`);
+            consola.debug(`   -> Sources: ${titles.join(", ")}`);
         } else {
-            console.log("   -> NO CHUNKS FOUND (Try manual search or lower threshold)");
+            consola.warn("   -> NO CHUNKS FOUND (Try manual search or lower threshold)");
         }
 
         updatedQuestions.push({
@@ -36,10 +37,10 @@ async function main() {
         });
     }
 
-    console.log("\n---------------------------------------------------------");
-    console.log("GENERATION COMPLETE.");
-    console.log("You can update 'src/lib/evaluation-questions.ts' with the following object:");
-    console.log("---------------------------------------------------------");
+    consola.info("\n---------------------------------------------------------");
+    consola.success("GENERATION COMPLETE.");
+    consola.info("You can update 'src/lib/evaluation-questions.ts' with the following object:");
+    consola.info("---------------------------------------------------------");
 
     // Helper to print the object as valid TS code
     const output = JSON.stringify(updatedQuestions, null, 4)
@@ -47,14 +48,14 @@ async function main() {
         // or the user can just use the JSON
         .replace(/"(\w+)":/g, "$1:"); // Remove quotes from keys
 
-    console.log(`export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = ${output};`);
+    consola.info(`export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = ${output};`);
 }
 
 if (require.main === module) {
     main()
         .then(() => process.exit(0))
         .catch((e) => {
-            console.error("Script failed:", e);
+            consola.error("Script failed:", e);
             process.exit(1);
         });
 }

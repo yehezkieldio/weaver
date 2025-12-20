@@ -13,6 +13,7 @@
  */
 
 import { generateText } from "ai";
+import consola from "consola";
 import { JUDGE_MODEL } from "@/lib/ai";
 import type {
     ConversationMetrics,
@@ -72,7 +73,7 @@ Output only the numerical score (e.g., 0.85):`;
         const score = Number.parseFloat(text.trim());
         return Number.isNaN(score) ? 0.5 : Math.max(0, Math.min(1, score));
     } catch (error) {
-        console.error("Error evaluating coherence:", error);
+        consola.error("Error evaluating coherence:", error);
         return 0.5; // Default moderate score on error
     }
 }
@@ -145,7 +146,7 @@ The response doesn't need to contain exact keywords, but should semantically rel
         const result = text.trim().toLowerCase();
         return result === "true" || result.includes("true");
     } catch (error) {
-        console.error("Error in LLM context retention evaluation, falling back to keyword-based:", error);
+        consola.error("Error in LLM context retention evaluation, falling back to keyword-based:", error);
         // Fallback to keyword-based evaluation
         return evaluateContextRetention(assistantResponse, requiredContext);
     }
@@ -281,7 +282,7 @@ export async function calculateConversationMetrics(
             );
             informationCoverageRate = coverageResult.score;
         } catch (error) {
-            console.error("Error in LLM information coverage, falling back to keyword-based:", error);
+            consola.error("Error in LLM information coverage, falling back to keyword-based:", error);
             // Fallback to keyword-based evaluation
             const allResponses = turns
                 .map((t) => t.assistantResponse)
@@ -381,7 +382,7 @@ ${historyText}
             missingTopics: parsed.missingTopics || requiredInformation,
         };
     } catch (error) {
-        console.error("Error evaluating information coverage:", error);
+        consola.error("Error evaluating information coverage:", error);
         return {
             score: 0.5,
             coveredTopics: [],

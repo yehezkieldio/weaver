@@ -1242,7 +1242,7 @@ export async function detectDocumentType(content: string): Promise<AcademicDocum
     const contentHash = hashDocumentContent(normalized);
     const cached = documentTypeCache.get(contentHash);
     if (cached) {
-        console.log(`[detectDocumentType] Cache hit for hash ${contentHash}: ${cached}`);
+        consola.debug(`[detectDocumentType] Cache hit for hash ${contentHash}: ${cached}`);
         return cached;
     }
 
@@ -1255,14 +1255,14 @@ export async function detectDocumentType(content: string): Promise<AcademicDocum
 
     // Use confidence-based pattern matching (optimized approach)
     const confidenceResult = calculatePatternConfidence(normalized, language);
-    console.log(
+    consola.debug(
         `[detectDocumentType] Confidence score: ${confidenceResult.score.toFixed(2)} for type: ${confidenceResult.type} (${confidenceResult.matchDetails.length} pattern matches)`
     );
 
     // If confidence is high enough, use pattern-based result (skip LLM)
     if (confidenceResult.score >= CONFIDENCE_THRESHOLD) {
         documentTypeCache.set(contentHash, confidenceResult.type);
-        console.log(`[detectDocumentType] High confidence - using pattern result: ${confidenceResult.type}`);
+        consola.debug(`[detectDocumentType] High confidence - using pattern result: ${confidenceResult.type}`);
         return confidenceResult.type;
     }
 
@@ -1284,7 +1284,7 @@ export async function detectDocumentType(content: string): Promise<AcademicDocum
     // If we have some confidence but below threshold, still prefer pattern result
     // over LLM for borderline cases (reduces LLM calls further)
     if (confidenceResult.score >= 0.3 && confidenceResult.type !== "other") {
-        console.log(
+        consola.debug(
             `[detectDocumentType] Medium confidence (${confidenceResult.score.toFixed(2)}) - using pattern result to avoid LLM`
         );
         documentTypeCache.set(contentHash, confidenceResult.type);
@@ -1292,7 +1292,7 @@ export async function detectDocumentType(content: string): Promise<AcademicDocum
     }
 
     // Fallback to LLM only for truly ambiguous cases
-    console.log("[detectDocumentType] Low confidence - falling back to LLM");
+    consola.debug("[detectDocumentType] Low confidence - falling back to LLM");
     try {
         const { text } = await generateText({
             model: CHAT_MODEL,

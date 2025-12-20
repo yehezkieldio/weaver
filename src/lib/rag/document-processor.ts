@@ -303,7 +303,7 @@ function analyzeDocumentCharacteristics(content: string): DocumentCharacteristic
 export function selectChunkingStrategy(content: string): ChunkingStrategy {
     const characteristics = analyzeDocumentCharacteristics(content);
 
-    console.log(
+    consola.debug(
         `[selectChunkingStrategy] Analysis: length=${characteristics.documentLength}, ` +
             `headingDensity=${characteristics.headingDensity.toFixed(2)}, ` +
             `avgParagraph=${characteristics.avgParagraphLength.toFixed(0)}, ` +
@@ -314,7 +314,7 @@ export function selectChunkingStrategy(content: string): ChunkingStrategy {
     // Dense information documents (FAQs, glossaries, short items)
     // Characteristics: short paragraphs, high list density
     if (characteristics.avgParagraphLength < 200 && characteristics.listDensity > 0.15) {
-        console.log("[selectChunkingStrategy] Selected: sentence_window (dense info/lists)");
+        consola.debug("[selectChunkingStrategy] Selected: sentence_window (dense info/lists)");
         return "sentence_window";
     }
 
@@ -325,14 +325,14 @@ export function selectChunkingStrategy(content: string): ChunkingStrategy {
         characteristics.headingDensity < 0.3 &&
         !characteristics.hasChapters
     ) {
-        console.log("[selectChunkingStrategy] Selected: semantic (long narrative)");
+        consola.debug("[selectChunkingStrategy] Selected: semantic (long narrative)");
         return "semantic";
     }
 
     // Structured documents (textbooks, regulations with chapters)
     // Characteristics: formal chapter markers OR high heading density
     if (characteristics.hasChapters || characteristics.headingDensity > 1.5) {
-        console.log("[selectChunkingStrategy] Selected: hierarchical (structured/chapters)");
+        consola.debug("[selectChunkingStrategy] Selected: hierarchical (structured/chapters)");
         return "hierarchical";
     }
 
@@ -343,12 +343,12 @@ export function selectChunkingStrategy(content: string): ChunkingStrategy {
         characteristics.headingDensity > 0.5 &&
         characteristics.avgParagraphLength > 300
     ) {
-        console.log("[selectChunkingStrategy] Selected: semantic (moderate structure)");
+        consola.debug("[selectChunkingStrategy] Selected: semantic (moderate structure)");
         return "semantic";
     }
 
     // Default: recursive is safe for mixed or unknown content
-    console.log("[selectChunkingStrategy] Selected: recursive (default/mixed)");
+    consola.debug("[selectChunkingStrategy] Selected: recursive (default/mixed)");
     return "recursive";
 }
 
@@ -378,8 +378,8 @@ export async function processDocument(documentId: string, options: ProcessingOpt
         enableProgressTracking = false,
     } = options;
 
-    console.log(`[processDocument] Starting document processing - documentId: ${documentId}`);
-    console.log(
+    consola.debug(`[processDocument] Starting document processing - documentId: ${documentId}`);
+    consola.debug(
         `[processDocument] Options: strategy=${requestedStrategy}, chunkSize=${chunkSize}, overlap=${chunkOverlap}, language=${language}, progress=${enableProgressTracking}`
     );
 
@@ -388,14 +388,14 @@ export async function processDocument(documentId: string, options: ProcessingOpt
 
     // Set processing status before transaction (allows visibility of "processing" state)
     await updateDocumentStatus(db, documentId, "processing");
-    console.log(`[processDocument] Document status set to 'processing'`);
+    consola.debug(`[processDocument] Document status set to 'processing'`);
 
     try {
         const [doc] = await db.select().from(documents).where(eq(documents.id, documentId)).limit(1);
 
         if (!doc?.content) {
             const errorMsg = doc ? "Document has no content to process" : "Document not found";
-            console.warn(`[processDocument] ${errorMsg} - documentId: ${documentId}`);
+            consola.warn(`[processDocument] ${errorMsg} - documentId: ${documentId}`);
             throw new Error(errorMsg);
         }
 
@@ -405,14 +405,14 @@ export async function processDocument(documentId: string, options: ProcessingOpt
             await tracker.updateStage("extracting", "Content already extracted, analyzing document...");
         }
 
-        console.log(`[processDocument] Document found - title: ${doc.title}, contentLength: ${doc.content.length}`);
+        consola.debug(`[processDocument] Document found - title: ${doc.title}, contentLength: ${doc.content.length}`);
 
         // Detect language
         if (tracker) {
             await tracker.updateStage("detecting_language");
         }
         const detectedLanguage = language === "auto" ? detectDocumentLanguage(doc.content) : language;
-        console.log(`[processDocument] Detected language: ${detectedLanguage}`);
+        consola.debug(`[processDocument] Detected language: ${detectedLanguage}`);
 
         // Save language detection artifact
         if (tracker) {
@@ -430,7 +430,7 @@ export async function processDocument(documentId: string, options: ProcessingOpt
         if (tracker) {
             await tracker.updateStage("chunking", `Creating chunks using ${effectiveStrategy} strategy...`);
         }
-        console.log(`[processDocument] Starting chunking with strategy: ${effectiveStrategy}`);
+        consola.debug(`[processDocument] Starting chunking with strategy: ${effectiveStrategy}`);
         const chunks =
             effectiveStrategy === "semantic"
                 ? await chunkDocument(doc.content, {
@@ -448,7 +448,7 @@ export async function processDocument(documentId: string, options: ProcessingOpt
                       levels: 2,
                       language: detectedLanguage,
                   });
-        console.log(`[processDocument] Chunking complete - chunks created: ${chunks.length}`);
+        consola.debug(`[processDocument] Chunking complete - chunks created: ${chunks.length}`);
 
         // Save chunk count artifact
         if (tracker) {
@@ -457,14 +457,14 @@ export async function processDocument(documentId: string, options: ProcessingOpt
         }
 
         // Embedding stage - use progress-aware function if tracker exists
-        console.log(`[processDocument] Generating embeddings for ${chunks.length} chunks`);
+        consola.debug(`[processDocument] Generating embeddings for ${chunks.length} chunks`);
         const chunkRecords = tracker
             ? await createChunkRecordsWithProgress(documentId, chunks, detectedLanguage, effectiveStrategy, tracker)
             : await createChunkRecords(documentId, chunks, detectedLanguage, effectiveStrategy);
-        console.log(`[processDocument] Chunk records prepared - total: ${chunkRecords.length}`);
+        consola.debug(`[processDocument] Chunk records prepared - total: ${chunkRecords.length}`);
 
         const universityMetadata = await extractUniversityMetadata(doc.content);
-        console.log(`[processDocument] University metadata extracted - type: ${universityMetadata.documentType}`);
+        consola.debug(`[processDocument] University metadata extracted - type: ${universityMetadata.documentType}`);
 
         // Save metadata artifact
         if (tracker) {
@@ -482,11 +482,11 @@ export async function processDocument(documentId: string, options: ProcessingOpt
         // Use transaction for chunk insertion and status update
         // This ensures atomicity: either all chunks are inserted AND status is updated,
         // or nothing is changed (automatic rollback on error)
-        console.log("[processDocument] Starting database transaction for chunk insertion and status update");
+        consola.debug("[processDocument] Starting database transaction for chunk insertion and status update");
         await db.transaction(async (tx) => {
             // Insert all chunks within transaction
             await insertChunksBatch(tx, chunkRecords);
-            console.log("[processDocument] All chunks inserted in batch");
+            consola.debug("[processDocument] All chunks inserted in batch");
 
             // Update document status within same transaction
             await updateDocumentStatus(tx, documentId, "completed", {
@@ -507,7 +507,7 @@ export async function processDocument(documentId: string, options: ProcessingOpt
                     keywords: universityMetadata.keywords,
                 },
             });
-            console.log("[processDocument] Document status updated to 'completed'");
+            consola.debug("[processDocument] Document status updated to 'completed'");
         });
 
         // Mark progress as complete
@@ -515,7 +515,7 @@ export async function processDocument(documentId: string, options: ProcessingOpt
             await tracker.complete();
         }
 
-        console.log("[processDocument] Document processing completed successfully");
+        consola.debug("[processDocument] Document processing completed successfully");
         return {
             success: true,
             documentId,
@@ -525,7 +525,7 @@ export async function processDocument(documentId: string, options: ProcessingOpt
         };
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        console.error(`[processDocument] Error during processing: ${errorMessage}`);
+        consola.error(`[processDocument] Error during processing: ${errorMessage}`);
 
         // Mark progress as failed
         if (tracker) {
@@ -534,7 +534,7 @@ export async function processDocument(documentId: string, options: ProcessingOpt
             // Update status to failed (outside transaction since main transaction rolled back)
             await updateDocumentStatus(db, documentId, "failed", { error: errorMessage });
         }
-        console.log(`[processDocument] Document status set to 'failed' with error: ${errorMessage}`);
+        consola.debug(`[processDocument] Document status set to 'failed' with error: ${errorMessage}`);
 
         return {
             success: false,
