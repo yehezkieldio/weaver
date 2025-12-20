@@ -99,7 +99,26 @@ Realistic multi-turn conversations:
 Each scenario includes:
 - Conversation template (predefined turns)
 - Success criteria (keywords, context retention, coherence)
-- Expected information coverage
+- Expected information coverage using **pattern-based matching**
+
+#### Pattern-Based Information Coverage
+
+Instead of exact substring matching, scenarios now use flexible OR-patterns:
+
+```typescript
+requiredInformationCoverage: [
+  "SIAS|Sistem Informasi Akademik|daring|online",  // Matches ANY of these
+  "registrasi|pembayaran|aktif",                    // Matches ANY of these
+  "validasi|Penasehat Akademik|PA|Dosen PA",       // Matches ANY of these
+  "Prodi|kendala|bantuan|konsultasi"               // Matches ANY of these
+]
+```
+
+This approach:
+- ✅ More flexible (synonyms and alternatives)
+- ✅ Handles paraphrasing in responses
+- ✅ Reduces false negatives
+- ✅ More robust to natural language variation
 
 ### 3. User Simulator (`user-simulator.ts`)
 
@@ -111,17 +130,55 @@ LLM-powered user message generation:
 
 ### 4. Conversation Runner (`conversation-runner.ts`)
 
-Main orchestrator:
+Main orchestrator with **improved streaming parser**:
+
+#### Fixed Streaming Parser
+
+The conversation runner now correctly parses the Vercel AI SDK UI Message Stream format:
+
+```typescript
+// Supports all AI SDK protocol types:
+// - 0: Text chunks (JSON-encoded strings)
+// - 2: Data parts (structured metadata)
+// - 8: Finish signals
+// - e: Error messages
+// - d: Done signals
+
+function parseAISDKStream(rawStream: string): {
+    text: string;
+    retrievedChunks: RetrievedChunk[];
+}
+```
+
+This fix:
+- ✅ Handles streaming responses correctly
+- ✅ Extracts both text and metadata from stream
+- ✅ Robust to protocol format variations
+- ✅ Prevents information loss during parsing
+
+**Before (Flaky)**:
+```typescript
+const lines = chunk.split("\n").filter((line) => line.trim().startsWith("0:"));
+// Only captured lines starting with "0:", missed metadata
+```
+
+**After (Robust)**:
+```typescript
+const { text, retrievedChunks } = parseAISDKStream(rawStream);
+// Properly handles all protocol types and formats
+```
+
+Flow:
 1. Creates chat session
 2. Generates user message (template or LLM-generated)
-3. Calls real chat API
+3. Calls real chat API with **correct streaming parsing**
 4. Evaluates response (coherence, context retention)
 5. Continues until task complete or max turns
 6. Calculates conversation metrics
 
 ### 5. Evaluator (`evaluator.ts`)
 
-Calculates system-level metrics:
+Calculates system-level metrics with **pattern-based evaluation**:
 
 **Conversation Quality**:
 - Coherence score (0-1): Natural conversation flow
@@ -131,12 +188,44 @@ Calculates system-level metrics:
 **Task Completion**:
 - Task completion rate: Did user achieve goal?
 - Turns to completion: Efficiency metric
-- Information coverage: % of required info provided
+- **Information coverage**: % of patterns matched using OR-logic
 
 **User Experience**:
 - Perceived usability: Composite score (coherence + latency + errors)
 - Error rate: % of turns with errors
 - Clarification need rate: % of turns requiring clarification
+
+#### Information Coverage Evaluation
+
+Uses lightweight pattern-based matching instead of LLM calls:
+
+```typescript
+function calculatePatternBasedCoverage(
+  allResponses: string,
+  requiredPatterns: string[]
+): number {
+  // Split patterns by | to get alternatives
+  const matchedCount = requiredPatterns.filter((pattern) =>
+    matchesPattern(allResponses, pattern)
+  ).length;
+  return matchedCount / requiredPatterns.length;
+}
+
+function matchesPattern(text: string, pattern: string): boolean {
+  const textLower = text.toLowerCase();
+  // Return true if ANY alternative matches
+  return pattern
+    .split("|")
+    .map((alt) => alt.trim().toLowerCase())
+    .some((alt) => textLower.includes(alt));
+}
+```
+
+Benefits:
+- ✅ Fast (no LLM calls)
+- ✅ Deterministic (same inputs = same output)
+- ✅ Flexible (handles synonyms and paraphrasing)
+- ✅ Transparent (easy to understand why coverage matched/failed)
 
 ## Usage
 
@@ -198,13 +287,13 @@ console.log(`Context Retention: ${result.metrics.contextRetentionRate}`);
 
 ### System-Level vs Component-Level
 
-| Aspect | Component-Level (RAGAS) | System-Level (Simulated User) |
-|--------|-------------------------|-------------------------------|
-| **What** | Individual Q&A pairs | Complete conversations |
-| **Measures** | Faithfulness, relevancy | Coherence, task completion |
-| **Context** | Single-turn | Multi-turn |
-| **Integration** | RAG components only | Full system (API + UI) |
-| **Purpose** | Validate RAG quality | Validate implementation |
+| Aspect          | Component-Level (RAGAS) | System-Level (Simulated User) |
+| --------------- | ----------------------- | ----------------------------- |
+| **What**        | Individual Q&A pairs    | Complete conversations        |
+| **Measures**    | Faithfulness, relevancy | Coherence, task completion    |
+| **Context**     | Single-turn             | Multi-turn                    |
+| **Integration** | RAG components only     | Full system (API + UI)        |
+| **Purpose**     | Validate RAG quality    | Validate implementation       |
 
 ### Key Metrics
 
@@ -414,6 +503,6 @@ validasi menyeluruh terhadap implementasi MuliaChat...
 
 ---
 
-**Status**: ✅ Implemented  
-**Last Updated**: 2025-12-20  
+**Status**: ✅ Implemented
+**Last Updated**: 2025-12-20
 **Maintainer**: Research Team

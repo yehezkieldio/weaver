@@ -14,6 +14,30 @@ Pengujian dilakukan berdasarkan serangkaian skenario yang telah ditentukan (`ALL
 *   **Informasi Fasilitas**: Pertanyaan tentang lokasi dan jam operasional laboratorium.
 *   **Prosedur Administrasi**: Mengurus surat keterangan aktif kuliah atau transkrip.
 
+### 1.2. Parser Streaming yang Diperbaiki
+
+Komunikasi dengan API dilakukan melalui streaming dalam format Vercel AI SDK UI Message Stream. Parser telah diperbaiki untuk menangani semua jenis protocol message:
+
+```typescript
+// Mendukung semua tipe protocol AI SDK:
+// - 0: Text chunks (string yang dikodekan JSON)
+// - 2: Data parts (metadata terstruktur)
+// - 8: Finish signals
+// - e: Error messages
+// - d: Done signals
+
+function parseAISDKStream(rawStream: string): {
+    text: string;
+    retrievedChunks: RetrievedChunk[];
+}
+```
+
+Perbaikan ini:
+- ✅ Menangani respon streaming dengan benar
+- ✅ Mengekstrak teks dan metadata dari stream
+- ✅ Robust terhadap variasi format protocol
+- ✅ Mencegah kehilangan informasi selama parsing
+
 ## 2. Metrik Evaluasi Tingkat Sistem
 
 Evaluasi dilakukan terhadap log percakapan lengkap, bukan hanya pasangan pertanyaan-jawaban tunggal. Metrik yang digunakan meliputi:
@@ -36,8 +60,40 @@ Dimana $u_t$ adalah input pengguna pada giliran $t$ dan $a_{t-1}$ adalah jawaban
 ### 2.3. Context Retention Rate
 Mengukur kemampuan sistem mengingat informasi yang diberikan pengguna di awal percakapan (misal: nama atau prodi pengguna) tanpa perlu pengulangan.
 
-### 2.4. Information Coverage
-Persentase informasi kunci yang berhasil disampaikan sistem dibandingkan dengan informasi yang seharusnya diberikan untuk menyelesaikan tugas secara ideal.
+### 2.4. Information Coverage dengan Pattern-Based Matching
+
+Persentase pola informasi kunci yang berhasil disampaikan sistem. Pola menggunakan format **OR** untuk mendukung sinonimitas:
+
+```typescript
+requiredInformationCoverage: [
+  "SIAS|Sistem Informasi Akademik|daring|online",  // Cocok JIKA ADA SATU dari ini
+  "registrasi|pembayaran|aktif",                    // Cocok JIKA ADA SATU dari ini
+  "validasi|Penasehat Akademik|PA|Dosen PA",       // Cocok JIKA ADA SATU dari ini
+]
+```
+
+Pendekatan pattern-based ini:
+- ✅ Lebih fleksibel (mendukung sinonim dan alternatif)
+- ✅ Menangani parafrase dalam respons
+- ✅ Mengurangi false negative
+- ✅ Lebih robust terhadap variasi bahasa alami
+
+Evaluasi menggunakan pattern matching yang ringan (tanpa panggilan LLM):
+
+```typescript
+function matchesPattern(text: string, pattern: string): boolean {
+  const textLower = text.toLowerCase();
+  return pattern
+    .split("|")
+    .map((alt) => alt.trim().toLowerCase())
+    .some((alt) => textLower.includes(alt));
+}
+```
+
+Keuntungan:
+- ✅ Cepat (tidak ada panggilan LLM)
+- ✅ Deterministik (input sama = output sama)
+- ✅ Transparan (mudah memahami mengapa coverage cocok/tidak)
 
 ## 3. Analisis Kinerja dan Latensi
 
