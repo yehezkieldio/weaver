@@ -95,7 +95,12 @@ async function runTest(testCase: TestCase): Promise<boolean> {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                messages: [{ role: "user", content: testCase.query }],
+                messages: [
+                    {
+                        role: "user",
+                        parts: [{ type: "text", text: testCase.query }],
+                    },
+                ],
                 useRag: true,
                 useAgenticMode: false, // Standard RAG is enough for fact checking
                 stream: false, // Turn off streaming for easier text parsing if supported, actually API always streams
