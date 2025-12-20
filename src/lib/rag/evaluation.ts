@@ -863,10 +863,11 @@ export async function calculateHallucinationRate(answer: string, contexts: strin
     if (!answer) return 1; // No answer = 100% hallucination
 
     try {
-        const { object } = await generateObject({
-            model: JUDGE_MODEL,
-            schema: SingleScoreSchema,
-            prompt: `Analisis jawaban berikut untuk mendeteksi halusinasi (informasi yang dibuat-buat atau tidak akurat).
+        // Different prompt depending on whether contexts are available
+        const hasContexts = contexts && contexts.length > 0 && contexts.some((c) => c.trim().length > 0);
+
+        const prompt = hasContexts
+            ? `Analisis jawaban berikut untuk mendeteksi halusinasi (informasi yang dibuat-buat atau tidak akurat).
 
 Jawaban: ${answer}
 
@@ -878,7 +879,26 @@ Identifikasi:
 3. Detail spesifik (angka, nama, tanggal) yang tidak didukung
 4. Generalisasi berlebihan tanpa dasar
 
-Berikan TINGKAT HALUSINASI 0-1 (0 = tidak ada halusinasi, 1 = sepenuhnya halusinasi).`,
+Berikan TINGKAT HALUSINASI 0-1 (0 = tidak ada halusinasi, 1 = sepenuhnya halusinasi).`
+            : `Analisis jawaban berikut untuk mendeteksi halusinasi (informasi yang dibuat-buat atau tidak akurat).
+TIDAK ADA konteks yang tersedia - jawaban ini dibuat tanpa RAG.
+
+Jawaban: ${answer}
+
+Identifikasi potensi halusinasi:
+1. Fakta spesifik yang tidak dapat diverifikasi (angka, nama, tanggal, URL)
+2. Klaim yang terlalu pasti tentang informasi yang memerlukan sumber
+3. Detail teknis yang mungkin dibuat-buat
+4. Generalisasi berlebihan
+
+PENTING: Jawaban tanpa konteks cenderung memiliki LEBIH BANYAK halusinasi.
+Berikan TINGKAT HALUSINASI 0-1 (0 = tidak ada halusinasi, 1 = sepenuhnya halusinasi).
+Untuk jawaban tanpa konteks yang mengandung klaim spesifik, berikan skor lebih tinggi (0.4-0.8).`;
+
+        const { object } = await generateObject({
+            model: JUDGE_MODEL,
+            schema: SingleScoreSchema,
+            prompt,
             temperature: 0.1,
         });
 
@@ -1057,12 +1077,14 @@ export async function calculateAllMetrics(
         `[calculateAllMetrics] Batched metrics calculated - faithfulness: ${groundingMetrics.faithfulness.toFixed(3)}, relevancy: ${answerRelevancy.toFixed(3)}`
     );
 
-    // Calculate retrieval metrics if IDs provided
-    const retrievalNdcg = retrievedIds && relevantIds ? calculateNDCG(retrievedIds, relevantIds) : 0;
-    const retrievalMrr = retrievedIds && relevantIds ? calculateMRR(retrievedIds, relevantIds) : 0;
-    const retrievalPrecision = retrievedIds && relevantIds ? calculateRetrievalPrecision(retrievedIds, relevantIds) : 0;
+    // Calculate retrieval metrics if IDs provided and relevantIds is non-empty
+    // When relevantIds is undefined or empty, we can't calculate retrieval quality metrics
+    const hasRetrievalGroundTruth = retrievedIds && retrievedIds.length > 0 && relevantIds && relevantIds.size > 0;
+    const retrievalNdcg = hasRetrievalGroundTruth ? calculateNDCG(retrievedIds, relevantIds) : -1;
+    const retrievalMrr = hasRetrievalGroundTruth ? calculateMRR(retrievedIds, relevantIds) : -1;
+    const retrievalPrecision = hasRetrievalGroundTruth ? calculateRetrievalPrecision(retrievedIds, relevantIds) : -1;
     consola.debug(
-        `[calculateAllMetrics] Retrieval metrics - NDCG: ${retrievalNdcg.toFixed(3)}, MRR: ${retrievalMrr.toFixed(3)}, Precision: ${retrievalPrecision.toFixed(3)}`
+        `[calculateAllMetrics] Retrieval metrics - hasGroundTruth: ${hasRetrievalGroundTruth}, NDCG: ${retrievalNdcg.toFixed(3)}, MRR: ${retrievalMrr.toFixed(3)}, Precision: ${retrievalPrecision.toFixed(3)}`
     );
 
     // Get latency & token metrics using a helper to keep this function compact

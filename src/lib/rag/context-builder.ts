@@ -27,8 +27,11 @@
  */
 
 import { encode } from "gpt-tokenizer";
-import { hybridRetrieve } from "./hybrid-retrieval";
+import { hybridRetrieve, hybridRetrieveWithMetrics, type RetrievalLatencyMetrics } from "./hybrid-retrieval";
 import { enhancePromptForUniversity, type UniversityMetadata } from "./university-domain";
+
+// Re-export for convenience
+export type { RetrievalLatencyMetrics } from "./hybrid-retrieval";
 
 /**
  * Retrieved chunk with similarity scores
@@ -173,6 +176,108 @@ export async function retrieveContext(
         totalTokensEstimate: totalTokens,
         retrievalStrategy: strategy,
         language: detectedLanguage,
+    };
+}
+
+/**
+ * Extended ContextResult that includes latency metrics for evaluation
+ */
+export interface ContextResultWithLatency extends ContextResult {
+    latency: RetrievalLatencyMetrics;
+}
+
+/**
+ * Retrieve context with detailed latency metrics for evaluation pipeline.
+ * Use this function when you need to track timing breakdown for ablation studies.
+ *
+ * @param query - The user's query
+ * @param options - Retrieval configuration options
+ * @returns Context result with latency breakdown
+ */
+export async function retrieveContextWithLatency(
+    query: string,
+    options: {
+        topK?: number;
+        minSimilarity?: number;
+        maxTokens?: number;
+        strategy?: "vector" | "keyword" | "hybrid";
+        vectorWeight?: number;
+        bm25Weight?: number;
+        language?: "en" | "id" | "auto";
+        useReranker?: boolean;
+        rerankerStrategy?: "cross_encoder" | "llm" | "llm_listwise" | "cohere" | "ensemble" | "none";
+    } = {}
+): Promise<ContextResultWithLatency> {
+    consola.debug(
+        `[retrieveContextWithLatency] Starting context retrieval with metrics - query: "${query.substring(0, 80)}..."`
+    );
+    const {
+        topK = 5,
+        maxTokens = 4000,
+        strategy = "hybrid",
+        vectorWeight = 0.6,
+        bm25Weight = 0.4,
+        language = "auto",
+        useReranker = true,
+        rerankerStrategy = "cross_encoder",
+    } = options;
+
+    // Use hybridRetrieveWithMetrics for detailed latency tracking
+    const { results, latency } = await hybridRetrieveWithMetrics(query, {
+        topK: topK * 2,
+        strategy,
+        vectorWeight,
+        bm25Weight,
+        language,
+        useReranker,
+        rerankerStrategy,
+    });
+    consola.debug(
+        `[retrieveContextWithLatency] Retrieval complete - ${results.length} results in ${latency.totalMs}ms`
+    );
+
+    // Convert to RetrievedChunk format
+    const chunksWithScores: RetrievedChunk[] = results.map((r) => ({
+        chunkId: r.chunkId,
+        documentId: r.documentId,
+        documentTitle: r.documentTitle,
+        content: r.content,
+        similarity: r.fusedScore,
+        vectorScore: r.vectorScore,
+        bm25Score: r.bm25Score,
+        fusedScore: r.fusedScore,
+        retrievalMethod: r.retrievalMethod,
+        metadata: r.metadata,
+    }));
+
+    // Build context string with token limit
+    let context = "";
+    let totalTokens = 0;
+    const selectedChunks: RetrievedChunk[] = [];
+
+    for (const chunk of chunksWithScores.slice(0, topK)) {
+        const contentToUse = chunk.metadata?.sentenceWindowContext || chunk.content;
+        const chunkText = `\n\n---\nSource: ${chunk.documentTitle} (Score: ${chunk.fusedScore?.toFixed(3)})\n${contentToUse}`;
+        const chunkTokens = encode(chunkText).length;
+
+        if (totalTokens + chunkTokens > maxTokens) {
+            break;
+        }
+
+        context += chunkText;
+        totalTokens += chunkTokens;
+        selectedChunks.push(chunk);
+    }
+
+    const detectedLanguage = language === "auto" ? detectQueryLanguage(query) : language;
+
+    return {
+        context: context.trim(),
+        chunks: selectedChunks,
+        totalTokensEstimate: totalTokens,
+        retrievalStrategy: strategy,
+        language: detectedLanguage,
+        latency,
     };
 }
 

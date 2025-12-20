@@ -31,7 +31,7 @@ import { CHAT_MODEL, telemetryConfig } from "@/lib/ai";
 import { db } from "@/lib/db";
 import { evaluationQuestions, evaluationRuns } from "@/lib/db/schema";
 import { ACADEMIC_QUESTIONS } from "@/lib/evaluation-questions";
-import { buildRagPrompt, retrieveContext, SYSTEM_PROMPTS } from "@/lib/rag/context-builder";
+import { buildRagPrompt, retrieveContextWithLatency, SYSTEM_PROMPTS } from "@/lib/rag/context-builder";
 import {
     calculateAllMetrics,
     calculateAnswerCorrectness,
@@ -167,36 +167,51 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
                     // minSimilarity (0.3) is for cosine similarity (0-1 range)
                     // hybridRetrieve uses RRF fusion with much smaller scores (0.01-0.05 range)
                     // Let hybridRetrieve use its RRF-appropriate default minScore (0.01)
-                    const contextResult = await retrieveContext(question.question, {
+
+                    // Track retrieval with detailed latency breakdown
+                    const contextResult = await retrieveContextWithLatency(question.question, {
                         topK: 5,
                         // minSimilarity intentionally omitted - would break RRF score filtering
                         strategy: retrievalStrategy,
                         useReranker,
                         rerankerStrategy,
                     });
+
+                    // Use actual latency metrics from hybridRetrieve
+                    const retrievalLatency = contextResult.latency;
+
                     // Mark retrieval phase AFTER retrieval completes
                     latencyTracker.mark("retrieval");
 
-                    // Mark reranking phase if reranker was used (time is already included in retrieval)
-                    if (useReranker) {
-                        latencyTracker.mark("reranking");
+                    // Mark reranking phase with actual measured latency
+                    if (useReranker && retrievalLatency.rerankingMs > 0) {
+                        latencyTracker.mark("reranking", {
+                            documentsProcessed: contextResult.chunks.length,
+                        });
                     }
 
                     const ragPrompt = buildRagPrompt(SYSTEM_PROMPTS.rag, contextResult.context, question.question);
 
+                    const generationStartTime = Date.now();
                     const ragResponse = await generateText({
                         model: CHAT_MODEL,
                         prompt: ragPrompt,
                         temperature: 0.3,
                         experimental_telemetry: telemetryConfig,
                     });
+                    const generationEndTime = Date.now();
                     // Mark generation phase AFTER generation completes
                     latencyTracker.mark("generation");
                     const ragLatency = Date.now() - ragStartTime;
 
+                    // Use actual latency metrics from retrieval
+                    const actualGenerationMs = generationEndTime - generationStartTime;
+                    const actualRerankingMs = retrievalLatency.rerankingMs;
+                    const actualRetrievalMs = retrievalLatency.totalMs - actualRerankingMs;
+
                     // Log debug info about what we're evaluating
                     console.log(
-                        `[Evaluation Run] RAG response length: ${ragResponse.text.length}, contexts: ${contextResult.chunks.length}`
+                        `[Evaluation Run] RAG response length: ${ragResponse.text.length}, contexts: ${contextResult.chunks.length}, retrieval: ${actualRetrievalMs}ms, reranking: ${actualRerankingMs}ms`
                     );
 
                     // Generate non-RAG response
@@ -232,6 +247,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
                     const nonRagHallucination = await calculateHallucinationRate(nonRagResponse.text, []); // No context for non-RAG
 
                     // Update question with all results including hallucination and domain metrics
+                    // Handle -1 values for retrieval metrics (means no ground truth available)
                     await db
                         .update(evaluationQuestions)
                         .set({
@@ -257,16 +273,18 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
                             ragFactualConsistency: ragMetrics.factualConsistency,
                             ragSourceAttribution: ragMetrics.sourceAttribution,
                             ragContradictionScore: ragMetrics.contradictionScore,
-                            // Retrieval metrics
-                            retrievalNdcg: ragMetrics.retrievalNdcg,
-                            retrievalMrr: ragMetrics.retrievalMrr,
-                            retrievalPrecision: ragMetrics.retrievalPrecision,
-                            // Latency metrics
+                            // Retrieval metrics (-1 means no ground truth available, store as null)
+                            retrievalNdcg: ragMetrics.retrievalNdcg >= 0 ? ragMetrics.retrievalNdcg : null,
+                            retrievalMrr: ragMetrics.retrievalMrr >= 0 ? ragMetrics.retrievalMrr : null,
+                            retrievalPrecision:
+                                ragMetrics.retrievalPrecision >= 0 ? ragMetrics.retrievalPrecision : null,
+                            // Latency metrics - use actual measured values from retrieval
                             ragLatencyMs: ragLatency,
                             nonRagLatencyMs: nonRagLatency,
-                            ragRetrievalLatencyMs: Math.round(ragMetrics.retrievalLatencyMs),
-                            ragRerankingLatencyMs: Math.round(ragMetrics.rerankingLatencyMs),
-                            ragGenerationLatencyMs: Math.round(ragMetrics.generationLatencyMs),
+                            ragRetrievalLatencyMs: Math.round(actualRetrievalMs),
+                            ragRerankingLatencyMs: Math.round(actualRerankingMs),
+                            ragGenerationLatencyMs: Math.round(actualGenerationMs),
+                            // Agentic metrics - only populated in agentic mode, 0 for standard RAG
                             ragAgentReasoningLatencyMs: Math.round(ragMetrics.agentReasoningLatencyMs),
                             ragPlanningLatencyMs: Math.round(ragMetrics.planningLatencyMs),
                             ragSynthesisLatencyMs: Math.round(ragMetrics.synthesisLatencyMs),

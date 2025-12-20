@@ -69,6 +69,38 @@ export interface RetrievalResult {
 }
 
 /**
+ * Latency metrics from hybrid retrieval operation
+ *
+ * WHY Track These:
+ * - Enables accurate latency breakdown for evaluation pipeline
+ * - Identifies performance bottlenecks (vector vs BM25 vs reranking)
+ * - Required for ablation studies comparing retrieval strategies
+ *
+ * @property vectorSearchMs - Time for vector similarity search (pgvector)
+ * @property keywordSearchMs - Time for BM25 candidate retrieval
+ * @property bm25ScoringMs - Time for BM25 scoring on candidates
+ * @property rerankingMs - Time for reranking phase (0 if disabled)
+ * @property contextExpansionMs - Time for parent-child context expansion
+ * @property totalMs - Total retrieval time including all phases
+ */
+export interface RetrievalLatencyMetrics {
+    vectorSearchMs: number;
+    keywordSearchMs: number;
+    bm25ScoringMs: number;
+    rerankingMs: number;
+    contextExpansionMs: number;
+    totalMs: number;
+}
+
+/**
+ * Extended result from hybridRetrieveWithMetrics including latency breakdown
+ */
+export interface HybridRetrievalResultWithMetrics {
+    results: RetrievalResult[];
+    latency: RetrievalLatencyMetrics;
+}
+
+/**
  * Configuration options for hybrid retrieval
  *
  * WHY These Options:
@@ -756,6 +788,167 @@ async function performKeywordCandidateSearch(query: string, topK: number, langua
  *
  * This approach is compliant with research constraints in README.md and scales
  * efficiently for large document collections.
+ */
+/**
+ * Hybrid retrieval with detailed latency metrics for evaluation pipeline.
+ * Use this version when you need to track timing breakdown for ablation studies.
+ */
+export async function hybridRetrieveWithMetrics(
+    query: string,
+    options: HybridRetrievalOptions = {}
+): Promise<HybridRetrievalResultWithMetrics> {
+    const retrievalId = crypto.randomUUID().slice(0, 8);
+    consola.debug(`[hybridRetrieveWithMetrics:${retrievalId}] Starting hybrid retrieval pipeline with metrics`);
+    const startTime = Date.now();
+    const opts = { ...DEFAULT_OPTIONS, ...options };
+
+    // Latency tracking
+    const latency: RetrievalLatencyMetrics = {
+        vectorSearchMs: 0,
+        keywordSearchMs: 0,
+        bm25ScoringMs: 0,
+        rerankingMs: 0,
+        contextExpansionMs: 0,
+        totalMs: 0,
+    };
+
+    // Build a map to store chunk data for efficient lookup
+    const chunkMap = new Map<string, ChunkData>();
+    const vectorRankingResults: { id: string; rank: number; score: number }[] = [];
+    const bm25RankingResults: { id: string; rank: number; score: number }[] = [];
+    let detectedLanguage: "en" | "id" = "en";
+
+    // 1. Vector Search Phase
+    if (opts.strategy === "vector" || opts.strategy === "hybrid") {
+        const vectorStart = Date.now();
+        const vectorResults = await performVectorSearch(query, opts.topK);
+        latency.vectorSearchMs = Date.now() - vectorStart;
+        consola.debug(
+            `[hybridRetrieveWithMetrics:${retrievalId}] Vector search: ${vectorResults.length} results in ${latency.vectorSearchMs}ms`
+        );
+
+        for (const result of vectorResults) {
+            chunkMap.set(result.id, result.chunk);
+            vectorRankingResults.push({ id: result.id, rank: result.rank, score: result.score });
+        }
+
+        if (vectorResults.length > 0) {
+            detectedLanguage =
+                opts.language === "auto" ? detectLanguage(`${query} ${vectorResults[0].chunk.content}`) : opts.language;
+        }
+    }
+
+    // 2. Keyword Search Phase (Candidate Selection)
+    if (opts.strategy === "keyword" || opts.strategy === "hybrid") {
+        if (detectedLanguage === "en" && opts.language === "auto") {
+            detectedLanguage = detectLanguage(query);
+        } else if (opts.language !== "auto") {
+            detectedLanguage = opts.language;
+        }
+
+        const keywordStart = Date.now();
+        const keywordCandidates = await performKeywordCandidateSearch(query, opts.topK, detectedLanguage);
+        latency.keywordSearchMs = Date.now() - keywordStart;
+        consola.debug(
+            `[hybridRetrieveWithMetrics:${retrievalId}] Keyword search: ${keywordCandidates.length} candidates in ${latency.keywordSearchMs}ms`
+        );
+
+        for (const chunk of keywordCandidates) {
+            if (!chunkMap.has(chunk.chunkId)) {
+                chunkMap.set(chunk.chunkId, chunk);
+            }
+        }
+    }
+
+    if (chunkMap.size === 0) {
+        latency.totalMs = Date.now() - startTime;
+        return { results: [], latency };
+    }
+
+    // 3. BM25 Scoring Phase
+    if (opts.strategy === "keyword" || opts.strategy === "hybrid") {
+        const bm25Start = Date.now();
+        const chunksForBM25 = Array.from(chunkMap.values());
+        bm25RankingResults.push(...performBM25Search(query, chunksForBM25, detectedLanguage));
+        latency.bm25ScoringMs = Date.now() - bm25Start;
+        consola.debug(`[hybridRetrieveWithMetrics:${retrievalId}] BM25 scoring in ${latency.bm25ScoringMs}ms`);
+    }
+
+    const finalScores = combineRankings(
+        vectorRankingResults,
+        bm25RankingResults,
+        chunkMap,
+        opts.strategy,
+        opts.rrfK,
+        opts.qualityWeight
+    );
+
+    const results = buildResults(chunkMap, finalScores, opts.strategy);
+
+    let finalResults = results
+        .sort((a, b) => b.fusedScore - a.fusedScore)
+        .filter((r) => r.fusedScore >= opts.minScore)
+        .slice(0, opts.topK);
+
+    // 4. Reranking Phase
+    if (opts.useReranker && opts.rerankerStrategy !== "none" && finalResults.length > 0) {
+        const rerankStart = Date.now();
+        const reranked = await rerank(query, finalResults, {
+            strategy: opts.rerankerStrategy,
+            topK: opts.rerankerTopK,
+            minScore: opts.rerankerMinScore,
+            language: detectedLanguage,
+        });
+        latency.rerankingMs = Date.now() - rerankStart;
+        consola.debug(
+            `[hybridRetrieveWithMetrics:${retrievalId}] Reranking: ${reranked.length} results in ${latency.rerankingMs}ms`
+        );
+
+        finalResults = reranked.map((r) => ({
+            chunkId: r.chunkId,
+            documentId: r.documentId,
+            documentTitle: r.documentTitle,
+            content: r.content,
+            vectorScore: r.vectorScore,
+            bm25Score: r.bm25Score,
+            fusedScore: r.rerankedScore,
+            qualityScore: r.qualityScore,
+            retrievalMethod: r.retrievalMethod,
+            metadata: r.metadata,
+        }));
+    }
+
+    // 5. Context Expansion Phase
+    if (opts.useContextExpansion) {
+        const expansionStart = Date.now();
+        finalResults = await expandToParentContext(finalResults);
+        latency.contextExpansionMs = Date.now() - expansionStart;
+        consola.debug(
+            `[hybridRetrieveWithMetrics:${retrievalId}] Context expansion in ${latency.contextExpansionMs}ms`
+        );
+    }
+
+    latency.totalMs = Date.now() - startTime;
+    consola.debug(`[hybridRetrieveWithMetrics:${retrievalId}] Total retrieval time: ${latency.totalMs}ms`);
+
+    return { results: finalResults, latency };
+}
+
+/**
+ * Perform hybrid retrieval using pgvector for vector search and BM25 for keyword search.
+ *
+ * Optimization: Uses pgvector's native <=> operator for efficient database-level vector search
+ * instead of fetching all chunks and computing cosine similarity in-memory.
+ *
+ * For "hybrid" strategy:
+ * 1. Vector search returns top-K*3 candidates using pgvector SQL
+ * 2. BM25 is computed on the candidate pool (not all documents)
+ * 3. Results are fused using Reciprocal Rank Fusion (RRF)
+ *
+ * This approach is compliant with research constraints in README.md and scales
+ * efficiently for large document collections.
+ *
+ * NOTE: For evaluation with latency tracking, use hybridRetrieveWithMetrics() instead.
  */
 export async function hybridRetrieve(query: string, options: HybridRetrievalOptions = {}): Promise<RetrievalResult[]> {
     const retrievalId = crypto.randomUUID().slice(0, 8);
