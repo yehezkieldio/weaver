@@ -12,7 +12,7 @@
  * - POST: Create new evaluation run with questions and configuration
  */
 
-import { desc } from "drizzle-orm";
+import { avg, desc } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { evaluationQuestions, evaluationRuns } from "@/lib/db/schema";
 
@@ -22,19 +22,75 @@ import { evaluationQuestions, evaluationRuns } from "@/lib/db/schema";
  * WHY: Lists all evaluation runs for dashboard display
  * - Orders by creation date for chronological view
  * - Includes run status and configuration for filtering
+ * - Calculates aggregate metrics for comparison charts
  *
  * Response:
  * - Success (200): { runs: EvaluationRun[] }
  * - Error (500): { error: string }
  *
- * @returns JSON response with evaluation runs array
+ * @returns JSON response with evaluation runs array including metrics
  */
 export async function GET() {
     try {
         const runs = await db.select().from(evaluationRuns).orderBy(desc(evaluationRuns.createdAt));
 
-        return Response.json({ runs });
+        // Calculate aggregate metrics for all runs efficiently using SQL Group By
+        const metrics = await db
+            .select({
+                runId: evaluationQuestions.runId,
+                ragFaithfulness: avg(evaluationQuestions.ragFaithfulness),
+                ragAnswerRelevancy: avg(evaluationQuestions.ragAnswerRelevancy),
+                ragContextPrecision: avg(evaluationQuestions.ragContextPrecision),
+                ragContextRecall: avg(evaluationQuestions.ragContextRecall),
+                ragAnswerCorrectness: avg(evaluationQuestions.ragAnswerCorrectness),
+                nonRagAnswerRelevancy: avg(evaluationQuestions.nonRagAnswerRelevancy),
+                nonRagAnswerCorrectness: avg(evaluationQuestions.nonRagAnswerCorrectness),
+                ragHallucinationRate: avg(evaluationQuestions.ragHallucinationRate),
+                nonRagHallucinationRate: avg(evaluationQuestions.nonRagHallucinationRate),
+                ragFactualConsistency: avg(evaluationQuestions.ragFactualConsistency),
+                ragSourceAttribution: avg(evaluationQuestions.ragSourceAttribution),
+                ragLatencyMs: avg(evaluationQuestions.ragLatencyMs),
+            })
+            .from(evaluationQuestions)
+            .groupBy(evaluationQuestions.runId);
+
+        // Map metrics to runs
+        const runsWithMetrics = runs.map((run) => {
+            const runMetrics = metrics.find((m) => m.runId === run.id);
+            
+            if (!runMetrics) {
+                return run;
+            }
+
+            // Convert string results from avg() to numbers if necessary (depends on driver)
+            const parseMetric = (val: unknown) => (typeof val === "string" ? parseFloat(val) : (val as number) || 0);
+
+            return {
+                ...run,
+                aggregateMetrics: {
+                    rag: {
+                        faithfulness: parseMetric(runMetrics.ragFaithfulness),
+                        answerRelevancy: parseMetric(runMetrics.ragAnswerRelevancy),
+                        contextPrecision: parseMetric(runMetrics.ragContextPrecision),
+                        contextRecall: parseMetric(runMetrics.ragContextRecall),
+                        answerCorrectness: parseMetric(runMetrics.ragAnswerCorrectness),
+                    },
+                    nonRag: {
+                        answerRelevancy: parseMetric(runMetrics.nonRagAnswerRelevancy),
+                        answerCorrectness: parseMetric(runMetrics.nonRagAnswerCorrectness),
+                    },
+                    avgHallucinationRate: parseMetric(runMetrics.ragHallucinationRate),
+                    nonRagHallucinationRate: parseMetric(runMetrics.nonRagHallucinationRate),
+                    avgFactualConsistency: parseMetric(runMetrics.ragFactualConsistency),
+                    avgSourceAttribution: parseMetric(runMetrics.ragSourceAttribution),
+                    avgLatencyMs: parseMetric(runMetrics.ragLatencyMs),
+                },
+            };
+        });
+
+        return Response.json({ runs: runsWithMetrics });
     } catch (error) {
+        console.error("Failed to fetch evaluation runs:", error);
         return Response.json({ error: "Failed to fetch evaluation runs" }, { status: 500 });
     }
 }
