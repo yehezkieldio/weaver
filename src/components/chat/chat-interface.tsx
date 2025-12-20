@@ -110,7 +110,7 @@ const MessageBubble = memo(function MessageBubbleComponent({
         <div className={cn("flex w-full gap-3", isUser ? "flex-row-reverse" : "justify-start")}>
             <div
                 className={cn(
-                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-full shadow-sm ring-1 ring-border/20",
                     isUser ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                 )}
             >
@@ -118,7 +118,12 @@ const MessageBubble = memo(function MessageBubbleComponent({
             </div>
 
             <div className={cn("flex max-w-[85%] flex-col space-y-2", isUser && "items-end")}>
-                <Card className={cn("w-fit p-4", isUser ? "bg-primary text-primary-foreground" : "bg-card")}>
+                <Card
+                    className={cn(
+                        "w-fit p-4 shadow-sm",
+                        isUser ? "border-primary/20 bg-primary text-primary-foreground" : "border-border bg-card"
+                    )}
+                >
                     <div
                         className={cn(
                             "prose prose-sm dark:prose-invert max-w-none",
@@ -669,12 +674,12 @@ const ChatInput = memo(function ChatInputComponent({
     const isNearLimit = inputLength > MAX_LENGTH * 0.9;
 
     return (
-        <div className="border-border border-t bg-card p-4">
+        <div className="border-t bg-card/50 p-4 backdrop-blur-sm">
             <form className="w-full" onSubmit={onSubmit}>
                 <div className="relative">
                     <Textarea
                         className={cn(
-                            "min-h-15 resize-none bg-background pr-24",
+                            "min-h-15 resize-none bg-background pr-24 shadow-sm transition-all focus-visible:ring-primary/20",
                             isTooShort && "border-yellow-500 focus-visible:ring-yellow-500",
                             isTooLong && "border-destructive focus-visible:ring-destructive"
                         )}

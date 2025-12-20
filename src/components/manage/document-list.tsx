@@ -164,7 +164,7 @@ export function DocumentList() {
             </div>
 
             {/* Documents Table */}
-            <Card>
+            <Card className="overflow-hidden border-border shadow-sm">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -180,7 +180,7 @@ export function DocumentList() {
                     <TableBody>
                         {filteredDocs.length === 0 ? (
                             <TableRow>
-                                <TableCell className="py-8 text-center text-muted-foreground" colSpan={7}>
+                                <TableCell className="h-24 text-center text-muted-foreground" colSpan={7}>
                                     {searchQuery
                                         ? "Tidak ada dokumen yang cocok dengan pencarian Anda"
                                         : "Belum ada dokumen yang diunggah"}
@@ -188,8 +188,8 @@ export function DocumentList() {
                             </TableRow>
                         ) : (
                             filteredDocs.map((doc) => (
-                                <TableRow key={doc.id}>
-                                    <TableCell>
+                                <TableRow className="group transition-colors hover:bg-muted/50" key={doc.id}>
+                                    <TableCell className="font-medium">
                                         <div className="flex items-center gap-3">
                                             <div className="rounded-lg bg-muted p-2">
                                                 {getDocTypeIcon(doc.metadata?.documentType)}
@@ -245,7 +245,11 @@ export function DocumentList() {
                                     <TableCell>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <Button className="h-8 w-8" size="icon" variant="ghost">
+                                                <Button
+                                                    className="h-8 w-8 opacity-0 transition-opacity group-hover:opacity-100"
+                                                    size="icon"
+                                                    variant="ghost"
+                                                >
                                                     <MoreHorizontal className="h-4 w-4" />
                                                 </Button>
                                             </DropdownMenuTrigger>

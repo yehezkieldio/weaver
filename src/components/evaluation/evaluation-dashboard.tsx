@@ -223,32 +223,32 @@ export function EvaluationDashboard() {
                 <TabsContent className="space-y-4" value="runs">
                     {/* Summary Cards */}
                     <div className="grid gap-4 md:grid-cols-4">
-                        <Card>
+                        <Card className="border-border/60 shadow-sm transition-colors hover:border-primary/20">
                             <CardHeader className="pb-2">
                                 <CardDescription>Total Evaluasi</CardDescription>
-                                <CardTitle className="text-3xl">{runs.length}</CardTitle>
+                                <CardTitle className="font-bold text-3xl tracking-tight">{runs.length}</CardTitle>
                             </CardHeader>
                         </Card>
-                        <Card>
+                        <Card className="border-border/60 shadow-sm transition-colors hover:border-green-500/20">
                             <CardHeader className="pb-2">
                                 <CardDescription>Selesai</CardDescription>
-                                <CardTitle className="text-3xl text-green-600">
+                                <CardTitle className="font-bold text-3xl text-green-600 tracking-tight">
                                     {runs.filter((r) => r.status === "completed").length}
                                 </CardTitle>
                             </CardHeader>
                         </Card>
-                        <Card>
+                        <Card className="border-border/60 shadow-sm transition-colors hover:border-blue-500/20">
                             <CardHeader className="pb-2">
                                 <CardDescription>Berjalan</CardDescription>
-                                <CardTitle className="text-3xl text-blue-600">
+                                <CardTitle className="font-bold text-3xl text-blue-600 tracking-tight">
                                     {runs.filter((r) => r.status === "running").length}
                                 </CardTitle>
                             </CardHeader>
                         </Card>
-                        <Card>
+                        <Card className="border-border/60 shadow-sm transition-colors hover:border-primary/20">
                             <CardHeader className="pb-2">
                                 <CardDescription>Total Pertanyaan</CardDescription>
-                                <CardTitle className="text-3xl">
+                                <CardTitle className="font-bold text-3xl tracking-tight">
                                     {runs.reduce((acc, r) => acc + r.totalQuestions, 0)}
                                 </CardTitle>
                             </CardHeader>
@@ -256,7 +256,7 @@ export function EvaluationDashboard() {
                     </div>
 
                     {/* Runs Table */}
-                    <Card>
+                    <Card className="border-border/60 shadow-sm">
                         <Table>
                             <TableHeader>
                                 <TableRow>

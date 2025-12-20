@@ -57,13 +57,14 @@ export async function GET() {
         // Map metrics to runs
         const runsWithMetrics = runs.map((run) => {
             const runMetrics = metrics.find((m) => m.runId === run.id);
-            
+
             if (!runMetrics) {
                 return run;
             }
 
             // Convert string results from avg() to numbers if necessary (depends on driver)
-            const parseMetric = (val: unknown) => (typeof val === "string" ? parseFloat(val) : (val as number) || 0);
+            const parseMetric = (val: unknown) =>
+                typeof val === "string" ? Number.parseFloat(val) : (val as number) || 0;
 
             return {
                 ...run,
