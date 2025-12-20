@@ -34,6 +34,7 @@
  */
 
 import { embed, embedMany } from "ai";
+import consola from "consola";
 import { EMBEDDING_MODEL } from "@/lib/ai";
 
 /**

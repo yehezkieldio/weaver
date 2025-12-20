@@ -308,7 +308,7 @@ async function runAnalysis() {
         return;
     }
 
-    consola.info();
+    consola.info(" ");
 
     // ===== 0. DATA QUALITY VALIDATION =====
     consola.info("0. DATA QUALITY VALIDATION / VALIDASI KUALITAS DATA");

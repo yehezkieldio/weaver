@@ -5,6 +5,7 @@
  * in different ways for various testing scenarios.
  */
 
+import consola from "consola";
 import { runConversationScenario, runSimulatedUserTests } from "@/lib/simulated-user/conversation-runner";
 import { NEW_STUDENT_PERSONA } from "@/lib/simulated-user/personas";
 import { ALL_SCENARIOS, KRS_REGISTRATION_SCENARIO } from "@/lib/simulated-user/scenarios";

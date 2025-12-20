@@ -13,6 +13,7 @@
  */
 
 import { generateText } from "ai";
+import consola from "consola";
 import { JUDGE_MODEL } from "@/lib/ai";
 import type { ConversationTurn, UserPersona, UserSimulatorConfig } from "./types";
 

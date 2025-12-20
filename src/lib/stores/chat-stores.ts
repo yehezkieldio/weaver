@@ -23,6 +23,7 @@
  * - Syncs with database on app load
  */
 
+import consola from "consola";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
