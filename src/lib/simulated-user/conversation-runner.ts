@@ -151,7 +151,7 @@ export async function runConversationScenario(
     const { useAgenticMode = true, maxTurns = 10, useTemplate = true } = config;
 
     // Create a new chat session
-    const sessionId = generateId();
+    const sessionId = crypto.randomUUID();
     await db.insert(chatSessions).values({
         id: sessionId,
         title: scenario.name,
