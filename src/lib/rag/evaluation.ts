@@ -1080,6 +1080,20 @@ export async function calculateAllMetrics(
     // Calculate retrieval metrics if IDs provided and relevantIds is non-empty
     // When relevantIds is undefined or empty, we can't calculate retrieval quality metrics
     const hasRetrievalGroundTruth = retrievedIds && retrievedIds.length > 0 && relevantIds && relevantIds.size > 0;
+
+    // Debug: Log the IDs being compared to understand matching issues
+    if (hasRetrievalGroundTruth) {
+        const relevantArray = Array.from(relevantIds);
+        const matchingIds = retrievedIds.filter((id) => relevantIds.has(id));
+        console.log("[calculateAllMetrics] Retrieval IDs debug:");
+        console.log(`  - Retrieved IDs (${retrievedIds.length}): ${retrievedIds.slice(0, 3).join(", ")}...`);
+        console.log(`  - Relevant IDs (${relevantArray.length}): ${relevantArray.slice(0, 3).join(", ")}...`);
+        console.log(`  - Matching IDs: ${matchingIds.length} matches`);
+        if (matchingIds.length === 0) {
+            console.log("  - WARNING: No overlap between retrieved and relevant chunk IDs!");
+        }
+    }
+
     const retrievalNdcg = hasRetrievalGroundTruth ? calculateNDCG(retrievedIds, relevantIds) : -1;
     const retrievalMrr = hasRetrievalGroundTruth ? calculateMRR(retrievedIds, relevantIds) : -1;
     const retrievalPrecision = hasRetrievalGroundTruth ? calculateRetrievalPrecision(retrievedIds, relevantIds) : -1;

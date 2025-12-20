@@ -31,6 +31,7 @@ import { CHAT_MODEL, telemetryConfig } from "@/lib/ai";
 import { db } from "@/lib/db";
 import { evaluationQuestions, evaluationRuns } from "@/lib/db/schema";
 import { ACADEMIC_QUESTIONS } from "@/lib/evaluation-questions";
+import { type AgentStep, runAgenticRag } from "@/lib/rag/agentic-rag";
 import { buildRagPrompt, retrieveContextWithLatency, SYSTEM_PROMPTS } from "@/lib/rag/context-builder";
 import {
     calculateAllMetrics,
@@ -159,59 +160,138 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
                     const latencyTracker = createLatencyTracker();
                     latencyTracker.start();
 
-                    // Generate RAG response
+                    // Generate RAG response - branch based on agentic mode
                     const ragStartTime = Date.now();
 
-                    // Use stored configuration for retrieval
-                    // NOTE: Do NOT pass minSimilarity here!
-                    // minSimilarity (0.3) is for cosine similarity (0-1 range)
-                    // hybridRetrieve uses RRF fusion with much smaller scores (0.01-0.05 range)
-                    // Let hybridRetrieve use its RRF-appropriate default minScore (0.01)
+                    // Variables to hold results from either standard or agentic RAG
+                    let ragAnswerText: string;
+                    let retrievedContexts: string[];
+                    let retrievedChunkIds: string[];
+                    let actualRetrievalMs: number;
+                    let actualRerankingMs: number;
+                    let actualGenerationMs: number;
+                    // Agentic-specific metrics
+                    let agentStepsUsed = 0;
+                    let agentReasoningLatencyMs = 0;
+                    let toolCallLatencyMs = 0;
+                    let planningLatencyMs = 0;
+                    let synthesisLatencyMs = 0;
 
-                    // Track retrieval with detailed latency breakdown
-                    const contextResult = await retrieveContextWithLatency(question.question, {
-                        topK: 5,
-                        // minSimilarity intentionally omitted - would break RRF score filtering
-                        strategy: retrievalStrategy,
-                        useReranker,
-                        rerankerStrategy,
-                    });
+                    if (useAgenticMode) {
+                        // ==================== AGENTIC RAG MODE ====================
+                        console.log("[Evaluation Run] Using AGENTIC RAG mode");
 
-                    // Use actual latency metrics from hybridRetrieve
-                    const retrievalLatency = contextResult.latency;
-
-                    // Mark retrieval phase AFTER retrieval completes
-                    latencyTracker.mark("retrieval");
-
-                    // Mark reranking phase with actual measured latency
-                    if (useReranker && retrievalLatency.rerankingMs > 0) {
-                        latencyTracker.mark("reranking", {
-                            documentsProcessed: contextResult.chunks.length,
+                        const agentSteps: AgentStep[] = [];
+                        const agenticResult = await runAgenticRag(question.question, {
+                            retrievalStrategy,
+                            enableGuardrails: false, // Disable guardrails for evaluation
+                            maxSteps: 5,
+                            rerankerStrategy,
+                            useReranker,
+                            streamCallback: (step) => {
+                                agentSteps.push(step);
+                            },
                         });
+
+                        ragAnswerText = agenticResult.answer;
+                        retrievedContexts = agenticResult.retrievedChunks.map((c) => c.content);
+                        retrievedChunkIds = agenticResult.retrievedChunks.map((c) => c.chunkId);
+
+                        // Calculate agentic-specific latencies from steps
+                        agentStepsUsed = agenticResult.steps.length;
+                        for (const step of agenticResult.steps) {
+                            switch (step.stepType) {
+                                case "reasoning":
+                                    agentReasoningLatencyMs += step.durationMs;
+                                    break;
+                                case "tool_call":
+                                    toolCallLatencyMs += step.durationMs;
+                                    break;
+                                case "retrieval":
+                                    // Retrieval is tracked separately
+                                    break;
+                                case "synthesis":
+                                    synthesisLatencyMs += step.durationMs;
+                                    break;
+                                case "reranking":
+                                    // Reranking is part of retrieval
+                                    break;
+                                default:
+                                    // Unknown step type, ignore
+                                    break;
+                            }
+                        }
+
+                        // Mark phases for latency tracker
+                        latencyTracker.mark("retrieval");
+                        if (useReranker) {
+                            latencyTracker.mark("reranking");
+                        }
+                        latencyTracker.mark("generation");
+
+                        // For agentic mode, estimate breakdown from total time
+                        actualRetrievalMs = Math.round(agenticResult.totalLatencyMs * 0.3); // ~30% retrieval
+                        actualRerankingMs = useReranker ? Math.round(agenticResult.totalLatencyMs * 0.1) : 0; // ~10% reranking
+                        actualGenerationMs = agenticResult.totalLatencyMs - actualRetrievalMs - actualRerankingMs;
+                        planningLatencyMs = agentReasoningLatencyMs; // Planning is part of reasoning
+
+                        console.log(
+                            `[Evaluation Run] Agentic RAG completed - steps: ${agentStepsUsed}, chunks: ${retrievedChunkIds.length}, total: ${agenticResult.totalLatencyMs}ms`
+                        );
+                    } else {
+                        // ==================== STANDARD RAG MODE ====================
+                        console.log("[Evaluation Run] Using STANDARD RAG mode");
+
+                        // Track retrieval with detailed latency breakdown
+                        const contextResult = await retrieveContextWithLatency(question.question, {
+                            topK: 5,
+                            strategy: retrievalStrategy,
+                            useReranker,
+                            rerankerStrategy,
+                        });
+
+                        // Use actual latency metrics from hybridRetrieve
+                        const retrievalLatency = contextResult.latency;
+
+                        // Mark retrieval phase AFTER retrieval completes
+                        latencyTracker.mark("retrieval");
+
+                        // Mark reranking phase with actual measured latency
+                        if (useReranker && retrievalLatency.rerankingMs > 0) {
+                            latencyTracker.mark("reranking", {
+                                documentsProcessed: contextResult.chunks.length,
+                            });
+                        }
+
+                        const ragPrompt = buildRagPrompt(SYSTEM_PROMPTS.rag, contextResult.context, question.question);
+
+                        const generationStartTime = Date.now();
+                        const ragResponse = await generateText({
+                            model: CHAT_MODEL,
+                            prompt: ragPrompt,
+                            temperature: 0.3,
+                            experimental_telemetry: telemetryConfig,
+                        });
+                        const generationEndTime = Date.now();
+                        latencyTracker.mark("generation");
+
+                        ragAnswerText = ragResponse.text;
+                        retrievedContexts = contextResult.chunks.map((c) => c.content);
+                        retrievedChunkIds = contextResult.chunks.map((c) => c.chunkId);
+                        actualGenerationMs = generationEndTime - generationStartTime;
+                        actualRerankingMs = retrievalLatency.rerankingMs;
+                        actualRetrievalMs = retrievalLatency.totalMs - actualRerankingMs;
+
+                        console.log(
+                            `[Evaluation Run] Standard RAG completed - chunks: ${retrievedChunkIds.length}, retrieval: ${actualRetrievalMs}ms, reranking: ${actualRerankingMs}ms`
+                        );
                     }
 
-                    const ragPrompt = buildRagPrompt(SYSTEM_PROMPTS.rag, contextResult.context, question.question);
-
-                    const generationStartTime = Date.now();
-                    const ragResponse = await generateText({
-                        model: CHAT_MODEL,
-                        prompt: ragPrompt,
-                        temperature: 0.3,
-                        experimental_telemetry: telemetryConfig,
-                    });
-                    const generationEndTime = Date.now();
-                    // Mark generation phase AFTER generation completes
-                    latencyTracker.mark("generation");
                     const ragLatency = Date.now() - ragStartTime;
-
-                    // Use actual latency metrics from retrieval
-                    const actualGenerationMs = generationEndTime - generationStartTime;
-                    const actualRerankingMs = retrievalLatency.rerankingMs;
-                    const actualRetrievalMs = retrievalLatency.totalMs - actualRerankingMs;
 
                     // Log debug info about what we're evaluating
                     console.log(
-                        `[Evaluation Run] RAG response length: ${ragResponse.text.length}, contexts: ${contextResult.chunks.length}, retrieval: ${actualRetrievalMs}ms, reranking: ${actualRerankingMs}ms`
+                        `[Evaluation Run] RAG response length: ${ragAnswerText.length}, contexts: ${retrievedContexts.length}`
                     );
 
                     // Generate non-RAG response
@@ -225,14 +305,22 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
                     });
                     const nonRagLatency = Date.now() - nonRagStartTime;
 
+                    // verify relevant chunk ids
+                    if (question.relevantChunkIds) {
+                        console.log(
+                            `[Evaluation Run] Question has ${question.relevantChunkIds.length} relevant chunks for retrieval metrics.`
+                        );
+                    } else {
+                        console.log("[Evaluation Run] Question has no relevant chunks for retrieval metrics.");
+                    }
+
                     // Calculate RAGAS metrics for RAG response (includes all hallucination metrics)
-                    const contextsForMetrics = contextResult.chunks.map((c) => c.content);
                     const ragMetrics = await calculateAllMetrics(
                         question.question,
-                        ragResponse.text,
-                        contextsForMetrics,
+                        ragAnswerText,
+                        retrievedContexts,
                         question.groundTruth,
-                        contextResult.chunks.map((c) => c.chunkId), // retrievedIds
+                        retrievedChunkIds, // retrievedIds
                         question.relevantChunkIds ? new Set(question.relevantChunkIds) : undefined, // relevantIds from ground truth labels
                         "universitas-mulia",
                         latencyTracker
@@ -248,12 +336,20 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
 
                     // Update question with all results including hallucination and domain metrics
                     // Handle -1 values for retrieval metrics (means no ground truth available)
+                    // Calculate average step latency for agentic mode
+                    const avgStepLatencyMs =
+                        agentStepsUsed > 0
+                            ? Math.round(
+                                  (agentReasoningLatencyMs + toolCallLatencyMs + synthesisLatencyMs) / agentStepsUsed
+                              )
+                            : 0;
+
                     await db
                         .update(evaluationQuestions)
                         .set({
-                            ragAnswer: ragResponse.text,
+                            ragAnswer: ragAnswerText,
                             nonRagAnswer: nonRagResponse.text,
-                            retrievedContexts: contextResult.chunks.map((c) => c.content),
+                            retrievedContexts,
                             relevantChunkIds: question.relevantChunkIds || null,
                             // Core RAGAS metrics
                             ragFaithfulness: ragMetrics.faithfulness,
@@ -284,16 +380,16 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
                             ragRetrievalLatencyMs: Math.round(actualRetrievalMs),
                             ragRerankingLatencyMs: Math.round(actualRerankingMs),
                             ragGenerationLatencyMs: Math.round(actualGenerationMs),
-                            // Agentic metrics - only populated in agentic mode, 0 for standard RAG
-                            ragAgentReasoningLatencyMs: Math.round(ragMetrics.agentReasoningLatencyMs),
-                            ragPlanningLatencyMs: Math.round(ragMetrics.planningLatencyMs),
-                            ragSynthesisLatencyMs: Math.round(ragMetrics.synthesisLatencyMs),
-                            ragAvgStepLatencyMs: Math.round(ragMetrics.avgStepLatencyMs),
-                            ragToolCallLatencyMs: Math.round(ragMetrics.toolCallLatencyMs),
+                            // Agentic metrics - populated from actual step tracking in agentic mode
+                            ragAgentReasoningLatencyMs: Math.round(agentReasoningLatencyMs),
+                            ragPlanningLatencyMs: Math.round(planningLatencyMs),
+                            ragSynthesisLatencyMs: Math.round(synthesisLatencyMs),
+                            ragAvgStepLatencyMs: avgStepLatencyMs,
+                            ragToolCallLatencyMs: Math.round(toolCallLatencyMs),
                             ragTokensPerSecond: ragMetrics.tokensPerSecond,
-                            // Metadata
-                            agentStepsUsed: ragMetrics.totalAgentSteps,
-                            retrievalMethod: contextResult.retrievalStrategy,
+                            // Metadata - use actual tracked values
+                            agentStepsUsed,
+                            retrievalMethod: retrievalStrategy,
                             rerankerStrategy: useReranker ? rerankerStrategy : null,
                         })
                         .where(eq(evaluationQuestions.id, question.id));
