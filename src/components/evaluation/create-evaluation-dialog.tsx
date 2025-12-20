@@ -37,7 +37,7 @@ export function CreateEvaluationDialog({ open, onOpenChange, onCreated }: Create
     const [useAgenticMode, setUseAgenticMode] = useState(true);
     const [retrievalStrategy, setRetrievalStrategy] = useState<"vector" | "keyword" | "hybrid">("hybrid");
     const [chunkingStrategy, setChunkingStrategy] = useState<string>("recursive");
-    const [enableGuardrails, setEnableGuardrails] = useState(true);
+    const [enableGuardrails, setEnableGuardrails] = useState(false);
     const [useReranker, setUseReranker] = useState(true);
     const [rerankerStrategy, setRerankerStrategy] = useState<string>("ensemble");
     const [language, setLanguage] = useState<string>("id");
