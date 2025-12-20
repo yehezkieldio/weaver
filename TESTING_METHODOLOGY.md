@@ -12,7 +12,14 @@ This document outlines the software testing strategy implemented to ensure the r
   - **Domain Logic** (`src/lib/rag/university-domain.ts`): Tests the extraction of metadata (course codes, faculties), query synonym expansion, and language detection.
 - **Execution**: `bun test src/tests/unit`
 
-### 2. End-to-End / System Testing (Simulated User)
+### 2. Integration Testing (Module Level)
+**Objective**: Verify the interaction between data sources and logic layers without relying on external services (like live databases or OpenAI APIs), ensuring the core retrieval and ranking algorithms work as expected.
+- **Tools**: Bun Test with Module Mocking.
+- **Coverage**:
+  - **Hybrid Retrieval** (`src/lib/rag/hybrid-retrieval.ts`): Tests the fusion of vector search (simulated) and keyword search (BM25), validating the Reciprocal Rank Fusion (RRF) algorithm and scoring logic.
+- **Execution**: `bun test src/tests/integration`
+
+### 3. End-to-End / System Testing (Simulated User)
 **Objective**: Evaluate the full RAG pipeline from query to generation using simulated user personas.
 - **Tools**: Custom Simulated User Framework (`src/lib/rag/simulated-user/`).
 - **Methodology**:
@@ -34,7 +41,10 @@ To include this testing strategy in your research paper, you can use the followi
 > **2.x.1. Component-Level Verification**
 > Unit tests were developed to validate critical data processing modules. Specifically, the **Document Chunking** algorithm was tested to verify its ability to preserve semantic boundaries (e.g., paragraphs, academic sections) and maintain citation integrity during text segmentation. The **Domain Logic** module, responsible for extracting metadata (e.g., course codes, faculty names) and expanding queries with domain-specific synonyms, was verified against a dataset of standard university document patterns. These tests ensure that the retrieval base is constructed correctly and that query processing is deterministic.
 >
-> **2.x.2. Simulated User End-to-End Testing**
+> **2.x.2. Integration Testing**
+> Integration tests were employed to validate the **Hybrid Retrieval** engine. By mocking the database layer, the logic for combining vector similarity scores with Okapi BM25 keyword scores via Reciprocal Rank Fusion (RRF) was isolated and verified. This ensures that the ranking algorithm correctly prioritizes documents that satisfy both semantic and lexical relevance criteria before they are passed to the generation generation model.
+>
+> **2.x.3. Simulated User End-to-End Testing**
 > To simulate real-world usage patterns without immediate human cost, an automated **Simulated User** framework was employed. This system utilizes a secondary Large Language Model (LLM) configured with distinct user personas (e.g., "New Student", "Faculty Member") to engage the chatbot in multi-turn conversations.
 >
 > The framework executes defined user journeys covering key domains:
@@ -46,7 +56,7 @@ To include this testing strategy in your research paper, you can use the followi
 
 ## Running the Tests
 
-1.  **Run Unit Tests**:
+1.  **Run Unit and Integration Tests**:
     ```bash
     bun test
     ```
