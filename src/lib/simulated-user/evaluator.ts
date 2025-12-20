@@ -78,7 +78,7 @@ Output only the numerical score (e.g., 0.85):`;
 }
 
 /**
- * Check if required context from previous turns is retained
+ * Check if required context from previous turns is retained (keyword-based, fast fallback)
  */
 export function evaluateContextRetention(assistantResponse: string, requiredContext: string[]): boolean {
     if (!requiredContext || requiredContext.length === 0) {
@@ -90,6 +90,65 @@ export function evaluateContextRetention(assistantResponse: string, requiredCont
 
     // At least 50% of required context should be referenced
     return retainedCount >= Math.ceil(requiredContext.length * 0.5);
+}
+
+/**
+ * Check if required context from previous turns is retained using LLM-based semantic evaluation
+ *
+ * This approach understands semantic similarity rather than exact keyword matching.
+ * For example, "prosedur pengisian KRS" will match responses that explain "cara mengisi KRS"
+ * or "langkah-langkah registrasi mata kuliah".
+ */
+export async function evaluateContextRetentionLLM(
+    assistantResponse: string,
+    requiredContext: string[],
+    conversationHistory: Array<{ role: "user" | "assistant"; content: string }>
+): Promise<boolean> {
+    if (!requiredContext || requiredContext.length === 0) {
+        return true; // No context required
+    }
+
+    const historyText = conversationHistory
+        .slice(-6) // Last 3 turns for context
+        .map((turn) => `${turn.role === "user" ? "User" : "Assistant"}: ${turn.content}`)
+        .join("\n");
+
+    const prompt = `Evaluate if the assistant's response demonstrates awareness and retention of required context topics.
+
+**Required Context Topics**:
+${requiredContext.map((ctx) => `- ${ctx}`).join("\n")}
+
+**Recent Conversation History**:
+${historyText || "(No history)"}
+
+**Current Assistant Response**:
+${assistantResponse}
+
+**Evaluation Task**:
+Does the assistant's response show awareness of the required context topics?
+The response doesn't need to contain exact keywords, but should semantically relate to or acknowledge these topics.
+
+**Criteria**:
+- Does the response build upon or reference previous conversation context?
+- Does it maintain continuity with the discussed topics?
+- Would a user feel the assistant "remembers" what was discussed?
+
+**Output**: Answer with only "true" if at least 50% of required context is semantically retained, or "false" otherwise.`;
+
+    try {
+        const { text } = await generateText({
+            model: JUDGE_MODEL,
+            temperature: 0.1,
+            prompt,
+        });
+
+        const result = text.trim().toLowerCase();
+        return result === "true" || result.includes("true");
+    } catch (error) {
+        console.error("Error in LLM context retention evaluation, falling back to keyword-based:", error);
+        // Fallback to keyword-based evaluation
+        return evaluateContextRetention(assistantResponse, requiredContext);
+    }
 }
 
 /**
@@ -164,12 +223,13 @@ export function evaluateSuccessCriteria(
 
 /**
  * Calculate overall conversation metrics
+ * Uses LLM-based semantic evaluation for information coverage
  */
-export function calculateConversationMetrics(
+export async function calculateConversationMetrics(
     turns: ConversationTurnResult[],
     criteria: SuccessCriteria,
     taskCompleted: boolean
-): ConversationMetrics {
+): Promise<ConversationMetrics> {
     if (turns.length === 0) {
         return {
             taskCompletionRate: 0,
@@ -205,16 +265,36 @@ export function calculateConversationMetrics(
     const followUpHandlingScore =
         followUpTurns.length > 0 ? followUpTurns.filter((t) => t.satisfiedIntent).length / followUpTurns.length : 1.0;
 
-    // Information coverage (based on keywords)
-    const allResponses = turns
-        .map((t) => t.assistantResponse)
-        .join(" ")
-        .toLowerCase();
-    const coveredInfo = criteria.requiredInformationCoverage
-        ? criteria.requiredInformationCoverage.filter((info) => allResponses.includes(info.toLowerCase())).length
-        : 0;
-    const totalRequiredInfo = criteria.requiredInformationCoverage?.length || 1;
-    const informationCoverageRate = coveredInfo / totalRequiredInfo;
+    // Information coverage using LLM-based semantic evaluation
+    let informationCoverageRate = 0;
+    if (criteria.requiredInformationCoverage && criteria.requiredInformationCoverage.length > 0) {
+        // Build conversation history for evaluation
+        const conversationHistory: Array<{ role: "user" | "assistant"; content: string }> = turns.flatMap((t) => [
+            { role: "user" as const, content: t.userMessage },
+            { role: "assistant" as const, content: t.assistantResponse },
+        ]);
+
+        try {
+            const coverageResult = await evaluateInformationCoverage(
+                conversationHistory,
+                criteria.requiredInformationCoverage
+            );
+            informationCoverageRate = coverageResult.score;
+        } catch (error) {
+            console.error("Error in LLM information coverage, falling back to keyword-based:", error);
+            // Fallback to keyword-based evaluation
+            const allResponses = turns
+                .map((t) => t.assistantResponse)
+                .join(" ")
+                .toLowerCase();
+            const coveredInfo = criteria.requiredInformationCoverage.filter((info) =>
+                allResponses.includes(info.toLowerCase())
+            ).length;
+            informationCoverageRate = coveredInfo / criteria.requiredInformationCoverage.length;
+        }
+    } else {
+        informationCoverageRate = 1.0; // No required coverage, consider it complete
+    }
 
     // Citation quality (percentage of turns with citations)
     const turnsWithCitations = turns.filter((t) => t.retrievedChunks && t.retrievedChunks.length > 0).length;

@@ -24,6 +24,7 @@ import {
     calculateConversationMetrics,
     evaluateCoherence,
     evaluateContextRetention,
+    evaluateContextRetentionLLM,
     evaluateSuccessCriteria,
 } from "./evaluator";
 import type {
@@ -225,7 +226,20 @@ export async function runConversationScenario(
 
         const templateTurn = scenario.conversationTemplate?.[turnNumber - 1];
         const requiredContext = templateTurn?.requiredContext || [];
-        const contextRetained = evaluateContextRetention(apiResult.response, requiredContext);
+
+        // Use LLM-based context retention evaluation for better semantic matching
+        // Fall back to keyword-based if LLM fails
+        let contextRetained: boolean;
+        try {
+            contextRetained = await evaluateContextRetentionLLM(
+                apiResult.response,
+                requiredContext,
+                conversationHistory.slice(0, -2) // Exclude current turn
+            );
+        } catch (error) {
+            console.warn("LLM context retention failed, using keyword fallback:", error);
+            contextRetained = evaluateContextRetention(apiResult.response, requiredContext);
+        }
 
         // Check if intent was satisfied (simple check: response is not empty and not an error)
         const satisfiedIntent = apiResult.response.length > 20 && !apiResult.response.toLowerCase().includes("error");

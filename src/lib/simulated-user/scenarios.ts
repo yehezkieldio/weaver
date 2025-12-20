@@ -36,34 +36,38 @@ export const KRS_REGISTRATION_SCENARIO: ConversationScenario = {
     conversationTemplate: [
         {
             turnNumber: 1,
-            userMessage: "Bagaimana cara mengisi KRS?",
+            userMessage: "Bagaimana cara mengisi KRS dan apa saja yang perlu diperhatikan?",
             expectedIntent: "Mendapatkan informasi prosedur pengisian KRS",
             isFollowUp: false,
             expectedResponseType: "informational",
         },
         {
             turnNumber: 2,
-            userMessage: "Berapa maksimal SKS yang bisa diambil?",
-            expectedIntent: "Mengetahui batas maksimal SKS",
-            requiredContext: ["KRS"],
+            userMessage: "Apakah saya harus berkonsultasi dengan Penasehat Akademik?",
+            expectedIntent: "Memahami peran PA dalam pengisian KRS",
+            requiredContext: ["KRS", "pengisian", "SIAS"],
             isFollowUp: true,
             expectedResponseType: "informational",
         },
         {
             turnNumber: 3,
-            userMessage: "Kalau IPK saya 3.5, berapa SKS yang boleh saya ambil?",
-            expectedIntent: "Mengetahui SKS spesifik berdasarkan IPK",
-            requiredContext: ["KRS", "SKS", "IPK"],
+            userMessage: "Kapan bisa melakukan perubahan mata kuliah kalau ada yang salah?",
+            expectedIntent: "Mengetahui periode KPRS untuk perubahan",
+            requiredContext: ["KRS", "Penasehat Akademik", "PA"],
             isFollowUp: true,
             expectedResponseType: "informational",
         },
     ],
     successCriteria: {
-        mustContainKeywords: ["KRS", "SKS", "Penasehat Akademik", "SIAS"],
-        mustRetainContext: ["KRS", "SKS"],
+        mustContainKeywords: ["KRS", "SIAS"],
+        mustRetainContext: ["KRS", "SIAS", "Penasehat Akademik", "PA", "KPRS"],
         minimumCoherenceScore: 0.7,
         maximumTurns: 5,
-        requiredInformationCoverage: ["cara mengisi KRS", "batas SKS", "konsultasi PA"],
+        requiredInformationCoverage: [
+            "sistem SIAS untuk pengisian KRS secara daring", // semantic: SIAS
+            "konsultasi dengan Penasehat Akademik atau PA", // semantic: PA wajib
+            "KPRS atau perubahan mata kuliah maksimal 2 minggu", // semantic: perubahan
+        ],
         acceptableLatencyMs: 5000,
     },
     category: "academic_regulations",
@@ -83,7 +87,7 @@ export const GRADUATION_REQUIREMENTS_SCENARIO: ConversationScenario = {
     conversationTemplate: [
         {
             turnNumber: 1,
-            userMessage: "Apa saja syarat kelulusan untuk program sarjana?",
+            userMessage: "Apa saja syarat kelulusan untuk program sarjana (S1)?",
             expectedIntent: "Mendapatkan daftar lengkap syarat kelulusan",
             isFollowUp: false,
             expectedResponseType: "informational",
@@ -92,33 +96,38 @@ export const GRADUATION_REQUIREMENTS_SCENARIO: ConversationScenario = {
             turnNumber: 2,
             userMessage: "Berapa total SKS yang harus diselesaikan?",
             expectedIntent: "Mengetahui jumlah SKS spesifik",
-            requiredContext: ["kelulusan", "sarjana"],
+            requiredContext: ["kelulusan", "sarjana", "S1", "syarat"],
             isFollowUp: true,
             expectedResponseType: "informational",
         },
         {
             turnNumber: 3,
-            userMessage: "Bagaimana prosedur yudisium?",
-            expectedIntent: "Memahami proses yudisium",
-            requiredContext: ["kelulusan"],
+            userMessage: "Apakah Skripsi atau Tugas Akhir wajib diselesaikan?",
+            expectedIntent: "Memahami persyaratan Skripsi",
+            requiredContext: ["kelulusan", "SKS", "144"],
             isFollowUp: true,
             expectedResponseType: "informational",
         },
         {
             turnNumber: 4,
-            userMessage: "Apakah ada persyaratan administratif lainnya?",
-            expectedIntent: "Memastikan tidak ada persyaratan yang terlewat",
-            requiredContext: ["kelulusan", "yudisium"],
+            userMessage: "Bagaimana prosedur yudisium setelah semua syarat dipenuhi?",
+            expectedIntent: "Memahami proses yudisium",
+            requiredContext: ["kelulusan", "Skripsi", "persyaratan"],
             isFollowUp: true,
             expectedResponseType: "informational",
         },
     ],
     successCriteria: {
-        mustContainKeywords: ["SKS", "Skripsi", "Yudisium", "administrasi"],
-        mustRetainContext: ["kelulusan", "sarjana"],
+        mustContainKeywords: ["SKS", "Skripsi"],
+        mustRetainContext: ["kelulusan", "sarjana", "S1", "yudisium", "SKS", "144"],
         minimumCoherenceScore: 0.75,
         maximumTurns: 6,
-        requiredInformationCoverage: ["jumlah SKS", "skripsi", "yudisium", "administrasi"],
+        requiredInformationCoverage: [
+            "144 SKS atau beban studi untuk kelulusan", // semantic: jumlah SKS
+            "Skripsi atau Tugas Akhir wajib", // semantic: skripsi
+            "yudisium setelah memenuhi syarat akademik dan administratif", // semantic: yudisium
+            "persyaratan administrasi dan keuangan", // semantic: administrasi
+        ],
         acceptableLatencyMs: 5000,
     },
     category: "academic_regulations",
@@ -145,27 +154,31 @@ export const ACADEMIC_LEAVE_SCENARIO: ConversationScenario = {
         },
         {
             turnNumber: 2,
-            userMessage: "Apakah cuti akademik mempengaruhi status mahasiswa?",
-            expectedIntent: "Memahami konsekuensi cuti terhadap status",
-            requiredContext: ["cuti akademik"],
+            userMessage: "Apakah cuti akademik berbeda dengan status non-aktif?",
+            expectedIntent: "Memahami perbedaan cuti dan non-aktif",
+            requiredContext: ["cuti", "akademik", "prosedur"],
             isFollowUp: true,
             expectedResponseType: "informational",
         },
         {
             turnNumber: 3,
-            userMessage: "Kemana saya harus mengajukan permohonan?",
-            expectedIntent: "Mengetahui unit yang menangani cuti",
-            requiredContext: ["cuti akademik", "permohonan"],
+            userMessage: "Harus mengajukan permohonan ke siapa untuk mendapatkan izin?",
+            expectedIntent: "Mengetahui jalur persetujuan cuti",
+            requiredContext: ["cuti", "akademik", "status"],
             isFollowUp: true,
             expectedResponseType: "informational",
         },
     ],
     successCriteria: {
-        mustContainKeywords: ["Cuti Akademik", "Dekan", "Rektor", "permohonan"],
-        mustRetainContext: ["cuti akademik"],
+        mustContainKeywords: ["cuti"],
+        mustRetainContext: ["cuti", "akademik", "permohonan", "Dekan", "Rektor"],
         minimumCoherenceScore: 0.7,
         maximumTurns: 5,
-        requiredInformationCoverage: ["prosedur pengajuan", "status mahasiswa", "unit terkait"],
+        requiredInformationCoverage: [
+            "permohonan melalui Dekan untuk izin Rektor", // semantic: prosedur pengajuan
+            "cuti akademik berbeda dengan non-aktif", // semantic: perbedaan status
+            "izin resmi dari Rektor", // semantic: persetujuan
+        ],
         acceptableLatencyMs: 5000,
     },
     category: "administrative_procedures",
@@ -192,27 +205,31 @@ export const ORGANIZATIONAL_STRUCTURE_SCENARIO: ConversationScenario = {
         },
         {
             turnNumber: 2,
-            userMessage: "Bagian apa saja yang ada di bawahnya?",
-            expectedIntent: "Mengetahui sub-unit Biro Akademik",
-            requiredContext: ["Biro Akademik"],
+            userMessage: "Bagian apa saja yang ada di bawah biro tersebut?",
+            expectedIntent: "Mengetahui tiga bagian di bawah Biro Akademik",
+            requiredContext: ["Biro", "Akademik", "Sistem Informasi"],
             isFollowUp: true,
             expectedResponseType: "informational",
         },
         {
             turnNumber: 3,
-            userMessage: "Siapa yang memimpin bagian-bagian tersebut?",
-            expectedIntent: "Mengetahui struktur kepemimpinan",
-            requiredContext: ["Biro Akademik", "bagian"],
+            userMessage: "Apa tugas dari Bagian Pusat Sistem dan Teknologi Informasi?",
+            expectedIntent: "Mengetahui fungsi spesifik bagian IT",
+            requiredContext: ["Biro", "Akademik", "bagian"],
             isFollowUp: true,
             expectedResponseType: "informational",
         },
     ],
     successCriteria: {
-        mustContainKeywords: ["Biro Akademik", "Kepala Biro", "Bagian"],
-        mustRetainContext: ["Biro Akademik", "organisasi"],
+        mustContainKeywords: ["Biro"],
+        mustRetainContext: ["Biro", "Akademik", "Sistem Informasi", "Bagian"],
         minimumCoherenceScore: 0.7,
         maximumTurns: 5,
-        requiredInformationCoverage: ["fungsi biro", "sub-unit", "kepemimpinan"],
+        requiredInformationCoverage: [
+            "Kepala Biro bertanggung jawab kepada Wakil Rektor", // semantic: struktur
+            "tiga bagian: Akademik, Pusat Sistem dan Teknologi Informasi, Media Kreatif", // semantic: sub-unit
+            "sistem informasi, jaringan, keamanan data", // semantic: tugas bagian IT
+        ],
         acceptableLatencyMs: 5000,
     },
     category: "administrative_procedures",
@@ -239,35 +256,40 @@ export const PROGRAM_INFORMATION_SCENARIO: ConversationScenario = {
         },
         {
             turnNumber: 2,
-            userMessage: "Ceritakan tentang program Teknik Informatika",
-            expectedIntent: "Mendapatkan detail program Teknik Informatika",
-            requiredContext: ["program studi", "Universitas Mulia"],
+            userMessage: "Apa saja konsentrasi yang tersedia di program studi Sarjana Informatika?",
+            expectedIntent: "Mendapatkan detail konsentrasi S1 Informatika",
+            requiredContext: ["program", "studi", "Universitas", "Mulia"],
             isFollowUp: true,
             expectedResponseType: "informational",
         },
         {
             turnNumber: 3,
-            userMessage: "Berapa biaya kuliahnya?",
-            expectedIntent: "Mengetahui biaya kuliah Teknik Informatika",
-            requiredContext: ["Teknik Informatika"],
+            userMessage: "Berapa biaya kuliah untuk program Informatika?",
+            expectedIntent: "Mengetahui biaya kuliah S1 Informatika",
+            requiredContext: ["Informatika", "konsentrasi"],
             isFollowUp: true,
             expectedResponseType: "informational",
         },
         {
             turnNumber: 4,
-            userMessage: "Bagaimana cara mendaftarnya?",
-            expectedIntent: "Memahami prosedur pendaftaran",
-            requiredContext: ["Teknik Informatika", "Universitas Mulia"],
+            userMessage: "Bagaimana alur pendaftaran untuk calon mahasiswa baru?",
+            expectedIntent: "Memahami prosedur pendaftaran melalui SIAS",
+            requiredContext: ["Informatika", "Universitas", "Mulia"],
             isFollowUp: true,
             expectedResponseType: "informational",
         },
     ],
     successCriteria: {
-        mustContainKeywords: ["program studi", "Teknik Informatika", "pendaftaran"],
-        mustRetainContext: ["Teknik Informatika", "program studi"],
+        mustContainKeywords: ["Informatika"],
+        mustRetainContext: ["Informatika", "konsentrasi", "SIAS", "pendaftaran"],
         minimumCoherenceScore: 0.7,
         maximumTurns: 6,
-        requiredInformationCoverage: ["daftar program", "detail program", "biaya", "pendaftaran"],
+        requiredInformationCoverage: [
+            "program sarjana di tiga fakultas", // semantic: daftar program
+            "Robotics and Artificial Intelligence dan Mobile Application Development", // semantic: konsentrasi
+            "rata-rata Rp 6 juta", // semantic: biaya
+            "mengisi formulir di SIAS untuk username dan password", // semantic: pendaftaran
+        ],
         acceptableLatencyMs: 5000,
     },
     category: "admissions_registration",
@@ -287,34 +309,38 @@ export const FACULTY_SERVICES_SCENARIO: ConversationScenario = {
     conversationTemplate: [
         {
             turnNumber: 1,
-            userMessage: "Apa saja layanan yang tersedia untuk dosen?",
-            expectedIntent: "Mendapatkan daftar layanan dosen",
+            userMessage: "Apa saja fasilitas yang tersedia untuk mendukung pengajaran?",
+            expectedIntent: "Mendapatkan daftar fasilitas pengajaran",
             isFollowUp: false,
             expectedResponseType: "informational",
         },
         {
             turnNumber: 2,
-            userMessage: "Bagaimana cara mengakses sistem akademik?",
-            expectedIntent: "Memahami cara akses SIAS",
-            requiredContext: ["layanan", "dosen"],
+            userMessage: "Apakah ada fasilitas Google Classroom dan Google Meet?",
+            expectedIntent: "Mengetahui layanan digital untuk dosen",
+            requiredContext: ["fasilitas", "pengajaran"],
             isFollowUp: true,
             expectedResponseType: "informational",
         },
         {
             turnNumber: 3,
-            userMessage: "Apakah ada dukungan untuk pengembangan metode pengajaran?",
-            expectedIntent: "Mengetahui program pengembangan dosen",
-            requiredContext: ["layanan", "dosen", "pengajaran"],
+            userMessage: "Bagaimana cara mendapatkan dukungan IT jika ada kendala?",
+            expectedIntent: "Mengetahui layanan IT support",
+            requiredContext: ["Google", "Classroom", "Meet"],
             isFollowUp: true,
             expectedResponseType: "informational",
         },
     ],
     successCriteria: {
-        mustContainKeywords: ["layanan", "dosen", "SIAS", "akademik"],
-        mustRetainContext: ["layanan", "dosen"],
+        mustContainKeywords: ["fasilitas"],
+        mustRetainContext: ["fasilitas", "Google", "Classroom", "Meet", "IT Support"],
         minimumCoherenceScore: 0.7,
         maximumTurns: 5,
-        requiredInformationCoverage: ["layanan dosen", "sistem akademik", "pengembangan"],
+        requiredInformationCoverage: [
+            "ruang kelas ber-AC dan proyektor", // semantic: fasilitas kelas
+            "Google Classroom dan Google Meet melalui Akun Universitas", // semantic: layanan digital
+            "IT Support untuk permasalahan teknis", // semantic: dukungan IT
+        ],
         acceptableLatencyMs: 5000,
     },
     category: "faculty_programs",
@@ -341,27 +367,31 @@ export const STUDENT_FACILITIES_SCENARIO: ConversationScenario = {
         },
         {
             turnNumber: 2,
-            userMessage: "Dimana lokasi perpustakaan?",
-            expectedIntent: "Mengetahui lokasi perpustakaan",
-            requiredContext: ["fasilitas"],
+            userMessage: "Apa itu Mulia Corner?",
+            expectedIntent: "Mengetahui fungsi Mulia Corner",
+            requiredContext: ["fasilitas", "kampus"],
             isFollowUp: true,
             expectedResponseType: "informational",
         },
         {
             turnNumber: 3,
-            userMessage: "Apa jam operasional perpustakaan?",
-            expectedIntent: "Mengetahui jam buka perpustakaan",
-            requiredContext: ["perpustakaan"],
+            userMessage: "Fasilitas apa yang tersedia di Laboratorium Multimedia?",
+            expectedIntent: "Mengetahui fungsi dan fasilitas lab multimedia",
+            requiredContext: ["fasilitas", "Mulia Corner"],
             isFollowUp: true,
             expectedResponseType: "informational",
         },
     ],
     successCriteria: {
-        mustContainKeywords: ["fasilitas", "perpustakaan"],
-        mustRetainContext: ["fasilitas", "perpustakaan"],
+        mustContainKeywords: ["fasilitas"],
+        mustRetainContext: ["fasilitas", "Mulia Corner", "Laboratorium", "Multimedia"],
         minimumCoherenceScore: 0.7,
         maximumTurns: 5,
-        requiredInformationCoverage: ["daftar fasilitas", "lokasi", "jam operasional"],
+        requiredInformationCoverage: [
+            "perpustakaan, gazebo, kantin, Mulia Corner, lapangan olahraga, laboratorium", // semantic: daftar fasilitas
+            "tempat berkumpul mahasiswa untuk belajar, makan, bersosialisasi", // semantic: Mulia Corner
+            "komputer untuk video editing, audio editing, desain, pembuatan game", // semantic: lab multimedia
+        ],
         acceptableLatencyMs: 5000,
     },
     category: "facilities_services",
