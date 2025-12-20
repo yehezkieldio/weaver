@@ -28,6 +28,24 @@ This document outlines the software testing strategy implemented to ensure the r
   - **Evaluation**: Automatically grades responses based on relevance, accuracy, and tone using a judge LLM.
 - **Execution**: `bun run test:simulated-user`
 
+### 4. Blackbox Verification
+**Objective**: Perform deterministic functional verification of the deployed API endpoint to ensure core domain knowledge is accessible and correctly formatted without inspecting internal code.
+- **Tools**: Custom Blackbox Test Suite (`scripts/blackbox-test.ts`).
+- **Methodology**:
+  - Sends a set of standard control queries (e.g., "What is the university name?", "List faculties") to the running API.
+  - Validates responses against expected keywords using regex matching.
+  - Ensures the API is responsive and serving correct domain-specific terms (English and Indonesian).
+- **Execution**: `bun run test:blackbox` (Requires running server)
+
+### 5. Stress Testing
+**Objective**: Evaluate system stability and latency under high-concurrency conditions.
+- **Tools**: Custom Stress Test Script (`scripts/stress-test.ts`).
+- **Methodology**:
+  - Simulates concurrent user load (default: 10 concurrent users, 50 total requests).
+  - Measures API latency (Time to First Byte and full stream completion).
+  - Reports success rates, throughput (req/s), and latency percentiles (P95, P99).
+- **Execution**: `bun run test:stress` (Requires running server)
+
 ## Inclusion in IMRAD Paper (Methodology Section)
 
 To include this testing strategy in your research paper, you can use the following text as a template for the **Methodology** section, specifically under a subsection titled **"System Verification and Validation"** or **"Evaluation Framework"**.

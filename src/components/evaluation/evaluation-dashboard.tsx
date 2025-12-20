@@ -1105,7 +1105,11 @@ function ComparisonChart({ runs }: { runs: EvaluationRun[] }) {
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="name" />
                             <YAxis domain={[0, 1]} tickFormatter={(val) => `${(val * 100).toFixed(0)}%`} />
-                            <Tooltip formatter={(value: number) => `${(value * 100).toFixed(1)}%`} />
+                            <Tooltip
+                                formatter={(value: number | undefined) =>
+                                    value !== undefined ? `${(value * 100).toFixed(1)}%` : "N/A"
+                                }
+                            />
                             <Legend />
                             <Bar dataKey="Kebenaran RAG" fill="#10B981" />
                             <Bar dataKey="Kebenaran Non-RAG" fill="#6B7280" />
