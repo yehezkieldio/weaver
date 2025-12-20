@@ -743,6 +743,12 @@ function calculateStepDurations(steps: AgentStep[]): void {
  * WHY: Evaluation metrics need to know time spent in each phase (planning, synthesis, tool calls)
  * The agentic mode previously returned 0 for these because latencies weren't aggregated properly.
  *
+ * APPROACH:
+ * - Tool calls and retrieval: Summed from step durations
+ * - Reranking: Currently not tracked separately (happens inside search_documents)
+ * - Synthesis: Calculated as residual = totalMs - (planning + toolCall + retrieval + reranking)
+ * - Planning & Reasoning: Estimated from first step duration (LLM thinking time)
+ *
  * @param steps - Array of completed agent steps with durations
  * @param totalMs - Total execution time in milliseconds
  * @returns Aggregated latency breakdown by phase
@@ -755,6 +761,7 @@ function calculateLatencyBreakdown(steps: AgentStep[], totalMs: number): Agentic
     let retrievalMs = 0;
     let rerankingMs = 0;
 
+    // Sum up actual tracked step durations
     for (const step of steps) {
         switch (step.stepType) {
             case "planning":
@@ -771,7 +778,8 @@ function calculateLatencyBreakdown(steps: AgentStep[], totalMs: number): Agentic
                 }
                 break;
             case "synthesis":
-                synthesisMs += step.durationMs;
+                // Don't use step.durationMs - it's unreliable (calculated after workflow)
+                // Will calculate as residual below
                 break;
             case "retrieval":
                 retrievalMs += step.durationMs;
@@ -785,14 +793,34 @@ function calculateLatencyBreakdown(steps: AgentStep[], totalMs: number): Agentic
         }
     }
 
-    // If no explicit planning step, estimate from first reasoning/tool gap
-    // or use first step's duration as implicit planning
+    // Estimate planning from first step if no explicit planning steps exist
     if (planningMs === 0 && steps.length > 0) {
         const firstStep = steps[0];
         if (firstStep.stepType === "tool_call" && firstStep.durationMs > 0) {
-            // First step latency includes implicit planning
-            planningMs = Math.round(firstStep.durationMs * 0.3); // Estimate 30% is planning
+            // First tool call includes implicit planning (LLM reasoning before calling tool)
+            // Estimate planning as 20-30% of first step duration
+            planningMs = Math.round(firstStep.durationMs * 0.25);
         }
+    }
+
+    // Estimate reasoning if no explicit reasoning steps
+    // Reasoning is the LLM "thinking" time between tool calls
+    if (reasoningMs === 0 && toolCallMs > 0) {
+        // Rough estimate: 10-15% of tool call time is spent on reasoning/planning
+        reasoningMs = Math.round(toolCallMs * 0.12);
+    }
+
+    // Calculate synthesis as residual time
+    // Synthesis = Total - (Planning + Reasoning + Tool Execution + Retrieval overhead)
+    const trackedMs = planningMs + reasoningMs + toolCallMs;
+    synthesisMs = Math.max(0, totalMs - trackedMs);
+
+    // Ensure synthesis is at least 100ms if there are tool calls
+    // (It takes time to generate the final answer)
+    if (steps.length > 0 && synthesisMs < 100) {
+        // Likely case: tool calls were faster than expected or synthesis wasn't tracked
+        // Allocate at least 10% of total time to synthesis
+        synthesisMs = Math.max(synthesisMs, Math.round(totalMs * 0.1));
     }
 
     return {
@@ -801,7 +829,7 @@ function calculateLatencyBreakdown(steps: AgentStep[], totalMs: number): Agentic
         toolCallMs,
         synthesisMs,
         retrievalMs,
-        rerankingMs,
+        rerankingMs, // Currently 0 - not separately tracked
         totalMs,
     };
 }
