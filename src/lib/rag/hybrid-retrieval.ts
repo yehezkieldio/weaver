@@ -846,7 +846,7 @@ export async function hybridRetrieve(query: string, options: HybridRetrievalOpti
     // Log score distribution for debugging
     const allScores = results.map((r) => r.fusedScore).sort((a, b) => b - a);
     consola.debug(
-        `[hybridRetrieve:${retrievalId}] Score distribution - max: ${allScores[0]?.toFixed(4) || "N/A"}, min: ${allScores.at(-1)?.toFixed(4) || "N/A"}`
+        `[hybridRetrieve:${retrievalId}] Score distribution - count: ${results.length}, max: ${allScores[0]?.toFixed(4) || "N/A"}, min: ${allScores.at(-1)?.toFixed(4) || "N/A"}`
     );
 
     const finalResults = results

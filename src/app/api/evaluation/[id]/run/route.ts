@@ -163,6 +163,9 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
                     const ragStartTime = Date.now();
 
                     // Use stored configuration for retrieval
+                    console.log(
+                        `[Evaluation Run] DEBUG - Calling retrieveContext with: strategy=${retrievalStrategy}, useReranker=${useReranker}, rerankerStrategy=${rerankerStrategy}`
+                    );
                     const contextResult = await retrieveContext(question.question, {
                         topK: 5,
                         minSimilarity: 0.3, // Lower threshold for better recall
@@ -170,6 +173,9 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
                         useReranker,
                         rerankerStrategy,
                     });
+                    console.log(
+                        `[Evaluation Run] DEBUG - retrieveContext returned: chunks=${contextResult.chunks.length}, context length=${contextResult.context.length}, strategy=${contextResult.retrievalStrategy}`
+                    );
                     // Mark retrieval phase AFTER retrieval completes
                     latencyTracker.mark("retrieval");
 

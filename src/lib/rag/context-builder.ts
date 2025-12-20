@@ -108,10 +108,14 @@ export async function retrieveContext(
     );
 
     // Use hybrid retrieval with language support
+    // NOTE: Do NOT pass minSimilarity as minScore here!
+    // minSimilarity is for vector cosine similarity (0-1 range)
+    // hybridRetrieve uses RRF fusion which produces much smaller scores (0.01-0.05 range)
+    // Let hybridRetrieve use its default minScore (0.01) which is appropriate for RRF
     consola.debug("[retrieveContext] Executing hybrid retrieval");
     const results = await hybridRetrieve(query, {
         topK: topK * 2,
-        minScore: minSimilarity,
+        // minScore intentionally omitted - use hybridRetrieve's RRF-appropriate default (0.01)
         strategy,
         vectorWeight,
         bm25Weight,

@@ -36,6 +36,7 @@ const SCORE_REGEX = /\d+\.?\d*/;
 const LATIN_REGEX = /[a-zA-Z]/;
 const INDONESIAN_WORDS_REGEX = /\b(yang|dengan|untuk|adalah)\b/i;
 const DOC_ID_REGEX = /doc_(\d+)/;
+const JSON_EXTRACT_REGEX = /\{[\s\S]*\}/;
 
 /**
  * Available reranking strategies with different speed/quality tradeoffs
@@ -284,6 +285,17 @@ ${detailed ? "Also provide a brief reasoning (1 sentence)." : ""}`;
     return await Promise.all(promises);
 }
 
+/**
+ * Sanitize content for JSON prompt (remove/escape problematic characters)
+ */
+function sanitizeForPrompt(text: string): string {
+    return text
+        .replace(/[\n\r\t]/g, " ") // Replace newlines/tabs with spaces
+        .replace(/"/g, "'") // Replace double quotes with single quotes
+        .replace(/\s+/g, " ") // Collapse multiple spaces
+        .trim();
+}
+
 // ask LLM once to rank all documents
 async function llmListwiseRerank(
     query: string,
@@ -302,19 +314,24 @@ async function llmListwiseRerank(
             ? `Anda adalah penilai relevansi dokumen akademik. Tugas Anda adalah mengurutkan dokumen berdasarkan relevansinya terhadap pertanyaan.
 
 Urutkan dokumen dari yang paling relevan (rank 1) hingga paling tidak relevan.
-Respond dalam format JSON: {"rankings": [{"id": "doc_X", "rank": 1, "score": 0.95, "reasoning": "..."}, ...]}`
+Respond HANYA dalam format JSON yang VALID, tanpa markdown atau text lain:
+{"rankings": [{"id": "doc_0", "rank": 1, "score": 0.95}, {"id": "doc_1", "rank": 2, "score": 0.80}]}`
             : `You are an academic document relevance assessor. Your task is to rank documents by their relevance to the question.
 
 Rank documents from most relevant (rank 1) to least relevant.
-Respond in JSON format: {"rankings": [{"id": "doc_X", "rank": 1, "score": 0.95, "reasoning": "..."}, ...]}`;
+Respond ONLY in VALID JSON format, no markdown or other text:
+{"rankings": [{"id": "doc_0", "rank": 1, "score": 0.95}, {"id": "doc_1", "rank": 2, "score": 0.80}]}`;
 
     try {
-        // Create passages list with IDs
+        // Create passages list with IDs and sanitized content
         const passagesList = passages
-            .map((p, idx) => `Document ${idx + 1} (id: doc_${idx}):\n${p.content.slice(0, 300)}...`)
+            .map((p, idx) => {
+                const sanitized = sanitizeForPrompt(p.content.slice(0, 250));
+                return `Document ${idx + 1} (id: doc_${idx}):\n${sanitized}`;
+            })
             .join("\n\n");
 
-        const prompt = `Question: ${query}\n\n${passagesList}\n\nRank these ${passages.length} documents by relevance:`;
+        const prompt = `Question: ${query}\n\n${passagesList}\n\nRank these ${passages.length} documents by relevance. Return ONLY valid JSON:`;
 
         const { text } = await generateText({
             model: CHAT_MODEL,
@@ -323,7 +340,14 @@ Respond in JSON format: {"rankings": [{"id": "doc_X", "rank": 1, "score": 0.95, 
             maxOutputTokens: 500,
         });
 
-        const parsed = JSON.parse(text.trim());
+        // Try to extract JSON from response (handle markdown code blocks)
+        let jsonText = text.trim();
+        const jsonMatch = jsonText.match(JSON_EXTRACT_REGEX);
+        if (jsonMatch) {
+            jsonText = jsonMatch[0];
+        }
+
+        const parsed = JSON.parse(jsonText);
         const rankings = parsed.rankings || [];
 
         for (const ranking of rankings) {
@@ -341,9 +365,12 @@ Respond in JSON format: {"rankings": [{"id": "doc_X", "rank": 1, "score": 0.95, 
                 }
             }
         }
+
+        consola.debug(`[llmListwiseRerank] Successfully parsed ${rankings.length} rankings`);
     } catch (error) {
         consola.error("Listwise LLM rerank error:", error);
         // Fall back to original scores (already initialized)
+        consola.debug("[llmListwiseRerank] Falling back to original scores");
     }
 
     return results;
