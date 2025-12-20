@@ -256,7 +256,7 @@ async function main() {
         const report = generateMarkdownReport(metrics, startTime, endTime);
 
         // Save report
-        const reportPath = `/tmp/simulated-user-testing-report-${Date.now()}.md`;
+        const reportPath = `.results/simulated-user-testing-report-${Date.now()}.md`;
         writeFileSync(reportPath, report, "utf-8");
 
         consola.info(`\n${"=".repeat(80)}`);
