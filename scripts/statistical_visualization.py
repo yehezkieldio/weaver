@@ -131,7 +131,7 @@ class FigureGenerator:
         ax.axis("off")
 
         # Create title
-        full_title = f"{title}\n({title_id})" if self.bilingual and title_id else title
+        full_title = title_id if title_id else title
         ax.set_title(full_title, fontsize=self.config.title_fontsize, fontweight="bold", pad=20)
 
         # Create table
@@ -225,16 +225,16 @@ class FigureGenerator:
             ax.text(0.5, y_bar + 0.04 * y_range, sig_text, ha="center", fontsize=12, fontweight="bold")
 
         # Labels
-        full_title = f"{metric_name}\n({metric_name_id})" if self.bilingual and metric_name_id else metric_name
+        full_title = metric_name_id if metric_name_id else metric_name
         ax.set_title(full_title, fontsize=self.config.title_fontsize, fontweight="bold")
-        ax.set_xlabel("System / Sistem", fontsize=self.config.label_fontsize)
-        ax.set_ylabel("Score / Skor", fontsize=self.config.label_fontsize)
+        ax.set_xlabel("Sistem", fontsize=self.config.label_fontsize)
+        ax.set_ylabel("Skor", fontsize=self.config.label_fontsize)
 
         # Add legend for significance
         if show_significance and p_value is not None:
             legend_text = f"p = {p_value:.4f}"
             if p_value < 0.05:
-                legend_text += " (significant / signifikan)"
+                legend_text += " (signifikan)"
             ax.text(0.98, 0.02, legend_text, transform=ax.transAxes, ha="right",
                    fontsize=9, style="italic", alpha=0.7)
 
@@ -299,11 +299,9 @@ class FigureGenerator:
         ax.set_yticklabels(sorted_names)
         ax.invert_yaxis()  # Best at top
 
-        full_title = f"Configuration Ranking by {metric_name}"
-        if self.bilingual and metric_name_id:
-            full_title += f"\n(Peringkat Konfigurasi berdasarkan {metric_name_id})"
+        full_title = f"Peringkat Konfigurasi berdasarkan {metric_name_id}" if metric_name_id else f"Configuration Ranking by {metric_name}"
         ax.set_title(full_title, fontsize=self.config.title_fontsize, fontweight="bold")
-        ax.set_xlabel(f"{metric_name} Score / Skor", fontsize=self.config.label_fontsize)
+        ax.set_xlabel(f"Skor {metric_name_id if metric_name_id else metric_name}", fontsize=self.config.label_fontsize)
 
         # Add rank labels
         for i, name in enumerate(sorted_names):
@@ -366,10 +364,8 @@ class FigureGenerator:
         # Set radial limits
         ax.set_ylim(0, 1)
         ax.set_yticks([0.2, 0.4, 0.6, 0.8, 1.0])
-        ax.set_yticklabels(["0.2", "0.4", "0.6", "0.8", "1.0"], fontsize=8)
-
         # Title
-        full_title = f"{title}\n({title_id})" if self.bilingual and title_id else title
+        full_title = title_id if title_id else title
         ax.set_title(full_title, fontsize=self.config.title_fontsize, fontweight="bold", pad=20)
 
         # Legend
@@ -427,10 +423,10 @@ class FigureGenerator:
             ax.axvline(p99, color="#e74c3c", linestyle="--", linewidth=2, label=f"P99: {p99:.0f}ms")
 
         # Labels
-        full_title = f"{title}\n({title_id})" if self.bilingual and title_id else title
+        full_title = title_id if title_id else title
         ax.set_title(full_title, fontsize=self.config.title_fontsize, fontweight="bold")
-        ax.set_xlabel("Latency (ms) / Latensi (ms)", fontsize=self.config.label_fontsize)
-        ax.set_ylabel("Frequency / Frekuensi", fontsize=self.config.label_fontsize)
+        ax.set_xlabel("Latensi (ms)", fontsize=self.config.label_fontsize)
+        ax.set_ylabel("Frekuensi", fontsize=self.config.label_fontsize)
 
         ax.legend(loc="upper right")
 
@@ -477,21 +473,21 @@ class FigureGenerator:
             ax.plot(effect, i, "D", markersize=10, color=marker_color, markeredgecolor="black")
 
         # Null effect line
-        ax.axvline(null_value, color="black", linestyle="--", linewidth=1, alpha=0.7, label="No effect")
+        ax.axvline(null_value, color="black", linestyle="--", linewidth=1, alpha=0.7, label="Tidak ada efek")
 
         # Labels
         ax.set_yticks(y_positions)
         ax.set_yticklabels(metric_names)
         ax.invert_yaxis()
 
-        full_title = f"{title}\n({title_id})" if self.bilingual and title_id else title
+        full_title = title_id if title_id else title
         ax.set_title(full_title, fontsize=self.config.title_fontsize, fontweight="bold")
-        ax.set_xlabel("Effect Size (Cohen's d)", fontsize=self.config.label_fontsize)
+        ax.set_xlabel("Ukuran Efek (Cohen's d)", fontsize=self.config.label_fontsize)
 
         # Add legend
         legend_elements = [
-            mpatches.Patch(color="#27ae60", label="Significant / Signifikan"),
-            mpatches.Patch(color="#95a5a6", label="Not significant / Tidak signifikan"),
+            mpatches.Patch(color="#27ae60", label="Signifikan"),
+            mpatches.Patch(color="#95a5a6", label="Tidak signifikan"),
         ]
         ax.legend(handles=legend_elements, loc="lower right")
 
@@ -534,11 +530,11 @@ class FigureGenerator:
             square=True,
             linewidths=0.5,
             ax=ax,
-            cbar_kws={"label": "Correlation / Korelasi"},
+            cbar_kws={"label": "Korelasi"},
         )
 
         # Title
-        full_title = f"{title}\n({title_id})" if self.bilingual and title_id else title
+        full_title = title_id if title_id else title
         ax.set_title(full_title, fontsize=self.config.title_fontsize, fontweight="bold", pad=20)
 
         # Rotate labels
@@ -572,7 +568,7 @@ class FigureGenerator:
         if "key_metrics" in metrics_summary:
             km = metrics_summary["key_metrics"]
             bars = ax1.bar(list(km.keys()), list(km.values()), color="#3498db", edgecolor="black")
-            ax1.set_title("Key RAG Metrics / Metrik RAG Utama", fontweight="bold")
+            ax1.set_title("Metrik RAG Utama", fontweight="bold")
             ax1.set_ylim(0, 1)
             ax1.axhline(0.8, color="#27ae60", linestyle="--", alpha=0.7, label="Target (0.8)")
             ax1.legend()
@@ -587,8 +583,8 @@ class FigureGenerator:
             colors = ["#27ae60" if v > 0 else "#e74c3c" for v in imp.values()]
             ax2.barh(list(imp.keys()), list(imp.values()), color=colors, edgecolor="black")
             ax2.axvline(0, color="black", linewidth=1)
-            ax2.set_title("RAG vs Non-RAG Improvement (%) / Peningkatan", fontweight="bold")
-            ax2.set_xlabel("Improvement %")
+            ax2.set_title("Peningkatan RAG vs Non-RAG (%)", fontweight="bold")
+            ax2.set_xlabel("Peningkatan (%)")
 
         # 3. Bottom-left: Latency comparison
         ax3 = fig.add_subplot(gs[1, 0])
@@ -600,8 +596,8 @@ class FigureGenerator:
                    color="#9b59b6", edgecolor="black", capsize=5)
             ax3.set_xticks(x)
             ax3.set_xticklabels(list(lat.keys()), rotation=45, ha="right")
-            ax3.set_title("Latency by Component (ms)", fontweight="bold")
-            ax3.set_ylabel("Latency (ms)")
+            ax3.set_title("Latensi per Komponen (ms)", fontweight="bold")
+            ax3.set_ylabel("Latensi (ms)")
 
         # 4. Bottom-right: Summary statistics table
         ax4 = fig.add_subplot(gs[1, 1])
@@ -622,9 +618,9 @@ class FigureGenerator:
                 if key[0] == 0:
                     cell.set_facecolor("#4472C4")
                     cell.set_text_props(color="white", fontweight="bold")
-            ax4.set_title("Summary Statistics / Ringkasan Statistik", fontweight="bold", pad=40)
+            ax4.set_title("Ringkasan Statistik", fontweight="bold", pad=40)
 
-        fig.suptitle("RAG Evaluation Summary Dashboard", fontsize=16, fontweight="bold", y=0.98)
+        fig.suptitle("Dasbor Ringkasan Evaluasi RAG", fontsize=16, fontweight="bold", y=0.98)
 
         return self._save_figure(fig, filename)
 

@@ -1168,21 +1168,21 @@ def run_analysis():
         if fig_gen:
             print("\n[Generating Descriptive Statistics Figure...]")
             stats_data = {
-                "Faithfulness": calculate_descriptive_stats(rag_faithfulness),
-                "Answer Relevancy": calculate_descriptive_stats(rag_relevancy),
-                "Citation Accuracy": calculate_descriptive_stats(rag_citation_accuracy),
-                "Factual Consistency": calculate_descriptive_stats(rag_factual_consistency),
+                "Kesetiaan": calculate_descriptive_stats(rag_faithfulness),
+                "Relevansi Jawaban": calculate_descriptive_stats(rag_relevancy),
+                "Akurasi Sitasi": calculate_descriptive_stats(rag_citation_accuracy),
+                "Konsistensi Faktual": calculate_descriptive_stats(rag_factual_consistency),
                 "NDCG": calculate_descriptive_stats(retrieval_ndcg),
                 "MRR": calculate_descriptive_stats(retrieval_mrr),
             }
             stats_df = pd.DataFrame({
                 metric: {
                     "N": int(s.n),
-                    "Mean": round(s.mean, 4),
+                    "Rerata": round(s.mean, 4),
                     "Median": round(s.median, 4),
                     "Std Dev": round(s.std_dev, 4),
                     "Min": round(s.min_val, 4),
-                    "Max": round(s.max_val, 4),
+                    "Maks": round(s.max_val, 4),
                 }
                 for metric, s in stats_data.items() if s.n > 0
             }).T
@@ -1459,7 +1459,7 @@ def run_analysis():
             fig_gen.create_forest_plot(
                 effect_sizes,
                 cis,
-                [comp.metric for comp in comparisons],
+                [comp.metric_id for comp in comparisons],
                 "effect_sizes_forest_plot",
                 "RAG vs Non-RAG Effect Sizes",
                 "Ukuran Efek RAG vs Non-RAG",
@@ -1467,17 +1467,17 @@ def run_analysis():
 
             # ===== FIGURE: Radar Chart for Multi-Metric Overview =====
             rag_metrics = {
-                "Faithfulness": np.mean(rag_faithfulness) if len(rag_faithfulness) > 0 else 0,
-                "Answer Relevancy": np.mean(rag_relevancy) if len(rag_relevancy) > 0 else 0,
-                "Citation Accuracy": np.mean(rag_citation_accuracy) if len(rag_citation_accuracy) > 0 else 0,
-                "Factual Consistency": np.mean(rag_factual_consistency) if len(rag_factual_consistency) > 0 else 0,
+                "Kesetiaan": np.mean(rag_faithfulness) if len(rag_faithfulness) > 0 else 0,
+                "Relevansi": np.mean(rag_relevancy) if len(rag_relevancy) > 0 else 0,
+                "Akurasi Sitasi": np.mean(rag_citation_accuracy) if len(rag_citation_accuracy) > 0 else 0,
+                "Konsistensi Faktual": np.mean(rag_factual_consistency) if len(rag_factual_consistency) > 0 else 0,
                 "NDCG": np.mean(retrieval_ndcg) if len(retrieval_ndcg) > 0 else 0,
             }
             non_rag_metrics = {
-                "Faithfulness": 0,  # N/A for non-RAG
-                "Answer Relevancy": np.mean(non_rag_rel) if len(non_rag_rel) > 0 else 0,
-                "Citation Accuracy": 0,  # N/A for non-RAG
-                "Factual Consistency": 0,  # N/A for non-RAG
+                "Kesetiaan": 0,  # N/A for non-RAG
+                "Relevansi": np.mean(non_rag_rel) if len(non_rag_rel) > 0 else 0,
+                "Akurasi Sitasi": 0,  # N/A for non-RAG
+                "Konsistensi Faktual": 0,  # N/A for non-RAG
                 "NDCG": 0,  # N/A for non-RAG
             }
             fig_gen.create_radar_chart(
@@ -1486,7 +1486,7 @@ def run_analysis():
                 "Multi-Metric Overview",
                 "Ikhtisar Multi-Metrik",
                 comparison_metrics=non_rag_metrics,
-                labels=("RAG", "Non-RAG (where applicable)"),
+                labels=("RAG", "Non-RAG (jika ada)"),
             )
 
     # ===== 6. ABLATION STUDY ANALYSIS =====
@@ -1610,16 +1610,16 @@ def run_analysis():
             rag_fact = evaluation_data["rag_factual_consistency"].dropna().values
 
             metrics_summary["key_metrics"] = {
-                "Faithfulness": np.mean(rag_faith) if len(rag_faith) > 0 else 0,
-                "Relevancy": np.mean(rag_rel) if len(rag_rel) > 0 else 0,
-                "Citation Acc.": np.mean(rag_cit) if len(rag_cit) > 0 else 0,
-                "Factual Cons.": np.mean(rag_fact) if len(rag_fact) > 0 else 0,
+                "Kesetiaan": np.mean(rag_faith) if len(rag_faith) > 0 else 0,
+                "Relevansi": np.mean(rag_rel) if len(rag_rel) > 0 else 0,
+                "Akurasi Sitasi": np.mean(rag_cit) if len(rag_cit) > 0 else 0,
+                "Konsistensi": np.mean(rag_fact) if len(rag_fact) > 0 else 0,
             }
 
             non_rag_rel = evaluation_data["non_rag_answer_relevancy"].dropna().values
             if len(non_rag_rel) > 0 and len(rag_rel) > 0:
                 metrics_summary["improvements"] = {
-                    "Answer Relevancy": ((np.mean(rag_rel) - np.mean(non_rag_rel)) / np.mean(non_rag_rel) * 100) if np.mean(non_rag_rel) > 0 else 0,
+                    "Relevansi Jawaban": ((np.mean(rag_rel) - np.mean(non_rag_rel)) / np.mean(non_rag_rel) * 100) if np.mean(non_rag_rel) > 0 else 0,
                 }
 
             rag_lat = evaluation_data["rag_latency_ms"].dropna().values
@@ -1628,14 +1628,14 @@ def run_analysis():
 
             metrics_summary["latency"] = {
                 "Total": {"mean": np.mean(rag_lat) if len(rag_lat) > 0 else 0, "std": np.std(rag_lat) if len(rag_lat) > 0 else 0},
-                "Retrieval": {"mean": np.mean(rag_ret_lat) if len(rag_ret_lat) > 0 else 0, "std": np.std(rag_ret_lat) if len(rag_ret_lat) > 0 else 0},
-                "Generation": {"mean": np.mean(rag_gen_lat) if len(rag_gen_lat) > 0 else 0, "std": np.std(rag_gen_lat) if len(rag_gen_lat) > 0 else 0},
+                "Retrival": {"mean": np.mean(rag_ret_lat) if len(rag_ret_lat) > 0 else 0, "std": np.std(rag_ret_lat) if len(rag_ret_lat) > 0 else 0},
+                "Generasi": {"mean": np.mean(rag_gen_lat) if len(rag_gen_lat) > 0 else 0, "std": np.std(rag_gen_lat) if len(rag_gen_lat) > 0 else 0},
             }
 
             metrics_summary["summary_stats"] = {
-                "Total Questions": len(evaluation_data),
-                "Avg Faithfulness": np.mean(rag_faith) if len(rag_faith) > 0 else 0,
-                "Avg Latency (ms)": np.mean(rag_lat) if len(rag_lat) > 0 else 0,
+                "Total Pertanyaan": len(evaluation_data),
+                "Rerata Kesetiaan": np.mean(rag_faith) if len(rag_faith) > 0 else 0,
+                "Rerata Latensi (ms)": np.mean(rag_lat) if len(rag_lat) > 0 else 0,
             }
 
         fig_gen.create_summary_dashboard(metrics_summary, "summary_dashboard")
