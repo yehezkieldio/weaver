@@ -46,16 +46,90 @@ interface RetrievedChunk {
 }
 
 /**
+ * Try to parse SSE JSON payload and extract retrieved chunks
+ */
+function tryParseSSEPayload(contentLine: string, retrievedChunks: RetrievedChunk[]): boolean {
+    try {
+        const ssePayload = JSON.parse(contentLine);
+
+        // Handle data-retrieved-chunk type in SSE format
+        if (ssePayload?.type === "data-retrieved-chunk" && ssePayload?.data) {
+            const chunk = ssePayload.data as RetrievedChunk;
+            if (chunk.chunkId && !retrievedChunks.some((c) => c.chunkId === chunk.chunkId)) {
+                retrievedChunks.push({
+                    chunkId: chunk.chunkId,
+                    documentTitle: chunk.documentTitle || "",
+                    content: chunk.content || "",
+                    similarity: chunk.similarity || 0,
+                    retrievalMethod: chunk.retrievalMethod,
+                    vectorScore: chunk.vectorScore,
+                    bm25Score: chunk.bm25Score,
+                });
+            }
+            return true;
+        }
+    } catch {
+        // Not a JSON payload
+    }
+    return false;
+}
+
+/**
+ * Parse AI SDK protocol text chunks (type 0)
+ */
+function parseTextChunk(dataStr: string): string {
+    try {
+        const textContent = JSON.parse(dataStr);
+        if (typeof textContent === "string") {
+            return textContent;
+        }
+    } catch {
+        // Ignore parse errors
+    }
+    return "";
+}
+
+/**
+ * Parse AI SDK protocol data parts (type 2)
+ */
+function parseDataParts(dataStr: string, retrievedChunks: RetrievedChunk[]): void {
+    try {
+        const dataParts = JSON.parse(dataStr);
+        if (Array.isArray(dataParts)) {
+            for (const part of dataParts) {
+                if (part?.type === "data-retrieved-chunk" && part?.data) {
+                    const chunk = part.data as RetrievedChunk;
+                    if (chunk.chunkId && !retrievedChunks.some((c) => c.chunkId === chunk.chunkId)) {
+                        retrievedChunks.push({
+                            chunkId: chunk.chunkId,
+                            documentTitle: chunk.documentTitle || "",
+                            content: chunk.content || "",
+                            similarity: chunk.similarity || 0,
+                            retrievalMethod: chunk.retrievalMethod,
+                            vectorScore: chunk.vectorScore,
+                            bm25Score: chunk.bm25Score,
+                        });
+                    }
+                }
+            }
+        }
+    } catch {
+        // Ignore parse errors
+    }
+}
+
+/**
  * Parse Vercel AI SDK UI Message Stream format
  *
- * The AI SDK uses a specific stream protocol with different message types:
+ * The stream format uses Server-Sent Events (SSE) with "data:" prefix.
+ * Inside the SSE payload, the AI SDK uses a specific protocol with different message types:
  * - `0:` - Text chunks (JSON strings)
  * - `2:` - Data parts (arrays of data)
  * - `8:` - Finish messages
  * - `e:` - Error messages
  * - `d:` - Done signals
  *
- * This parser handles all these formats robustly.
+ * This parser handles both the SSE wrapper and the AI SDK protocol.
  */
 function parseAISDKStream(rawStream: string): {
     text: string;
@@ -69,53 +143,36 @@ function parseAISDKStream(rawStream: string): {
         const trimmedLine = line.trim();
         if (!trimmedLine) continue;
 
-        // Match the protocol format: TYPE:DATA
-        const colonIndex = trimmedLine.indexOf(":");
+        // Handle SSE format: "data: {...}" or direct protocol format "0:..."
+        let contentLine = trimmedLine;
+        if (trimmedLine.startsWith("data:")) {
+            contentLine = trimmedLine.substring(5).trim();
+
+            // Try to parse as SSE JSON payload
+            if (tryParseSSEPayload(contentLine, retrievedChunks)) {
+                continue;
+            }
+        }
+
+        // Parse AI SDK protocol format: TYPE:DATA
+        const colonIndex = contentLine.indexOf(":");
         if (colonIndex === -1) continue;
 
-        const typeCode = trimmedLine.substring(0, colonIndex);
-        const dataStr = trimmedLine.substring(colonIndex + 1);
+        const typeCode = contentLine.substring(0, colonIndex);
+        const dataStr = contentLine.substring(colonIndex + 1);
 
-        try {
-            switch (typeCode) {
-                case "0": {
-                    // Text chunk - the data is a JSON-encoded string
-                    const textContent = JSON.parse(dataStr);
-                    if (typeof textContent === "string") {
-                        text += textContent;
-                    }
-                    break;
-                }
-                case "2": {
-                    // Data part - contains arrays of structured data
-                    const dataParts = JSON.parse(dataStr);
-                    if (Array.isArray(dataParts)) {
-                        for (const part of dataParts) {
-                            // Handle retrieved-chunk-data type
-                            if (part?.type === "data-retrieved-chunk" && part?.data) {
-                                const chunk = part.data as RetrievedChunk;
-                                if (chunk.chunkId && !retrievedChunks.some((c) => c.chunkId === chunk.chunkId)) {
-                                    retrievedChunks.push({
-                                        chunkId: chunk.chunkId,
-                                        documentTitle: chunk.documentTitle || "",
-                                        content: chunk.content || "",
-                                        similarity: chunk.similarity || 0,
-                                        retrievalMethod: chunk.retrievalMethod,
-                                        vectorScore: chunk.vectorScore,
-                                        bm25Score: chunk.bm25Score,
-                                    });
-                                }
-                            }
-                        }
-                    }
-                    break;
-                }
-                default:
-                    // Types 8, e, d are finish/error/done signals - skip for content extraction
-                    break;
-            }
-        } catch (_parseError) {
-            // Skip unparseable lines - this is expected for some protocol messages
+        switch (typeCode) {
+            case "0":
+                // Text chunk
+                text += parseTextChunk(dataStr);
+                break;
+            case "2":
+                // Data parts
+                parseDataParts(dataStr, retrievedChunks);
+                break;
+            default:
+                // Types 8, e, d are finish/error/done signals - skip
+                break;
         }
     }
 

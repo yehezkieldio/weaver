@@ -31,6 +31,7 @@ import {
     streamText,
     type UIMessage,
 } from "ai";
+import consola from "consola";
 import { eq } from "drizzle-orm";
 import { CHAT_MODEL, telemetryConfig } from "@/lib/ai";
 import { db } from "@/lib/db";
@@ -167,6 +168,8 @@ type ChatMetadata = AgenticMetadata | StandardRagMetadata | DirectMetadata;
 export async function POST(request: Request) {
     const startTime = Date.now();
     console.log("[POST] Starting chat request processing");
+
+    consola.level = 999;
 
     try {
         const {
