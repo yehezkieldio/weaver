@@ -87,6 +87,8 @@ function parseArgs(): {
     allScenarios?: boolean;
     repetitions?: number;
     agentic?: boolean;
+    useReranker?: boolean;
+    rerankerStrategy?: "ensemble" | "cross_encoder" | "llm" | "cohere";
 } {
     const args = process.argv.slice(2);
     const parsed: {
@@ -95,6 +97,8 @@ function parseArgs(): {
         allScenarios?: boolean;
         repetitions?: number;
         agentic?: boolean;
+        useReranker?: boolean;
+        rerankerStrategy?: "ensemble" | "cross_encoder" | "llm" | "cohere";
     } = {};
 
     for (let i = 0; i < args.length; i++) {
@@ -112,6 +116,21 @@ function parseArgs(): {
             parsed.repetitions = Number.parseInt(args[i], 10);
         } else if (arg === "--no-agentic") {
             parsed.agentic = false;
+        } else if (arg === "--no-reranker") {
+            parsed.useReranker = false;
+        } else if (arg === "--reranker-strategy" && i + 1 < args.length) {
+            i += 1;
+            const strategy = args[i];
+            if (
+                strategy === "ensemble" ||
+                strategy === "cross_encoder" ||
+                strategy === "llm" ||
+                strategy === "cohere"
+            ) {
+                parsed.rerankerStrategy = strategy;
+            } else {
+                consola.warn(`Invalid reranker strategy: ${strategy}. Using default.`);
+            }
         }
     }
 
@@ -692,6 +711,8 @@ async function main() {
         repetitionsPerScenario: args.repetitions || 1,
         useAgenticMode: args.agentic !== false,
         retrievalStrategy: "hybrid",
+        useReranker: args.useReranker !== false,
+        rerankerStrategy: args.rerankerStrategy || "cross_encoder",
         enableGuardrails: true,
         maxTurnsPerConversation: 10,
         saveDetailedLogs: true,
@@ -701,6 +722,9 @@ async function main() {
     consola.info(`  Scenarios: ${config.scenarios.length}`);
     consola.info(`  Repetitions: ${config.repetitionsPerScenario}`);
     consola.info(`  Agentic Mode: ${config.useAgenticMode ? "enabled" : "disabled"}`);
+    consola.info(`  Retrieval Strategy: ${config.retrievalStrategy}`);
+    consola.info(`  Reranker: ${config.useReranker ? "enabled" : "disabled"}`);
+    consola.info(`  Reranker Strategy: ${config.rerankerStrategy || "cross_encoder"}`);
     consola.info(`  Max Turns: ${config.maxTurnsPerConversation}`);
     consola.log("");
 

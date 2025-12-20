@@ -247,7 +247,12 @@ function parseAISDKStream(rawStream: string): {
 async function callChatAPI(
     sessionId: string,
     userMessage: string,
-    useAgenticMode = true
+    options: {
+        useAgenticMode?: boolean;
+        retrievalStrategy?: "vector" | "keyword" | "hybrid";
+        useReranker?: boolean;
+        rerankerStrategy?: "ensemble" | "cross_encoder" | "llm" | "cohere";
+    } = {}
 ): Promise<{
     response: string;
     retrievedChunks: Array<{
@@ -258,6 +263,12 @@ async function callChatAPI(
     }>;
     latencyMs: number;
 }> {
+    const {
+        useAgenticMode = true,
+        retrievalStrategy = "hybrid",
+        useReranker = true,
+        rerankerStrategy = "cross_encoder",
+    } = options;
     const startTime = Date.now();
 
     try {
@@ -271,8 +282,9 @@ async function callChatAPI(
                 messages: [{ id: generateId(), role: "user", content: userMessage }],
                 sessionId,
                 useAgenticMode,
-                retrievalStrategy: "hybrid",
-                useReranker: true,
+                retrievalStrategy,
+                useReranker,
+                rerankerStrategy,
             }),
         });
 
@@ -336,11 +348,21 @@ export async function runConversationScenario(
     scenario: ConversationScenario,
     config: {
         useAgenticMode?: boolean;
+        retrievalStrategy?: "vector" | "keyword" | "hybrid";
+        useReranker?: boolean;
+        rerankerStrategy?: "ensemble" | "cross_encoder" | "llm" | "cohere";
         maxTurns?: number;
         useTemplate?: boolean;
     } = {}
 ): Promise<SimulatedConversationResult> {
-    const { useAgenticMode = true, maxTurns = 10, useTemplate = true } = config;
+    const {
+        useAgenticMode = true,
+        retrievalStrategy = "hybrid",
+        useReranker = true,
+        rerankerStrategy = "cross_encoder",
+        maxTurns = 10,
+        useTemplate = true,
+    } = config;
 
     // Create a new chat session
     const sessionId = crypto.randomUUID();
@@ -400,8 +422,13 @@ export async function runConversationScenario(
 
         consola.debug(`👤 User: ${userMessage}`);
 
-        // Call chat API
-        const apiResult = await callChatAPI(sessionId, userMessage, useAgenticMode);
+        // Call chat API with full configuration
+        const apiResult = await callChatAPI(sessionId, userMessage, {
+            useAgenticMode,
+            retrievalStrategy,
+            useReranker,
+            rerankerStrategy,
+        });
         consola.debug(`🤖 Assistant (${apiResult.latencyMs}ms): ${apiResult.response.substring(0, 100)}...`);
 
         // Add to history
@@ -498,7 +525,14 @@ export async function runConversationScenario(
  * Run multiple conversation scenarios and aggregate results
  */
 export async function runSimulatedUserTests(config: SimulatedUserTestConfig): Promise<SystemLevelMetrics> {
-    const { scenarios, repetitionsPerScenario = 1, useAgenticMode = true } = config;
+    const {
+        scenarios,
+        repetitionsPerScenario = 1,
+        useAgenticMode = true,
+        retrievalStrategy = "hybrid",
+        useReranker = true,
+        rerankerStrategy = "cross_encoder",
+    } = config;
 
     consola.debug("\n🚀 Starting Simulated User Testing");
     consola.debug(`   Scenarios: ${scenarios.length}`);
@@ -515,6 +549,9 @@ export async function runSimulatedUserTests(config: SimulatedUserTestConfig): Pr
 
             const result = await runConversationScenario(scenario, {
                 useAgenticMode,
+                retrievalStrategy,
+                useReranker,
+                rerankerStrategy,
                 maxTurns: config.maxTurnsPerConversation || 10,
                 useTemplate: true, // Use templates for predictable testing
             });

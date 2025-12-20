@@ -213,6 +213,8 @@ export interface SimulatedUserTestConfig {
     repetitionsPerScenario?: number; // Run each scenario N times for statistical validity
     useAgenticMode?: boolean;
     retrievalStrategy?: "vector" | "keyword" | "hybrid";
+    useReranker?: boolean; // Enable reranking for retrieved results
+    rerankerStrategy?: "ensemble" | "cross_encoder" | "llm" | "cohere"; // Reranking strategy to use
     enableGuardrails?: boolean;
     maxTurnsPerConversation?: number;
     randomizationSeed?: number; // For reproducible test runs
