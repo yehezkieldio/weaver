@@ -1,21 +1,8 @@
 "use client";
 
-import {
-    Brain,
-    FlaskConical,
-    Globe,
-    Layers,
-    Loader2,
-    Plus,
-    RefreshCw,
-    Rocket,
-    Shield,
-    Trash2,
-    Upload,
-    Zap,
-} from "lucide-react";
-import { type SetStateAction, useId, useState } from "react";
-import { ImportQuestionsDialog } from "@/components/evaluation/import-questions-dialog";
+import { Brain, FileText, FlaskConical, Globe, Layers, Loader2, RefreshCw, Rocket, Shield, Zap } from "lucide-react";
+import { type SetStateAction, useState } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -32,14 +19,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { SAMPLE_QUESTIONS_ID } from "@/lib/evaluation-questions";
+import { getQuestionCount } from "@/lib/evaluation-questions";
 
 type EvaluationMode = "quick" | "production";
-
-interface Question {
-    question: string;
-    groundTruth: string;
-}
 
 interface CreateEvaluationDialogProps {
     open: boolean;
@@ -50,7 +32,6 @@ interface CreateEvaluationDialogProps {
 export function CreateEvaluationDialog({ open, onOpenChange, onCreated }: CreateEvaluationDialogProps) {
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
-    const [questions, setQuestions] = useState<Question[]>([{ question: "", groundTruth: "" }]);
     const [isLoading, setIsLoading] = useState(false);
 
     const [useAgenticMode, setUseAgenticMode] = useState(true);
@@ -61,26 +42,12 @@ export function CreateEvaluationDialog({ open, onOpenChange, onCreated }: Create
     const [rerankerStrategy, setRerankerStrategy] = useState<string>("ensemble");
     const [language, setLanguage] = useState<string>("id");
     const [evaluationMode, setEvaluationMode] = useState<EvaluationMode>("quick");
-    const [showImportDialog, setShowImportDialog] = useState(false);
-    const [createdRunId, setCreatedRunId] = useState<string | null>(null);
 
-    const addQuestion = () => {
-        setQuestions([...questions, { question: "", groundTruth: "" }]);
-    };
-
-    const removeQuestion = (index: number) => {
-        setQuestions(questions.filter((_, i) => i !== index));
-    };
-
-    const updateQuestion = (index: number, field: keyof Question, value: string) => {
-        const updated = [...questions];
-        updated[index][field] = value;
-        setQuestions(updated);
-    };
+    const totalQuestions = getQuestionCount();
 
     const handleSubmit = async () => {
-        if (!name || questions.some((q) => !(q.question && q.groundTruth))) {
-            console.error("Validation failed: name or questions missing");
+        if (!name) {
+            console.error("Validation failed: name is required");
             return;
         }
 
@@ -88,7 +55,6 @@ export function CreateEvaluationDialog({ open, onOpenChange, onCreated }: Create
         try {
             console.log("Creating evaluation with config:", {
                 name,
-                questionCount: questions.length,
                 useAgenticMode,
                 retrievalStrategy,
                 chunkingStrategy,
@@ -101,7 +67,7 @@ export function CreateEvaluationDialog({ open, onOpenChange, onCreated }: Create
                 body: JSON.stringify({
                     name,
                     description,
-                    questions: questions.filter((q) => q.question && q.groundTruth),
+                    // Questions will be seeded from ACADEMIC_QUESTIONS when run starts
                     useAgenticMode,
                     retrievalStrategy,
                     chunkingStrategy,
@@ -125,34 +91,17 @@ export function CreateEvaluationDialog({ open, onOpenChange, onCreated }: Create
             // Reset form state
             setName("");
             setDescription("");
-            setQuestions([{ question: "", groundTruth: "" }]);
-
-            // Store run ID for potential import dialog
-            if (data.run?.id) {
-                setCreatedRunId(data.run.id);
-            }
 
             // Refresh data and close dialog
             onCreated();
             onOpenChange(false);
         } catch (error) {
             console.error("Error creating evaluation:", error);
-            // You might want to show a toast notification here
             alert(error instanceof Error ? error.message : "Failed to create evaluation");
         } finally {
             setIsLoading(false);
         }
     };
-
-    const loadSampleQuestions = () => {
-        const sampleQuestions = SAMPLE_QUESTIONS_ID.map((q) => ({
-            question: q.question,
-            groundTruth: q.groundTruth,
-        }));
-        setQuestions(sampleQuestions);
-    };
-
-    const questionId = useId();
 
     return (
         <Dialog onOpenChange={onOpenChange} open={open}>
@@ -160,7 +109,8 @@ export function CreateEvaluationDialog({ open, onOpenChange, onCreated }: Create
                 <DialogHeader>
                     <DialogTitle>Buat Evaluasi Baru</DialogTitle>
                     <DialogDescription>
-                        Konfigurasi pengaturan RAG dan tentukan pertanyaan uji dengan jawaban referensi
+                        Konfigurasi pengaturan RAG untuk evaluasi sistem. Pertanyaan uji akan menggunakan dataset
+                        ACADEMIC_QUESTIONS yang telah dikurasi.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -234,6 +184,19 @@ export function CreateEvaluationDialog({ open, onOpenChange, onCreated }: Create
                             </button>
                         </div>
                     </Card>
+
+                    {/* Dataset Notice */}
+                    <Alert>
+                        <FileText className="h-4 w-4" />
+                        <AlertTitle>Dataset Evaluasi</AlertTitle>
+                        <AlertDescription>
+                            Evaluasi akan menggunakan <strong>ACADEMIC_QUESTIONS</strong> dataset yang berisi{" "}
+                            <strong>{totalQuestions} pertanyaan</strong> terkurasi seputar informasi Universitas Mulia.
+                            Dataset ini mencakup kategori: regulasi akademik, prosedur administratif, layanan mahasiswa,
+                            program studi, fasilitas, keuangan, dan informasi umum universitas. Setiap pertanyaan
+                            dilengkapi dengan ground truth dan relevantChunkIds untuk evaluasi retrieval.
+                        </AlertDescription>
+                    </Alert>
 
                     <Card className="space-y-4 p-4">
                         <h4 className="font-medium text-sm">Konfigurasi RAG</h4>
@@ -359,71 +322,6 @@ export function CreateEvaluationDialog({ open, onOpenChange, onCreated }: Create
                             )}
                         </div>
                     </Card>
-
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <Label>Pertanyaan Uji</Label>
-                            <div className="flex gap-2">
-                                <Button
-                                    onClick={() => setShowImportDialog(true)}
-                                    size="sm"
-                                    type="button"
-                                    variant="outline"
-                                >
-                                    <Upload className="mr-1 h-4 w-4" />
-                                    Impor Bulk
-                                </Button>
-                                <Button onClick={loadSampleQuestions} size="sm" type="button" variant="outline">
-                                    Muat Contoh (ID)
-                                </Button>
-                                <Button onClick={addQuestion} size="sm" type="button" variant="outline">
-                                    <Plus className="mr-1 h-4 w-4" />
-                                    Tambah
-                                </Button>
-                            </div>
-                        </div>
-
-                        {questions.map((q, index) => (
-                            <div className="space-y-3 rounded-lg border bg-muted/50 p-4" key={questionId}>
-                                <div className="flex items-start justify-between">
-                                    <span className="font-medium text-muted-foreground text-sm">
-                                        Pertanyaan {index + 1}
-                                    </span>
-                                    {questions.length > 1 && (
-                                        <Button
-                                            className="h-6 w-6"
-                                            onClick={() => removeQuestion(index)}
-                                            size="icon"
-                                            type="button"
-                                            variant="ghost"
-                                        >
-                                            <Trash2 className="h-4 w-4 text-destructive" />
-                                        </Button>
-                                    )}
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label className="text-xs">Pertanyaan</Label>
-                                    <Textarea
-                                        onChange={(e) => updateQuestion(index, "question", e.target.value)}
-                                        placeholder="Masukkan pertanyaan uji..."
-                                        rows={2}
-                                        value={q.question}
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label className="text-xs">Jawaban Referensi (Ground Truth)</Label>
-                                    <Textarea
-                                        onChange={(e) => updateQuestion(index, "groundTruth", e.target.value)}
-                                        placeholder="Masukkan jawaban yang diharapkan..."
-                                        rows={2}
-                                        value={q.groundTruth}
-                                    />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
                 </div>
 
                 <DialogFooter>
@@ -436,15 +334,6 @@ export function CreateEvaluationDialog({ open, onOpenChange, onCreated }: Create
                     </Button>
                 </DialogFooter>
             </DialogContent>
-
-            {createdRunId && (
-                <ImportQuestionsDialog
-                    evaluationRunId={createdRunId}
-                    onImported={onCreated}
-                    onOpenChange={setShowImportDialog}
-                    open={showImportDialog}
-                />
-            )}
         </Dialog>
     );
 }

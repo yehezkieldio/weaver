@@ -162,7 +162,6 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
                     // Generate RAG response
                     const ragStartTime = Date.now();
 
-                    latencyTracker.mark("retrieval");
                     // Use stored configuration for retrieval
                     const contextResult = await retrieveContext(question.question, {
                         topK: 5,
@@ -171,17 +170,30 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
                         useReranker,
                         rerankerStrategy,
                     });
+                    // Mark retrieval phase AFTER retrieval completes
+                    latencyTracker.mark("retrieval");
+
+                    // Mark reranking phase if reranker was used (time is already included in retrieval)
+                    if (useReranker) {
+                        latencyTracker.mark("reranking");
+                    }
 
                     const ragPrompt = buildRagPrompt(SYSTEM_PROMPTS.rag, contextResult.context, question.question);
 
-                    latencyTracker.mark("generation");
                     const ragResponse = await generateText({
                         model: CHAT_MODEL,
                         prompt: ragPrompt,
                         temperature: 0.3,
                         experimental_telemetry: telemetryConfig,
                     });
+                    // Mark generation phase AFTER generation completes
+                    latencyTracker.mark("generation");
                     const ragLatency = Date.now() - ragStartTime;
+
+                    // Log debug info about what we're evaluating
+                    console.log(
+                        `[Evaluation Run] RAG response length: ${ragResponse.text.length}, contexts: ${contextResult.chunks.length}`
+                    );
 
                     // Generate non-RAG response
                     const nonRagStartTime = Date.now();
@@ -194,16 +206,32 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
                     });
                     const nonRagLatency = Date.now() - nonRagStartTime;
 
+                    // Log what we're passing to metric calculations
+                    const contextsForMetrics = contextResult.chunks.map((c) => c.content);
+                    console.log(
+                        `[Evaluation Run] Calculating metrics - answer: ${ragResponse.text.length} chars, contexts: ${contextsForMetrics.length}, ground truth: ${question.groundTruth.length} chars`
+                    );
+                    console.log(
+                        `[Evaluation Run] DEBUG - First context preview: ${contextsForMetrics[0]?.substring(0, 100) || "EMPTY"}`
+                    );
+                    console.log(
+                        `[Evaluation Run] DEBUG - relevantChunkIds: ${question.relevantChunkIds ? question.relevantChunkIds.length : "null"}`
+                    );
+
                     // Calculate RAGAS metrics for RAG response (includes all hallucination metrics)
                     const ragMetrics = await calculateAllMetrics(
                         question.question,
                         ragResponse.text,
-                        contextResult.chunks.map((c) => c.content),
+                        contextsForMetrics,
                         question.groundTruth,
                         contextResult.chunks.map((c) => c.chunkId), // retrievedIds
                         question.relevantChunkIds ? new Set(question.relevantChunkIds) : undefined, // relevantIds from ground truth labels
                         "universitas-mulia",
                         latencyTracker
+                    );
+
+                    console.log(
+                        `[Evaluation Run] DEBUG - ragMetrics faithfulness: ${ragMetrics.faithfulness}, hallucinationRate: ${ragMetrics.hallucinationRate}`
                     );
 
                     // Calculate metrics for non-RAG response
@@ -259,6 +287,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
                             // Metadata
                             agentStepsUsed: ragMetrics.totalAgentSteps,
                             retrievalMethod: contextResult.retrievalStrategy,
+                            rerankerStrategy: useReranker ? rerankerStrategy : null,
                         })
                         .where(eq(evaluationQuestions.id, question.id));
 

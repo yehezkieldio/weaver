@@ -26,15 +26,20 @@
  * - Faithfulness: NLI-based approach from "TRUE: Re-evaluating Factual Consistency" (Honovich et al., 2022)
  */
 
-import { cosineSimilarity, generateText } from "ai";
+import { cosineSimilarity, generateObject, generateText } from "ai";
 import consola from "consola";
+import { z } from "zod";
 import { CHAT_MODEL, JUDGE_MODEL, telemetryConfig } from "@/lib/ai";
 import { generateEmbedding } from "@/lib/ai/embeddings";
 import { runAgenticRag } from "./agentic-rag";
 import { buildRagPrompt, SYSTEM_PROMPTS } from "./context-builder";
-import { extractJsonArray, getCachedEmbedding } from "./evaluation-utils";
+import { getCachedEmbedding } from "./evaluation-utils";
 import { hybridRetrieve } from "./hybrid-retrieval";
 import type { RerankerStrategy } from "./reranker";
+
+// Set consola level to show more debug info during evaluation
+// Level 4 = debug, Level 3 = info, Level 5 = verbose
+consola.level = 4;
 
 /**
  * Comprehensive evaluation metrics for RAG systems
@@ -118,8 +123,36 @@ export interface EvaluationMetrics {
 // Top-level regex used for token splitting to avoid re-creating the literal repeatedly
 export const WHITESPACE_REGEX = /\s+/;
 
-// Top-level regex for JSON extraction from LLM responses
-const JSON_OBJECT_REGEX = /\{[\s\S]*\}/;
+// Zod schemas for structured LLM outputs
+const GroundingMetricsSchema = z.object({
+    faithfulness: z.number().min(0).max(1).describe("How much of the answer is supported by context (0-1)"),
+    hallucinationRate: z.number().min(0).max(1).describe("Proportion of fabricated information (0=none, 1=all)"),
+    factualConsistency: z.number().min(0).max(1).describe("NLI-based consistency score (0-1)"),
+    sourceAttribution: z.number().min(0).max(1).describe("How well claims are attributed to sources (0-1)"),
+    contradictionScore: z.number().min(0).max(1).describe("Freedom from contradictions (1=no contradictions)"),
+});
+
+const ContextQualityMetricsSchema = z.object({
+    contextPrecision: z.number().min(0).max(1).describe("Proportion of retrieved chunks that are relevant (0-1)"),
+    contextRecall: z.number().min(0).max(1).describe("Proportion of ground truth info covered by contexts (0-1)"),
+    contextRelevancy: z.number().min(0).max(1).describe("Average relevance of all chunks to query (0-1)"),
+});
+
+const SingleScoreSchema = z.object({
+    score: z.number().min(0).max(1).describe("Evaluation score between 0 and 1"),
+});
+
+const ClaimsArraySchema = z.object({
+    claims: z.array(z.string()).describe("Array of factual claims extracted from the answer"),
+});
+
+const SyntheticQuestionsSchema = z.object({
+    questions: z.array(z.string()).describe("Array of synthetic questions that could be answered by this answer"),
+});
+
+const ClaimVerificationSchema = z.object({
+    supported: z.boolean().describe("Whether the claim is supported by the context"),
+});
 
 // Helper: aggregate latency and token metrics into a compact object
 function aggregateLatencyAndTokenMetrics(
@@ -310,6 +343,11 @@ export async function calculateGroundingMetricsBatched(answer: string, contexts:
     };
 
     if (!answer || contexts.length === 0) {
+        console.warn("[calculateGroundingMetricsBatched] WARNING: Returning defaults - empty answer or contexts", {
+            hasAnswer: !!answer,
+            answerLength: answer?.length || 0,
+            contextsCount: contexts.length,
+        });
         consola.debug("[calculateGroundingMetricsBatched] Skipping - empty answer or contexts");
         return defaultMetrics;
     }
@@ -321,8 +359,9 @@ export async function calculateGroundingMetricsBatched(answer: string, contexts:
             `[calculateGroundingMetricsBatched] Evaluating grounding metrics - answer: ${answer.length} chars, contexts: ${contexts.length}`
         );
 
-        const { text } = await generateText({
+        const { object } = await generateObject({
             model: JUDGE_MODEL,
+            schema: GroundingMetricsSchema,
             prompt: `Anda adalah evaluator untuk sistem RAG (Retrieval-Augmented Generation). Evaluasi jawaban berikut berdasarkan konteks yang tersedia.
 
 **KONTEKS SUMBER:**
@@ -341,30 +380,19 @@ ${answer}
 
 4. **sourceAttribution**: Apakah klaim-klaim penting diatribusikan dengan benar ke sumber? (1.0 = atribusi sempurna, 0.0 = tidak ada atribusi)
 
-5. **contradictionScore**: Apakah jawaban bebas dari kontradiksi internal dan dengan konteks? (1.0 = tidak ada kontradiksi, 0.0 = kontradiksi berat)
-
-**OUTPUT FORMAT (JSON ONLY):**
-{"faithfulness": 0.0-1.0, "hallucinationRate": 0.0-1.0, "factualConsistency": 0.0-1.0, "sourceAttribution": 0.0-1.0, "contradictionScore": 0.0-1.0}`,
-            maxOutputTokens: 200,
+5. **contradictionScore**: Apakah jawaban bebas dari kontradiksi internal dan dengan konteks? (1.0 = tidak ada kontradiksi, 0.0 = kontradiksi berat)`,
             temperature: 0.1,
         });
 
-        // Parse JSON response
-        const jsonMatch = text.match(JSON_OBJECT_REGEX);
-        if (!jsonMatch) {
-            consola.warn("[calculateGroundingMetricsBatched] Could not parse JSON response, using defaults");
-            return defaultMetrics;
-        }
-
-        const parsed = JSON.parse(jsonMatch[0]);
-
         const result: GroundingMetrics = {
-            faithfulness: clampScore(parsed.faithfulness),
-            hallucinationRate: clampScore(parsed.hallucinationRate),
-            factualConsistency: clampScore(parsed.factualConsistency),
-            sourceAttribution: clampScore(parsed.sourceAttribution),
-            contradictionScore: clampScore(parsed.contradictionScore),
+            faithfulness: clampScore(object.faithfulness),
+            hallucinationRate: clampScore(object.hallucinationRate),
+            factualConsistency: clampScore(object.factualConsistency),
+            sourceAttribution: clampScore(object.sourceAttribution),
+            contradictionScore: clampScore(object.contradictionScore),
         };
+
+        consola.debug(`result: ${JSON.stringify(result)}`);
 
         consola.debug(
             `[calculateGroundingMetricsBatched] Result - faithfulness: ${result.faithfulness.toFixed(3)}, hallucination: ${result.hallucinationRate.toFixed(3)}`
@@ -372,6 +400,15 @@ ${answer}
 
         return result;
     } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error("[calculateGroundingMetricsBatched] CRITICAL ERROR:", errorMessage);
+        console.error("[calculateGroundingMetricsBatched] Stack:", error instanceof Error ? error.stack : "No stack");
+        console.error(
+            "[calculateGroundingMetricsBatched] Input - answer length:",
+            answer.length,
+            "contexts:",
+            contexts.length
+        );
         consola.error("[calculateGroundingMetricsBatched] Error:", error);
         return defaultMetrics;
     }
@@ -406,6 +443,11 @@ export async function calculateContextMetricsBatched(
     };
 
     if (!question || contexts.length === 0) {
+        console.warn("[calculateContextMetricsBatched] WARNING: Returning defaults - empty question or contexts", {
+            hasQuestion: !!question,
+            questionLength: question?.length || 0,
+            contextsCount: contexts.length,
+        });
         consola.debug("[calculateContextMetricsBatched] Skipping - empty question or contexts");
         return defaultMetrics;
     }
@@ -415,8 +457,9 @@ export async function calculateContextMetricsBatched(
             `[calculateContextMetricsBatched] Evaluating context metrics - question: ${question.length} chars, contexts: ${contexts.length}`
         );
 
-        const { text } = await generateText({
+        const { object } = await generateObject({
             model: JUDGE_MODEL,
+            schema: ContextQualityMetricsSchema,
             prompt: `Anda adalah evaluator untuk sistem RAG. Evaluasi kualitas konteks yang diambil untuk menjawab pertanyaan.
 
 **PERTANYAAN:**
@@ -434,27 +477,14 @@ ${contexts.map((c, i) => `[${i + 1}] ${c.substring(0, 500)}${c.length > 500 ? ".
 
 2. **contextRecall**: Berapa persen informasi dari jawaban benar yang tercakup dalam konteks? (1.0 = semua tercakup, 0.0 = tidak ada yang tercakup)
 
-3. **contextRelevancy**: Rata-rata relevansi semua konteks terhadap pertanyaan (1.0 = sangat relevan, 0.0 = tidak relevan)
-
-**OUTPUT FORMAT (JSON ONLY):**
-{"contextPrecision": 0.0-1.0, "contextRecall": 0.0-1.0, "contextRelevancy": 0.0-1.0}`,
-            maxOutputTokens: 150,
+3. **contextRelevancy**: Rata-rata relevansi semua konteks terhadap pertanyaan (1.0 = sangat relevan, 0.0 = tidak relevan)`,
             temperature: 0.1,
         });
 
-        // Parse JSON response
-        const jsonMatch = text.match(JSON_OBJECT_REGEX);
-        if (!jsonMatch) {
-            consola.warn("[calculateContextMetricsBatched] Could not parse JSON response, using defaults");
-            return defaultMetrics;
-        }
-
-        const parsed = JSON.parse(jsonMatch[0]);
-
         const result: ContextQualityMetrics = {
-            contextPrecision: clampScore(parsed.contextPrecision),
-            contextRecall: clampScore(parsed.contextRecall),
-            contextRelevancy: clampScore(parsed.contextRelevancy),
+            contextPrecision: clampScore(object.contextPrecision),
+            contextRecall: clampScore(object.contextRecall),
+            contextRelevancy: clampScore(object.contextRelevancy),
         };
 
         consola.debug(
@@ -463,6 +493,17 @@ ${contexts.map((c, i) => `[${i + 1}] ${c.substring(0, 500)}${c.length > 500 ? ".
 
         return result;
     } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error("[calculateContextMetricsBatched] CRITICAL ERROR:", errorMessage);
+        console.error("[calculateContextMetricsBatched] Stack:", error instanceof Error ? error.stack : "No stack");
+        console.error(
+            "[calculateContextMetricsBatched] Input - question length:",
+            question.length,
+            "contexts:",
+            contexts.length,
+            "groundTruth length:",
+            groundTruth.length
+        );
         consola.error("[calculateContextMetricsBatched] Error:", error);
         return defaultMetrics;
     }
@@ -508,27 +549,18 @@ export async function calculateFaithfulness(answer: string, contexts: string[]):
     try {
         // Step 1: Decompose answer into individual claims
         consola.debug("[calculateFaithfulness] Step 1: Decomposing answer into claims");
-        const { text: claimsText } = await generateText({
+        const { object: claimsResult } = await generateObject({
             model: JUDGE_MODEL,
+            schema: ClaimsArraySchema,
             prompt: `Pecah jawaban berikut menjadi klaim-klaim faktual individual. Setiap klaim harus merupakan pernyataan tunggal yang dapat diverifikasi.
 
 Jawaban: ${answer}
 
-Kembalikan sebagai array JSON berisi string klaim. Jika tidak ada klaim faktual, kembalikan array kosong [].
-Contoh format: ["Klaim pertama", "Klaim kedua", "Klaim ketiga"]`,
-            maxOutputTokens: 1000,
+Ekstrak klaim-klaim faktual dari jawaban. Jika tidak ada klaim faktual, kembalikan array kosong.`,
             temperature: 0.1,
         });
 
-        let claims: string[];
-        const extractedClaims = extractJsonArray(claimsText);
-        if (extractedClaims && extractedClaims.length > 0) {
-            claims = extractedClaims;
-        } else {
-            // Fallback: treat whole answer as single claim
-            consola.debug("[calculateFaithfulness] Could not parse claims, using answer as single claim");
-            claims = [answer.substring(0, 500)];
-        }
+        const claims = claimsResult.claims;
 
         if (claims.length === 0) {
             consola.debug("[calculateFaithfulness] No claims found, returning 1.0");
@@ -547,13 +579,13 @@ Contoh format: ["Klaim pertama", "Klaim kedua", "Klaim ketiga"]`,
             const batch = claims.slice(i, i + batchSize);
             const results = await Promise.all(
                 batch.map(async (claim) => {
-                    const { text } = await generateText({
+                    const { object } = await generateObject({
                         model: JUDGE_MODEL,
-                        prompt: `Konteks:\n${contextText}\n\nKlaim: ${claim}\n\nApakah klaim ini DIDUKUNG oleh konteks? Jawab hanya: ya atau tidak`,
-                        maxOutputTokens: 5,
+                        schema: ClaimVerificationSchema,
+                        prompt: `Konteks:\n${contextText}\n\nKlaim: ${claim}\n\nApakah klaim ini DIDUKUNG oleh konteks? Tentukan apakah klaim didukung (true) atau tidak didukung (false) berdasarkan informasi dalam konteks.`,
                         temperature: 0.1,
                     });
-                    return text.toLowerCase().includes("ya");
+                    return object.supported;
                 })
             );
             supportedCount += results.filter(Boolean).length;
@@ -599,31 +631,18 @@ export async function calculateAnswerRelevancy(question: string, answer: string,
         );
 
         // Step 1: Generate N synthetic questions from the answer
-        const { text: questionsText } = await generateText({
+        const { object: questionsResult } = await generateObject({
             model: JUDGE_MODEL,
+            schema: SyntheticQuestionsSchema,
             prompt: `Berdasarkan jawaban berikut, hasilkan ${numQuestions} pertanyaan yang kemungkinan besar dijawab oleh jawaban ini.
 
 Jawaban: ${answer}
 
-Kembalikan HANYA array JSON berisi ${numQuestions} pertanyaan dalam Bahasa Indonesia.
-Contoh format: ["Pertanyaan 1?", "Pertanyaan 2?", "Pertanyaan 3?"]`,
-            maxOutputTokens: 500,
+Hasilkan ${numQuestions} pertanyaan dalam Bahasa Indonesia yang bisa dijawab oleh jawaban di atas.`,
             temperature: 0.3,
         });
 
-        const extractedQuestions = extractJsonArray(questionsText);
-        if (!extractedQuestions) {
-            consola.debug(
-                "[calculateAnswerRelevancy] Could not parse synthetic questions, falling back to embedding comparison"
-            );
-            // Fallback to simple embedding comparison
-            const [questionEmbed, answerEmbed] = await Promise.all([
-                getCachedEmbedding(question),
-                getCachedEmbedding(answer),
-            ]);
-            return cosineSimilarity(questionEmbed.embedding, answerEmbed.embedding);
-        }
-        const syntheticQuestions: string[] = extractedQuestions;
+        const syntheticQuestions = questionsResult.questions;
 
         if (syntheticQuestions.length === 0) {
             consola.debug("[calculateAnswerRelevancy] No synthetic questions generated, using fallback");
@@ -668,7 +687,10 @@ export async function calculateContextPrecision(
     if (!question || contexts.length === 0 || !groundTruth) return 0;
 
     try {
-        const prompt = `Anda mengevaluasi presisi konteks yang diambil untuk menjawab pertanyaan.
+        const { object } = await generateObject({
+            model: JUDGE_MODEL,
+            schema: SingleScoreSchema,
+            prompt: `Anda mengevaluasi presisi konteks yang diambil untuk menjawab pertanyaan.
 
 Pertanyaan: ${question}
 
@@ -679,16 +701,11 @@ ${contexts.map((c, i) => `[${i + 1}] ${c}`).join("\n\n")}
 
 Tugas: Untuk setiap konteks, tentukan apakah mengandung informasi yang berguna untuk menjawab pertanyaan dengan benar.
 Hitung berapa banyak konteks yang relevan dan bagi dengan total konteks.
-Jawab HANYA dengan angka antara 0 dan 1.`;
-
-        const { text } = await generateText({
-            model: JUDGE_MODEL,
-            prompt,
-            maxOutputTokens: 10,
+Berikan skor antara 0 dan 1.`,
+            temperature: 0.1,
         });
 
-        const score = Number.parseFloat(text.trim());
-        return Number.isNaN(score) ? 0 : Math.min(1, Math.max(0, score));
+        return clampScore(object.score);
     } catch (error) {
         consola.error("Context precision calculation error:", error);
         return 0;
@@ -699,7 +716,10 @@ export async function calculateContextRecall(groundTruth: string, contexts: stri
     if (!groundTruth || contexts.length === 0) return 0;
 
     try {
-        const prompt = `Anda mengevaluasi recall dari konteks yang diambil.
+        const { object } = await generateObject({
+            model: JUDGE_MODEL,
+            schema: SingleScoreSchema,
+            prompt: `Anda mengevaluasi recall dari konteks yang diambil.
 
 Jawaban Benar: ${groundTruth}
 
@@ -707,18 +727,13 @@ Konteks yang Diambil:
 ${contexts.join("\n\n")}
 
 Tugas: Tentukan berapa persen informasi dalam jawaban benar yang tercakup oleh konteks yang diambil.
-Jawab HANYA dengan angka antara 0 dan 1.
+Berikan skor antara 0 dan 1:
 - 1.0 = Semua informasi dalam jawaban benar ada di konteks
-- 0.0 = Tidak ada informasi dari jawaban benar di konteks`;
-
-        const { text } = await generateText({
-            model: JUDGE_MODEL,
-            prompt,
-            maxOutputTokens: 10,
+- 0.0 = Tidak ada informasi dari jawaban benar di konteks`,
+            temperature: 0.1,
         });
 
-        const score = Number.parseFloat(text.trim());
-        return Number.isNaN(score) ? 0 : Math.min(1, Math.max(0, score));
+        return clampScore(object.score);
     } catch (error) {
         consola.error("Context recall calculation error:", error);
         return 0;
@@ -748,8 +763,9 @@ export async function calculateContextRelevancy(question: string, contexts: stri
 
         // Evaluate each context's relevance to the question in parallel
         const relevancePromises = contexts.map(async (context) => {
-            const { text } = await generateText({
+            const { object } = await generateObject({
                 model: JUDGE_MODEL,
+                schema: SingleScoreSchema,
                 prompt: `Pertanyaan: ${question}
 
 Konteks yang diambil: ${context.substring(0, 1000)}
@@ -758,15 +774,11 @@ Seberapa relevan konteks ini untuk menjawab pertanyaan?
 Berikan skor 0-1 di mana:
 - 1.0 = Sangat relevan, berisi informasi langsung untuk menjawab
 - 0.5 = Cukup relevan, berisi informasi terkait
-- 0.0 = Tidak relevan sama sekali
-
-Jawab HANYA dengan angka.`,
-                maxOutputTokens: 10,
+- 0.0 = Tidak relevan sama sekali`,
                 temperature: 0.1,
             });
 
-            const score = Number.parseFloat(text.trim());
-            return Number.isNaN(score) ? 0 : Math.min(1, Math.max(0, score));
+            return clampScore(object.score);
         });
 
         const relevanceScores = await Promise.all(relevancePromises);
@@ -793,7 +805,10 @@ export async function calculateAnswerCorrectness(answer: string, groundTruth: st
 
         const semanticSimilarity = cosineSimilarity(answerEmbed.embedding, truthEmbed.embedding);
 
-        const prompt = `Anda membandingkan dua jawaban untuk kebenaran faktual.
+        const { object } = await generateObject({
+            model: JUDGE_MODEL,
+            schema: SingleScoreSchema,
+            prompt: `Anda membandingkan dua jawaban untuk kebenaran faktual.
 
 Jawaban yang Dihasilkan: ${answer}
 
@@ -801,16 +816,11 @@ Jawaban Benar: ${groundTruth}
 
 Tugas: Evaluasi seberapa benar secara faktual jawaban yang dihasilkan dibandingkan dengan jawaban benar.
 Pertimbangkan akurasi faktual dan kelengkapan.
-Jawab HANYA dengan angka antara 0 dan 1.`;
-
-        const { text } = await generateText({
-            model: JUDGE_MODEL,
-            prompt,
-            maxOutputTokens: 10,
+Berikan skor antara 0 dan 1.`,
+            temperature: 0.1,
         });
 
-        const factualScore = Number.parseFloat(text.trim());
-        const validFactualScore = Number.isNaN(factualScore) ? 0 : Math.min(1, Math.max(0, factualScore));
+        const validFactualScore = clampScore(object.score);
 
         return semanticSimilarity * 0.3 + validFactualScore * 0.7;
     } catch (error) {
@@ -823,7 +833,10 @@ export async function calculateCitationAccuracy(answer: string, contexts: string
     if (!answer || contexts.length === 0) return 0;
 
     try {
-        const prompt = `Evaluasi akurasi sitasi dan referensi dalam jawaban berikut.
+        const { object } = await generateObject({
+            model: JUDGE_MODEL,
+            schema: SingleScoreSchema,
+            prompt: `Evaluasi akurasi sitasi dan referensi dalam jawaban berikut.
 
 Jawaban: ${answer}
 
@@ -835,16 +848,11 @@ Kriteria:
 3. Apakah tidak ada fabrikasi referensi?
 4. Apakah kutipan akurat terhadap sumber asli?
 
-Berikan skor 0-1. Jawab HANYA dengan angka.`;
-
-        const { text } = await generateText({
-            model: JUDGE_MODEL,
-            prompt,
-            maxOutputTokens: 10,
+Berikan skor 0-1.`,
+            temperature: 0.1,
         });
 
-        const score = Number.parseFloat(text.trim());
-        return Number.isNaN(score) ? 0 : Math.min(1, Math.max(0, score));
+        return clampScore(object.score);
     } catch (error) {
         consola.error("Citation accuracy calculation error:", error);
         return 0;
@@ -855,7 +863,10 @@ export async function calculateHallucinationRate(answer: string, contexts: strin
     if (!answer) return 1; // No answer = 100% hallucination
 
     try {
-        const prompt = `Analisis jawaban berikut untuk mendeteksi halusinasi (informasi yang dibuat-buat atau tidak akurat).
+        const { object } = await generateObject({
+            model: JUDGE_MODEL,
+            schema: SingleScoreSchema,
+            prompt: `Analisis jawaban berikut untuk mendeteksi halusinasi (informasi yang dibuat-buat atau tidak akurat).
 
 Jawaban: ${answer}
 
@@ -867,17 +878,11 @@ Identifikasi:
 3. Detail spesifik (angka, nama, tanggal) yang tidak didukung
 4. Generalisasi berlebihan tanpa dasar
 
-Berikan TINGKAT HALUSINASI 0-1 (0 = tidak ada halusinasi, 1 = sepenuhnya halusinasi).
-Jawab HANYA dengan angka.`;
-
-        const { text } = await generateText({
-            model: JUDGE_MODEL,
-            prompt,
-            maxOutputTokens: 10,
+Berikan TINGKAT HALUSINASI 0-1 (0 = tidak ada halusinasi, 1 = sepenuhnya halusinasi).`,
+            temperature: 0.1,
         });
 
-        const score = Number.parseFloat(text.trim());
-        return Number.isNaN(score) ? 0.5 : Math.min(1, Math.max(0, score));
+        return clampScore(object.score);
     } catch (error) {
         consola.error("Hallucination rate calculation error:", error);
         return 0.5;
@@ -889,7 +894,10 @@ export async function calculateFactualConsistency(answer: string, contexts: stri
 
     try {
         // Use NLI-style approach: check if answer is entailed by contexts
-        const prompt = `Evaluasi konsistensi faktual menggunakan pendekatan Natural Language Inference.
+        const { object } = await generateObject({
+            model: JUDGE_MODEL,
+            schema: SingleScoreSchema,
+            prompt: `Evaluasi konsistensi faktual menggunakan pendekatan Natural Language Inference.
 
 Premis (Konteks):
 ${contexts.join("\n\n")}
@@ -901,16 +909,11 @@ Tentukan hubungan:
 - NEUTRAL (0.5): Jawaban tidak bertentangan tapi tidak sepenuhnya didukung
 - CONTRADICTION (0.0): Jawaban bertentangan dengan konteks
 
-Berikan skor 0-1 berdasarkan tingkat entailment. Jawab HANYA dengan angka.`;
-
-        const { text } = await generateText({
-            model: JUDGE_MODEL,
-            prompt,
-            maxOutputTokens: 10,
+Berikan skor 0-1 berdasarkan tingkat entailment.`,
+            temperature: 0.1,
         });
 
-        const score = Number.parseFloat(text.trim());
-        return Number.isNaN(score) ? 0.5 : Math.min(1, Math.max(0, score));
+        return clampScore(object.score);
     } catch (error) {
         consola.error("Factual consistency calculation error:", error);
         return 0.5;
@@ -922,7 +925,10 @@ export async function calculateSourceAttribution(answer: string, contexts: strin
 
     try {
         // Check if claims are properly attributed to sources
-        const prompt = `Evaluasi atribusi sumber dalam jawaban.
+        const { object } = await generateObject({
+            model: JUDGE_MODEL,
+            schema: SingleScoreSchema,
+            prompt: `Evaluasi atribusi sumber dalam jawaban.
 
 Jawaban: ${answer}
 
@@ -934,16 +940,11 @@ Kriteria:
 3. Apakah atribusi akurat (tidak salah mengaitkan)?
 4. Apakah pembaca dapat memverifikasi klaim dari sumber?
 
-Berikan skor 0-1. Jawab HANYA dengan angka.`;
-
-        const { text } = await generateText({
-            model: JUDGE_MODEL,
-            prompt,
-            maxOutputTokens: 10,
+Berikan skor 0-1.`,
+            temperature: 0.1,
         });
 
-        const score = Number.parseFloat(text.trim());
-        return Number.isNaN(score) ? 0.5 : Math.min(1, Math.max(0, score));
+        return clampScore(object.score);
     } catch (error) {
         consola.error("Source attribution calculation error:", error);
         return 0.5;
@@ -954,7 +955,10 @@ export async function calculateContradictionScore(answer: string, contexts: stri
     if (!answer || contexts.length === 0) return 0;
 
     try {
-        const prompt = `Deteksi kontradiksi dalam jawaban terhadap konteks sumber.
+        const { object } = await generateObject({
+            model: JUDGE_MODEL,
+            schema: SingleScoreSchema,
+            prompt: `Deteksi kontradiksi dalam jawaban terhadap konteks sumber.
 
 Jawaban: ${answer}
 
@@ -967,17 +971,11 @@ Identifikasi kontradiksi:
 3. Angka atau data yang bertentangan
 4. Pernyataan yang saling bertentangan dalam jawaban itu sendiri
 
-Berikan skor KEBEBASAN KONTRADIKSI 0-1 (1 = tidak ada kontradiksi, 0 = kontradiksi berat).
-Jawab HANYA dengan angka.`;
-
-        const { text } = await generateText({
-            model: JUDGE_MODEL,
-            prompt,
-            maxOutputTokens: 10,
+Berikan skor KEBEBASAN KONTRADIKSI 0-1 (1 = tidak ada kontradiksi, 0 = kontradiksi berat).`,
+            temperature: 0.1,
         });
 
-        const score = Number.parseFloat(text.trim());
-        return Number.isNaN(score) ? 0.5 : Math.min(1, Math.max(0, score));
+        return clampScore(object.score);
     } catch (error) {
         consola.error("Contradiction score calculation error:", error);
         return 0.5;
@@ -1028,6 +1026,9 @@ export async function calculateAllMetrics(
     _domain?: string,
     latencyTracker?: ReturnType<typeof createLatencyTracker>
 ): Promise<EvaluationMetrics> {
+    console.log(
+        `[calculateAllMetrics] Starting - question: "${question.substring(0, 60)}...", answer: ${answer.length} chars, contexts: ${contexts.length}`
+    );
     consola.debug(
         `[calculateAllMetrics] Starting BATCHED metric calculation - question: "${question.substring(0, 60)}...", answer length: ${answer.length}`
     );
@@ -1035,6 +1036,7 @@ export async function calculateAllMetrics(
     // OPTIMIZATION: Use batched LLM calls to reduce API overhead by ~80%
     // Previously: 11 separate LLM calls
     // Now: 4 LLM calls (grounding batch, context batch, answer relevancy, answer correctness)
+    console.log("[calculateAllMetrics] Calling batched metrics functions...");
     const [groundingMetrics, contextMetrics, answerRelevancy, answerCorrectness, citationAccuracy] = await Promise.all([
         // Batch 1: Grounding metrics (faithfulness, hallucination, consistency, attribution, contradiction)
         calculateGroundingMetricsBatched(answer, contexts),
@@ -1048,6 +1050,9 @@ export async function calculateAllMetrics(
         calculateCitationAccuracy(answer, contexts),
     ]);
 
+    console.log(
+        `[calculateAllMetrics] Batched results - faithfulness: ${groundingMetrics.faithfulness}, hallucinationRate: ${groundingMetrics.hallucinationRate}, contextPrecision: ${contextMetrics.contextPrecision}`
+    );
     consola.debug(
         `[calculateAllMetrics] Batched metrics calculated - faithfulness: ${groundingMetrics.faithfulness.toFixed(3)}, relevancy: ${answerRelevancy.toFixed(3)}`
     );
@@ -1401,11 +1406,12 @@ async function executeRagPipeline(
     const contexts = retrievalResults.map((r) => r.content);
     const retrievedIds = retrievalResults.map((r) => r.chunkId);
 
-    // Step 2: Optional re-ranking (simulated - actual reranking would be in hybrid-retrieval)
+    // Step 2: Mark re-ranking completion
+    // NOTE: Re-ranking already happened inside hybridRetrieve when config.useReranker=true.
+    // This marker captures the point after retrieval+reranking is complete.
+    // TODO: Pass latencyTracker to hybridRetrieve for granular reranking latency tracking.
     if (config.useReranker) {
         latencyTracker.mark("reranking", { documentsProcessed: retrievalResults.length });
-        // Note: Re-ranking is typically already applied in hybridRetrieve when using ensemble strategy
-        // This marker is for tracking purposes
     }
 
     // Step 3: Build context string and generate response
