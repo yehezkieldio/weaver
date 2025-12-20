@@ -555,6 +555,7 @@ const ACADEMIC_SYNONYM_GROUPS: SynonymGroup[] = [
     },
 ];
 
+import consola from "consola";
 import { detectQueryLanguage as detectLang } from "@/lib/utils/language";
 
 /**

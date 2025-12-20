@@ -30,6 +30,7 @@
  * - Language-aware processing (Indonesian stemming, separators)
  */
 
+import consola from "consola";
 import { eq } from "drizzle-orm";
 import { generateEmbeddings } from "@/lib/ai/embeddings";
 import { db } from "@/lib/db";

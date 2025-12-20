@@ -27,6 +27,7 @@
  */
 
 import { cosineSimilarity, generateText } from "ai";
+import consola from "consola";
 import { CHAT_MODEL, JUDGE_MODEL, telemetryConfig } from "@/lib/ai";
 import { generateEmbedding } from "@/lib/ai/embeddings";
 import { runAgenticRag } from "./agentic-rag";
@@ -116,6 +117,9 @@ export interface EvaluationMetrics {
 
 // Top-level regex used for token splitting to avoid re-creating the literal repeatedly
 export const WHITESPACE_REGEX = /\s+/;
+
+// Top-level regex for JSON extraction from LLM responses
+const JSON_OBJECT_REGEX = /\{[\s\S]*\}/;
 
 // Helper: aggregate latency and token metrics into a compact object
 function aggregateLatencyAndTokenMetrics(
@@ -268,6 +272,214 @@ export interface AblationResult {
 function detectLanguage(_text: string): "id" {
     return "id";
 }
+
+// ============================================================================
+// BATCHED METRIC CALCULATIONS
+// ============================================================================
+// These functions batch multiple related metrics into single LLM calls to reduce
+// API overhead by ~80%. Each batch returns a JSON object with all related scores.
+
+/**
+ * Batched Grounding Metrics Calculation
+ *
+ * WHY BATCH: Previously 4 separate LLM calls for these related metrics.
+ * Now 1 call returns all grounding-related scores in a single JSON response.
+ *
+ * Metrics included:
+ * - faithfulness: Are claims grounded in retrieved sources? (0-1)
+ * - hallucinationRate: Proportion of fabricated information (0-1, lower is better)
+ * - factualConsistency: NLI-based consistency with sources (0-1)
+ * - sourceAttribution: Are claims properly attributed? (0-1)
+ * - contradictionScore: Absence of logical contradictions (0-1, higher is better)
+ */
+export interface GroundingMetrics {
+    faithfulness: number;
+    hallucinationRate: number;
+    factualConsistency: number;
+    sourceAttribution: number;
+    contradictionScore: number;
+}
+
+export async function calculateGroundingMetricsBatched(answer: string, contexts: string[]): Promise<GroundingMetrics> {
+    const defaultMetrics: GroundingMetrics = {
+        faithfulness: 0,
+        hallucinationRate: 1,
+        factualConsistency: 0,
+        sourceAttribution: 0,
+        contradictionScore: 0,
+    };
+
+    if (!answer || contexts.length === 0) {
+        consola.debug("[calculateGroundingMetricsBatched] Skipping - empty answer or contexts");
+        return defaultMetrics;
+    }
+
+    const contextText = contexts.join("\n\n---\n\n");
+
+    try {
+        consola.debug(
+            `[calculateGroundingMetricsBatched] Evaluating grounding metrics - answer: ${answer.length} chars, contexts: ${contexts.length}`
+        );
+
+        const { text } = await generateText({
+            model: JUDGE_MODEL,
+            prompt: `Anda adalah evaluator untuk sistem RAG (Retrieval-Augmented Generation). Evaluasi jawaban berikut berdasarkan konteks yang tersedia.
+
+**KONTEKS SUMBER:**
+${contextText}
+
+**JAWABAN YANG DIEVALUASI:**
+${answer}
+
+**TUGAS:** Evaluasi 5 metrik grounding berikut dan berikan skor 0-1 untuk masing-masing:
+
+1. **faithfulness**: Seberapa besar klaim dalam jawaban didukung oleh konteks? (1.0 = semua klaim didukung, 0.0 = tidak ada yang didukung)
+
+2. **hallucinationRate**: Seberapa banyak informasi yang dibuat-buat/tidak ada dalam konteks? (0.0 = tidak ada halusinasi, 1.0 = sepenuhnya halusinasi)
+
+3. **factualConsistency**: Menggunakan pendekatan NLI - apakah jawaban konsisten dengan konteks? (1.0 = entailment penuh, 0.5 = netral, 0.0 = kontradiksi)
+
+4. **sourceAttribution**: Apakah klaim-klaim penting diatribusikan dengan benar ke sumber? (1.0 = atribusi sempurna, 0.0 = tidak ada atribusi)
+
+5. **contradictionScore**: Apakah jawaban bebas dari kontradiksi internal dan dengan konteks? (1.0 = tidak ada kontradiksi, 0.0 = kontradiksi berat)
+
+**OUTPUT FORMAT (JSON ONLY):**
+{"faithfulness": 0.0-1.0, "hallucinationRate": 0.0-1.0, "factualConsistency": 0.0-1.0, "sourceAttribution": 0.0-1.0, "contradictionScore": 0.0-1.0}`,
+            maxOutputTokens: 200,
+            temperature: 0.1,
+        });
+
+        // Parse JSON response
+        const jsonMatch = text.match(JSON_OBJECT_REGEX);
+        if (!jsonMatch) {
+            consola.warn("[calculateGroundingMetricsBatched] Could not parse JSON response, using defaults");
+            return defaultMetrics;
+        }
+
+        const parsed = JSON.parse(jsonMatch[0]);
+
+        const result: GroundingMetrics = {
+            faithfulness: clampScore(parsed.faithfulness),
+            hallucinationRate: clampScore(parsed.hallucinationRate),
+            factualConsistency: clampScore(parsed.factualConsistency),
+            sourceAttribution: clampScore(parsed.sourceAttribution),
+            contradictionScore: clampScore(parsed.contradictionScore),
+        };
+
+        consola.debug(
+            `[calculateGroundingMetricsBatched] Result - faithfulness: ${result.faithfulness.toFixed(3)}, hallucination: ${result.hallucinationRate.toFixed(3)}`
+        );
+
+        return result;
+    } catch (error) {
+        consola.error("[calculateGroundingMetricsBatched] Error:", error);
+        return defaultMetrics;
+    }
+}
+
+/**
+ * Batched Context Quality Metrics Calculation
+ *
+ * WHY BATCH: Previously 3 separate LLM calls for context evaluation.
+ * Now 1 call evaluates all context-related metrics together.
+ *
+ * Metrics included:
+ * - contextPrecision: Are retrieved chunks relevant to query? (0-1)
+ * - contextRecall: Are all relevant facts retrieved? (0-1)
+ * - contextRelevancy: Average relevance of all chunks to query (0-1)
+ */
+export interface ContextQualityMetrics {
+    contextPrecision: number;
+    contextRecall: number;
+    contextRelevancy: number;
+}
+
+export async function calculateContextMetricsBatched(
+    question: string,
+    contexts: string[],
+    groundTruth: string
+): Promise<ContextQualityMetrics> {
+    const defaultMetrics: ContextQualityMetrics = {
+        contextPrecision: 0,
+        contextRecall: 0,
+        contextRelevancy: 0,
+    };
+
+    if (!question || contexts.length === 0) {
+        consola.debug("[calculateContextMetricsBatched] Skipping - empty question or contexts");
+        return defaultMetrics;
+    }
+
+    try {
+        consola.debug(
+            `[calculateContextMetricsBatched] Evaluating context metrics - question: ${question.length} chars, contexts: ${contexts.length}`
+        );
+
+        const { text } = await generateText({
+            model: JUDGE_MODEL,
+            prompt: `Anda adalah evaluator untuk sistem RAG. Evaluasi kualitas konteks yang diambil untuk menjawab pertanyaan.
+
+**PERTANYAAN:**
+${question}
+
+**JAWABAN BENAR (Ground Truth):**
+${groundTruth || "(Tidak tersedia)"}
+
+**KONTEKS YANG DIAMBIL:**
+${contexts.map((c, i) => `[${i + 1}] ${c.substring(0, 500)}${c.length > 500 ? "..." : ""}`).join("\n\n")}
+
+**TUGAS:** Evaluasi 3 metrik kualitas konteks berikut:
+
+1. **contextPrecision**: Berapa proporsi konteks yang relevan untuk menjawab pertanyaan? (1.0 = semua relevan, 0.0 = tidak ada yang relevan)
+
+2. **contextRecall**: Berapa persen informasi dari jawaban benar yang tercakup dalam konteks? (1.0 = semua tercakup, 0.0 = tidak ada yang tercakup)
+
+3. **contextRelevancy**: Rata-rata relevansi semua konteks terhadap pertanyaan (1.0 = sangat relevan, 0.0 = tidak relevan)
+
+**OUTPUT FORMAT (JSON ONLY):**
+{"contextPrecision": 0.0-1.0, "contextRecall": 0.0-1.0, "contextRelevancy": 0.0-1.0}`,
+            maxOutputTokens: 150,
+            temperature: 0.1,
+        });
+
+        // Parse JSON response
+        const jsonMatch = text.match(JSON_OBJECT_REGEX);
+        if (!jsonMatch) {
+            consola.warn("[calculateContextMetricsBatched] Could not parse JSON response, using defaults");
+            return defaultMetrics;
+        }
+
+        const parsed = JSON.parse(jsonMatch[0]);
+
+        const result: ContextQualityMetrics = {
+            contextPrecision: clampScore(parsed.contextPrecision),
+            contextRecall: clampScore(parsed.contextRecall),
+            contextRelevancy: clampScore(parsed.contextRelevancy),
+        };
+
+        consola.debug(
+            `[calculateContextMetricsBatched] Result - precision: ${result.contextPrecision.toFixed(3)}, recall: ${result.contextRecall.toFixed(3)}, relevancy: ${result.contextRelevancy.toFixed(3)}`
+        );
+
+        return result;
+    } catch (error) {
+        consola.error("[calculateContextMetricsBatched] Error:", error);
+        return defaultMetrics;
+    }
+}
+
+/**
+ * Helper function to clamp score between 0 and 1
+ */
+function clampScore(score: unknown): number {
+    const num = Number(score);
+    if (Number.isNaN(num)) return 0;
+    return Math.max(0, Math.min(1, num));
+}
+
+// ============================================================================
+// INDIVIDUAL METRIC CALCULATIONS (kept for backward compatibility)
+// ============================================================================
 
 // Core RAGAS Metrics
 
@@ -817,39 +1029,27 @@ export async function calculateAllMetrics(
     latencyTracker?: ReturnType<typeof createLatencyTracker>
 ): Promise<EvaluationMetrics> {
     consola.debug(
-        `[calculateAllMetrics] Starting metric calculation - question: "${question.substring(0, 60)}...", answer length: ${answer.length}`
+        `[calculateAllMetrics] Starting BATCHED metric calculation - question: "${question.substring(0, 60)}...", answer length: ${answer.length}`
     );
-    const [
-        // Core RAGAS
-        faithfulness,
-        answerRelevancy,
-        contextPrecision,
-        contextRecall,
-        contextRelevancy, // NEW: RAGAS Context Relevancy
-        answerCorrectness,
-        // Domain-specific
-        citationAccuracy,
-        // Hallucination
-        hallucinationRate,
-        factualConsistency,
-        sourceAttribution,
-        contradictionScore,
-    ] = await Promise.all([
-        calculateFaithfulness(answer, contexts),
+
+    // OPTIMIZATION: Use batched LLM calls to reduce API overhead by ~80%
+    // Previously: 11 separate LLM calls
+    // Now: 4 LLM calls (grounding batch, context batch, answer relevancy, answer correctness)
+    const [groundingMetrics, contextMetrics, answerRelevancy, answerCorrectness, citationAccuracy] = await Promise.all([
+        // Batch 1: Grounding metrics (faithfulness, hallucination, consistency, attribution, contradiction)
+        calculateGroundingMetricsBatched(answer, contexts),
+        // Batch 2: Context metrics (precision, recall, relevancy)
+        calculateContextMetricsBatched(question, contexts, groundTruth),
+        // Individual: Answer relevancy (uses embeddings, not easily batchable)
         calculateAnswerRelevancy(question, answer),
-        calculateContextPrecision(question, contexts, groundTruth),
-        calculateContextRecall(groundTruth, contexts),
-        calculateContextRelevancy(question, contexts), // NEW: RAGAS Context Relevancy
+        // Individual: Answer correctness (compares to ground truth)
         calculateAnswerCorrectness(answer, groundTruth),
+        // Individual: Citation accuracy
         calculateCitationAccuracy(answer, contexts),
-        calculateHallucinationRate(answer, contexts),
-        calculateFactualConsistency(answer, contexts),
-        calculateSourceAttribution(answer, contexts),
-        calculateContradictionScore(answer, contexts),
     ]);
 
     consola.debug(
-        `[calculateAllMetrics] Core metrics calculated - faithfulness: ${faithfulness.toFixed(3)}, relevancy: ${answerRelevancy.toFixed(3)}`
+        `[calculateAllMetrics] Batched metrics calculated - faithfulness: ${groundingMetrics.faithfulness.toFixed(3)}, relevancy: ${answerRelevancy.toFixed(3)}`
     );
 
     // Calculate retrieval metrics if IDs provided
@@ -877,24 +1077,29 @@ export async function calculateAllMetrics(
     } = aggregateLatencyAndTokenMetrics(latencyTracker, answer, contexts);
 
     consola.debug(
-        `[calculateAllMetrics] Latency metrics - total: ${totalLatencyMs}ms, generation: ${generationLatencyMs}ms, hallucination rate: ${hallucinationRate.toFixed(3)}`
+        `[calculateAllMetrics] Latency metrics - total: ${totalLatencyMs}ms, generation: ${generationLatencyMs}ms, hallucination rate: ${groundingMetrics.hallucinationRate.toFixed(3)}`
     );
 
     return {
-        faithfulness,
+        // Unpack grounding metrics from batch
+        faithfulness: groundingMetrics.faithfulness,
+        hallucinationRate: groundingMetrics.hallucinationRate,
+        factualConsistency: groundingMetrics.factualConsistency,
+        sourceAttribution: groundingMetrics.sourceAttribution,
+        contradictionScore: groundingMetrics.contradictionScore,
+        // Unpack context metrics from batch
+        contextPrecision: contextMetrics.contextPrecision,
+        contextRecall: contextMetrics.contextRecall,
+        contextRelevancy: contextMetrics.contextRelevancy,
+        // Individual metrics
         answerRelevancy,
-        contextPrecision,
-        contextRecall,
-        contextRelevancy, // NEW: RAGAS Context Relevancy
         answerCorrectness,
         citationAccuracy,
-        hallucinationRate,
-        factualConsistency,
-        sourceAttribution,
-        contradictionScore,
+        // Retrieval metrics
         retrievalNdcg,
         retrievalMrr,
         retrievalPrecision,
+        // Latency metrics
         totalLatencyMs,
         retrievalLatencyMs,
         rerankingLatencyMs,

@@ -172,6 +172,7 @@ export async function retrieveContext(
     };
 }
 
+import consola from "consola";
 // Import from centralized language utility
 import { detectQueryLanguage } from "@/lib/utils/language";
 

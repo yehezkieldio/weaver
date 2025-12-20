@@ -924,6 +924,7 @@ export function extractKeywords(text: string, options: ExtractKeywordsOptions = 
         .map(([term]) => term);
 }
 
+import consola from "consola";
 import { expandQueryIndonesian as expandQueryIndonesianImpl } from "./university-domain";
 
 /**

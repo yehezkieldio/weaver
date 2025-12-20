@@ -27,6 +27,7 @@
 
 import { pipeline } from "@huggingface/transformers";
 import { generateText } from "ai";
+import consola from "consola";
 import { CHAT_MODEL } from "@/lib/ai";
 import type { RetrievalResult } from "@/lib/rag/hybrid-retrieval";
 

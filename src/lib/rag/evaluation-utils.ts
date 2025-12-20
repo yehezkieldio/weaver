@@ -8,6 +8,7 @@
  * - Metric error tracking
  */
 
+import consola from "consola";
 import { generateEmbedding } from "@/lib/ai/embeddings";
 
 // ==================== Embedding Cache ====================

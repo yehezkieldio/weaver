@@ -29,6 +29,7 @@
  */
 
 import { generateText } from "ai";
+import consola from "consola";
 import { CHAT_MODEL } from "@/lib/ai";
 
 /**

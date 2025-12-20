@@ -21,13 +21,7 @@ import { generateId } from "ai";
 import consola from "consola";
 import { db } from "@/lib/db";
 import { chatSessions } from "@/lib/db/schema";
-import {
-    calculateConversationMetrics,
-    evaluateCoherence,
-    evaluateContextRetention,
-    evaluateContextRetentionLLM,
-    evaluateSuccessCriteria,
-} from "./evaluator";
+import { calculateConversationMetrics, evaluateSuccessCriteria, evaluateTurnMetricsBatched } from "./evaluator";
 import type {
     ConversationScenario,
     ConversationTurnResult,
@@ -218,29 +212,19 @@ export async function runConversationScenario(
         conversationHistory.push({ role: "user", content: userMessage });
         conversationHistory.push({ role: "assistant", content: apiResult.response });
 
-        // Evaluate turn
-        const coherenceScore = await evaluateCoherence(
-            userMessage,
-            apiResult.response,
-            conversationHistory.slice(0, -2)
-        );
-
+        // Evaluate turn using BATCHED metrics (reduces 2 LLM calls to 1)
         const templateTurn = scenario.conversationTemplate?.[turnNumber - 1];
         const requiredContext = templateTurn?.requiredContext || [];
 
-        // Use LLM-based context retention evaluation for better semantic matching
-        // Fall back to keyword-based if LLM fails
-        let contextRetained: boolean;
-        try {
-            contextRetained = await evaluateContextRetentionLLM(
-                apiResult.response,
-                requiredContext,
-                conversationHistory.slice(0, -2) // Exclude current turn
-            );
-        } catch (error) {
-            consola.warn("LLM context retention failed, using keyword fallback:", error);
-            contextRetained = evaluateContextRetention(apiResult.response, requiredContext);
-        }
+        const turnMetrics = await evaluateTurnMetricsBatched(
+            userMessage,
+            apiResult.response,
+            conversationHistory.slice(0, -2), // Exclude current turn
+            requiredContext
+        );
+
+        const coherenceScore = turnMetrics.coherence;
+        const contextRetained = turnMetrics.contextRetained;
 
         // Check if intent was satisfied (simple check: response is not empty and not an error)
         const satisfiedIntent = apiResult.response.length > 20 && !apiResult.response.toLowerCase().includes("error");
