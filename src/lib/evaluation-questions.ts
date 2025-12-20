@@ -46,9 +46,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "d7fa9e4b-6d11-4741-a897-15803093566a",
-            "adb8e7d9-7155-4b0d-b70c-a9e60d8c735b",
-            "34ef169b-fee4-4a9a-9cfe-2b32b086bbb6",
+            "18193a76-a679-45f3-883d-43403e5e1d76",
+            "e22ca8ee-f47c-4c48-865e-f1fefa125bff",
+            "5cf230ab-dbf2-42a0-a469-d29d067ffb95",
         ],
     },
     {
@@ -59,9 +59,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "81456428-0a03-494f-aeb1-9d3d157852da",
-            "bd0df981-ed1c-49e5-8339-2180cae57a50",
-            "fcb702e3-456a-431b-8d93-b9a3371046fb",
+            "1350b3d7-009f-4e24-bacb-ab1c299de364",
+            "0f903b35-487c-493f-b208-a7632d387b58",
+            "426926af-51dc-4103-8da5-818730694450",
         ],
     },
     {
@@ -72,9 +72,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "a70aabb5-9ceb-4a4f-81dd-058a7f1fbb6d",
-            "921b6853-f970-4421-85ea-95937fa08852",
-            "f93e3b3d-a775-4b33-b473-81c986795d48",
+            "6a5e7a49-4717-47d8-bedd-77ee2aef784e",
+            "fa16e6db-5448-4961-a6c2-451e24e79231",
+            "e784b190-fbfe-407b-b8ab-a77865f16828",
         ],
     },
     {
@@ -85,9 +85,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "eb749c3d-1bf9-4f8c-9fe8-e02980a6e7d8",
-            "62f65034-6558-4e62-bbd8-17d8ab30efe8",
-            "3d87d8c9-3921-47d4-ae86-fe0bd82410db",
+            "c97681df-8046-4369-8c17-427c63cb99bf",
+            "284bbca2-0836-440d-9295-196bf108f07f",
+            "7eed7ac7-be26-4e2b-bdee-50b1f72f29df",
         ],
     },
     {
@@ -98,9 +98,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "easy",
         language: "id",
         relevantChunkIds: [
-            "62f65034-6558-4e62-bbd8-17d8ab30efe8",
-            "eb749c3d-1bf9-4f8c-9fe8-e02980a6e7d8",
-            "3d87d8c9-3921-47d4-ae86-fe0bd82410db",
+            "284bbca2-0836-440d-9295-196bf108f07f",
+            "0a015bf0-db07-4a98-b535-cac8032156c9",
+            "c97681df-8046-4369-8c17-427c63cb99bf",
         ],
     },
     {
@@ -111,9 +111,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "3d87d8c9-3921-47d4-ae86-fe0bd82410db",
-            "988f894a-415d-4a60-9f56-b1bcf7825689",
-            "def60385-9a19-4b51-85d2-19474303d6da",
+            "7eed7ac7-be26-4e2b-bdee-50b1f72f29df",
+            "40184998-147c-44d0-bfed-3081251f0035",
+            "97ce3ae6-efd3-4502-960d-95fd70e87635",
         ],
     },
     {
@@ -124,9 +124,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "easy",
         language: "id",
         relevantChunkIds: [
-            "3d87d8c9-3921-47d4-ae86-fe0bd82410db",
-            "6fce8d33-49cc-4a28-aff5-813f1e40e195",
-            "eb749c3d-1bf9-4f8c-9fe8-e02980a6e7d8",
+            "7eed7ac7-be26-4e2b-bdee-50b1f72f29df",
+            "c8bbc8de-16cc-4881-a648-f7583311ee22",
+            "5ed878e9-9205-4331-8674-1436bd304a22",
         ],
     },
     {
@@ -137,9 +137,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "d0e5a32b-7a30-4cbb-8b85-6dc400bcda34",
-            "23b3b99e-0e96-4d9d-bce8-599f72916adb",
-            "56c826cb-bb31-4903-a8e4-534a17ec7af6",
+            "173bec65-4635-4816-afb5-ee720f95b4f2",
+            "f155eda1-e304-48fd-a367-f38cda24110a",
+            "76732e4c-5f94-43da-9afb-c3ab5f4e2b38",
         ],
     },
     {
@@ -150,9 +150,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "77c5761f-687b-4a04-ad98-beb0e7c628c3",
-            "251d6e03-d836-4a4d-a89e-df3e24dd8f47",
-            "f59e4969-3bb3-41a1-b8a7-47fb3ae0d864",
+            "455d8792-7649-4c4c-ba5d-4a2a46461b90",
+            "9b572438-e518-4043-b103-ced4d8ce5805",
+            "c9091263-406c-44df-acf5-6e48e6bfc5e3",
         ],
     },
     {
@@ -163,9 +163,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "hard",
         language: "id",
         relevantChunkIds: [
-            "e7920b3e-a4ca-4828-ac35-826986f99d4b",
-            "ddbb54cf-db2e-4815-9b85-eae9d55d77b2",
-            "b8dd0ef2-b54a-438e-90f8-3f68b5f1171a",
+            "7317e629-d696-4ed8-89b2-897623c2ab96",
+            "62d53d92-9659-4e34-bece-7bf6d0bd6871",
+            "814be061-57b5-4308-ac78-e9c31a8a5524",
         ],
     },
     {
@@ -176,9 +176,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "ba17e9f6-a7f7-465f-9963-e0e55153465a",
-            "a2b69ea4-367e-48c6-a9a7-9bf0aad908c7",
-            "042c4752-87e5-4761-bc1b-e27394330914",
+            "3ca2fb7a-bb51-47aa-998c-131fffc20dde",
+            "0e0ce5a0-ea1f-4fec-9765-c675e5c460a0",
+            "6229b224-39e9-40cf-8df5-dcccc729f10d",
         ],
     },
     {
@@ -189,9 +189,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "hard",
         language: "id",
         relevantChunkIds: [
-            "4dba46cd-7757-4f7b-91e8-0ecd9b5f3a81",
-            "6acb82c7-aa42-40a5-a9fc-d2297dece253",
-            "c68e4316-37ea-47c7-9a5d-f75a0933afdd",
+            "83784abc-7051-4d3a-8822-e7e2b82ee063",
+            "7aff6f5d-17a2-423b-8e90-791ec6b45e43",
+            "f4c31154-244e-4269-ab50-6f39b5b5818a",
         ],
     },
     {
@@ -202,9 +202,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "easy",
         language: "id",
         relevantChunkIds: [
-            "ea29574a-c68f-405c-94ab-03e1adbd47d0",
-            "2e5a247b-90db-4b69-b519-44d9838256e7",
-            "20e4d21f-07c5-46d9-b54a-ede4a25dc8e2",
+            "618c530a-c451-49bb-baf3-992ef2f94e93",
+            "b72e7142-57a4-4c2b-acad-8ecf1b782ead",
+            "4eaa0d48-6d7a-4627-baeb-67655ea1f8cc",
         ],
     },
     {
@@ -215,9 +215,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "2e5a247b-90db-4b69-b519-44d9838256e7",
-            "20e4d21f-07c5-46d9-b54a-ede4a25dc8e2",
-            "34fa294f-8a2f-4947-8a08-f4684f36b9a0",
+            "b72e7142-57a4-4c2b-acad-8ecf1b782ead",
+            "c5a8bda0-8325-486d-a79f-e7a09319222c",
+            "4eaa0d48-6d7a-4627-baeb-67655ea1f8cc",
         ],
     },
     {
@@ -228,9 +228,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "easy",
         language: "id",
         relevantChunkIds: [
-            "0d190fa5-0815-4852-a752-23143eea0049",
-            "41546de1-11c6-4923-9a50-99334195f652",
-            "4c2339af-9894-426b-8524-51b63c1c3b72",
+            "248289a7-9df7-4157-8c34-4518fb4a6722",
+            "6bf8e66f-d05d-451d-89a0-73965ba99e5d",
+            "5c942a48-d81c-45c2-8383-50090eb0c4ff",
         ],
     },
     {
@@ -241,9 +241,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "easy",
         language: "id",
         relevantChunkIds: [
-            "d0861a23-206e-4d08-97bb-9fbdd1b283eb",
-            "41546de1-11c6-4923-9a50-99334195f652",
-            "7d9dbfcf-67c9-4fc2-a520-2a92292b9593",
+            "c93a712c-65ca-4e19-9c4b-b1b1f9bc8a7d",
+            "6bf8e66f-d05d-451d-89a0-73965ba99e5d",
+            "bc3b66fa-39da-49d7-80d7-9b83494ef016",
         ],
     },
     {
@@ -254,9 +254,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "ea29574a-c68f-405c-94ab-03e1adbd47d0",
-            "31f82eed-50fe-4167-b995-85620e023d36",
-            "20e4d21f-07c5-46d9-b54a-ede4a25dc8e2",
+            "618c530a-c451-49bb-baf3-992ef2f94e93",
+            "ceb0d03c-df2a-472a-bec8-beb99f58125a",
+            "4eaa0d48-6d7a-4627-baeb-67655ea1f8cc",
         ],
     },
     {
@@ -267,9 +267,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "d1213ecc-c1b0-4110-ad1c-c755496379dc",
-            "33317842-7cf8-4eda-aef0-00b707d13da9",
-            "a426d083-ce62-405d-a808-06bc7243247d",
+            "1f4118f6-2e61-4f9a-ae41-a1873d0e45e3",
+            "366ff68b-5d61-40d5-ad3a-0950faa755a5",
+            "3a655432-6344-4db4-88a0-31b9fc75513c",
         ],
     },
     {
@@ -280,9 +280,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "easy",
         language: "id",
         relevantChunkIds: [
-            "33317842-7cf8-4eda-aef0-00b707d13da9",
-            "d1213ecc-c1b0-4110-ad1c-c755496379dc",
-            "0e087488-ce80-4c0c-be59-4a010b97f0f3",
+            "366ff68b-5d61-40d5-ad3a-0950faa755a5",
+            "1f4118f6-2e61-4f9a-ae41-a1873d0e45e3",
+            "3b879555-7d04-4216-b4c5-b084c707a571",
         ],
     },
     {
@@ -293,9 +293,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "432e354a-39a4-46a2-86e5-81932cb29318",
-            "38e7cf47-85e0-418c-8fa7-140a855c4ebc",
-            "0d190fa5-0815-4852-a752-23143eea0049",
+            "7e7bb48a-7b41-4ea4-ba1a-500eac7f7659",
+            "7124fc89-f897-429f-bfa7-479392cce0d0",
+            "c1c5183b-3bdb-4b23-9cc2-515121b09608",
         ],
     },
     {
@@ -306,9 +306,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "bb9a4eb3-1871-4c97-9db2-358d9979f330",
-            "34ef169b-fee4-4a9a-9cfe-2b32b086bbb6",
-            "ae3f344c-4b02-4c73-aa29-cf804775a20f",
+            "935556a2-cee8-4301-814c-9988a5b6aa5c",
+            "57b39761-06b4-49a8-97f5-9bb7f3f537e8",
+            "d38d00cc-b201-476f-899e-c258217505d8",
         ],
     },
     {
@@ -318,9 +318,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "easy",
         language: "id",
         relevantChunkIds: [
-            "29334c70-40ca-4734-8c71-320044132635",
-            "9346c433-f48a-48c9-9866-5ca15340ba6b",
-            "726d61bb-b1c0-49f6-8168-f0015565c917",
+            "2a4abe54-92fb-4799-83a0-c6b62f50d7eb",
+            "8e833bf3-292b-42b1-85b7-33ea079eba11",
+            "3b74f220-ad6c-4ae6-a186-4a4954d11c74",
         ],
     },
     {
@@ -331,9 +331,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "14ef7ae0-4e1b-45b0-9f8c-a40af6e0dd4f",
-            "726d61bb-b1c0-49f6-8168-f0015565c917",
-            "559248ae-4f95-44ca-915d-78a8e6290e84",
+            "a9eb21f5-db74-4f7a-baba-5832e5ad4912",
+            "bb5560e5-13cc-44ed-894b-a3c1d68997fe",
+            "b547b277-14d8-4615-8361-ad5d3b390cee",
         ],
     },
     {
@@ -344,9 +344,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "hard",
         language: "id",
         relevantChunkIds: [
-            "0554459d-4cf9-458c-99dd-2c2a38e89f79",
-            "cf3b426c-7e87-46f2-aa3d-0b3dda0da983",
-            "7e65b834-34b6-45ad-af01-5b726bdfa1cc",
+            "2447b7b2-7f15-4d67-9745-b80115d95070",
+            "b547b277-14d8-4615-8361-ad5d3b390cee",
+            "08f00ae7-6517-4801-9647-f17506eb0779",
         ],
     },
     {
@@ -356,9 +356,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "123d374c-cd93-44a5-b235-987680b01601",
-            "fe4e231c-1449-4dad-a761-31f9423b8351",
-            "5715a95f-5de5-435d-9a28-99a3c759b320",
+            "4d1fe3d9-f04f-4faf-a4a2-b5a760e67898",
+            "60cdfdb9-504e-494e-bd88-ca262c81c074",
+            "21b33cdb-3eac-46b2-86c1-6dc22621fbbe",
         ],
     },
     {
@@ -369,9 +369,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "easy",
         language: "id",
         relevantChunkIds: [
-            "1a74f178-a478-467f-ad8a-28576660c067",
-            "82edcad3-965f-44c6-b94b-be9634f04e8b",
-            "4bf813f6-18cb-46e1-a5e4-3e85091ad6c7",
+            "aaca2731-fb9f-4749-876d-da968863cb86",
+            "b2eb112b-4afc-491e-b005-972121e0ace6",
+            "1a040052-b302-4381-806a-08fcbaaee8ab",
         ],
     },
     {
@@ -382,9 +382,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "easy",
         language: "id",
         relevantChunkIds: [
-            "fe4e231c-1449-4dad-a761-31f9423b8351",
-            "23b3b99e-0e96-4d9d-bce8-599f72916adb",
-            "56c826cb-bb31-4903-a8e4-534a17ec7af6",
+            "60cdfdb9-504e-494e-bd88-ca262c81c074",
+            "f155eda1-e304-48fd-a367-f38cda24110a",
+            "76732e4c-5f94-43da-9afb-c3ab5f4e2b38",
         ],
     },
     {
@@ -395,9 +395,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "9186e931-ff9c-4ea6-9b59-e459695d7fe4",
-            "a3a32b7a-730f-40a4-a1b6-b1e1202dda0d",
-            "bc910f76-8501-4c1d-aecd-29b61409def4",
+            "02439f98-ffdd-4d8b-9b5b-169a30263d38",
+            "d082a844-e0ef-48c5-99ee-830c505ba875",
+            "659baefc-bd1f-4680-b42a-37a36e2f7ee3",
         ],
     },
     {
@@ -408,9 +408,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "easy",
         language: "id",
         relevantChunkIds: [
-            "bb30b182-0c1a-4d89-94e2-990e02d88c8c",
-            "20e4d21f-07c5-46d9-b54a-ede4a25dc8e2",
-            "2292217b-e955-4780-bb24-20c46151761c",
+            "3055d32a-3580-4281-a0a1-05f8362419f7",
+            "4eaa0d48-6d7a-4627-baeb-67655ea1f8cc",
+            "9033709d-99ba-4e09-bbfe-4a747d58967d",
         ],
     },
     {
@@ -421,9 +421,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "589323f8-a4f0-4cb5-ab7b-640dee17fa2f",
-            "226d2bca-24ba-4246-afba-de02f1c98f8d",
-            "79890207-48bb-42fc-874b-33b19e037a65",
+            "8f568dc3-0b87-4a1c-ae55-e7480f73dc46",
+            "8361ca3e-10ce-43fd-8c66-608909783ba0",
+            "60a356c5-b25c-429c-b7af-f9b96559d909",
         ],
     },
     {
@@ -434,9 +434,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "hard",
         language: "id",
         relevantChunkIds: [
-            "e20faccf-582d-4dd7-9fa2-50e63755095a",
-            "93cd03f2-38b9-45fc-962c-1c97db945c4c",
-            "9acbd253-c7d1-4d23-af3d-2c81156e73dd",
+            "ce863b6f-89e1-4233-8a56-0590c3b319a6",
+            "569f9543-2db2-4ddb-b64e-619ea2f45739",
+            "a11bbe09-a074-4a2a-b362-5b16c628d557",
         ],
     },
     {
@@ -447,9 +447,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "270e388f-8df3-4da5-9870-13d902a11a8a",
-            "0e25ab33-0e3f-4508-b22d-ab3352fab87b",
-            "f93e3b3d-a775-4b33-b473-81c986795d48",
+            "64f743a0-48a0-4219-ad05-19c9ffa22d32",
+            "ce996b7f-a418-4763-8768-b7cfe9ddbb94",
+            "39757a0f-a968-481f-98b4-cc926daa6b97",
         ],
     },
     {
@@ -460,9 +460,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "4bfbdf58-3d2b-4428-b4d0-8b843c02b2d6",
-            "d91c54d4-b164-4155-a629-3d0fae2ed346",
-            "8c98cb7a-7255-4e98-98b6-d3a909ab9713",
+            "3b22d8a1-7990-4049-aba5-e540189c0727",
+            "74d83acd-0211-4d3c-b77d-6446ef7e2aee",
+            "8c503427-2039-43fc-b65a-d16a409107c9",
         ],
     },
     {
@@ -472,9 +472,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "easy",
         language: "id",
         relevantChunkIds: [
-            "e584aa97-76da-44f6-91cd-0b7fc683393e",
-            "fedc8695-b1f6-462d-afbd-5a471957a794",
-            "8cf0fb7f-62b3-4378-9ae0-ce6cc561ee56",
+            "34f4f5a7-f7cd-4db1-98e0-a07810071950",
+            "aafb4b99-c98a-4b7d-aa21-e2e7fa48edf2",
+            "ecd796bd-7ce9-4eb2-ab2f-c45caba569c7",
         ],
     },
     {
@@ -484,9 +484,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "easy",
         language: "id",
         relevantChunkIds: [
-            "29334c70-40ca-4734-8c71-320044132635",
-            "9346c433-f48a-48c9-9866-5ca15340ba6b",
-            "ded5f254-f345-41f3-90b2-3ee598cd5c41",
+            "8e833bf3-292b-42b1-85b7-33ea079eba11",
+            "3b74f220-ad6c-4ae6-a186-4a4954d11c74",
+            "d8f33552-6077-4fed-b7ab-612b7cd9b191",
         ],
     },
     {
@@ -496,9 +496,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "06e077cc-e33a-406e-8e61-520010c3436d",
-            "8e7c4351-5296-422d-8f46-33d9a881e643",
-            "d10727ca-2316-47fe-b76f-aec5fcb0417b",
+            "0ddd6b09-373e-48cc-8b31-47a6a8e483b4",
+            "94a525f7-04b0-433f-b25f-35d9388ca046",
+            "1c173324-8f2b-45bf-8aff-147d0e7cd606",
         ],
     },
     {
@@ -509,9 +509,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "easy",
         language: "id",
         relevantChunkIds: [
-            "0d190fa5-0815-4852-a752-23143eea0049",
-            "41546de1-11c6-4923-9a50-99334195f652",
-            "2e5a247b-90db-4b69-b519-44d9838256e7",
+            "248289a7-9df7-4157-8c34-4518fb4a6722",
+            "6bf8e66f-d05d-451d-89a0-73965ba99e5d",
+            "b72e7142-57a4-4c2b-acad-8ecf1b782ead",
         ],
     },
     {
@@ -522,9 +522,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "02063ca9-968c-4f5e-b236-f82c29e22028",
-            "fb41ed8b-8420-42df-9cef-b1bf83ec6829",
-            "f7490172-4da0-4843-bcbd-3c3acc1b4c8c",
+            "c5599ea1-14d9-47cb-bf23-84bbff47e15b",
+            "e27c1534-a819-44e8-b2e5-2a9933ed29ef",
+            "904ac012-5a23-4786-b3a7-aeec57e22e73",
         ],
     },
     {
@@ -534,9 +534,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "a373e970-63c4-4141-bb1f-bf271bd77f14",
-            "643e54bf-97d2-4ac2-8879-37430056a5f1",
-            "3112b467-d0b9-41f3-9b5a-2455b1e5bf2a",
+            "0cc6f3c2-e51f-4550-b0ca-c9d00a636f56",
+            "fd9df994-5189-4bf6-8566-40f0641dffa1",
+            "df9ec856-65b0-42b8-9a2a-4c47ef38b5a2",
         ],
     },
     {
@@ -546,9 +546,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "5715a95f-5de5-435d-9a28-99a3c759b320",
-            "3e14d974-29c5-4842-8119-3ca057ccd37f",
-            "a2d29bce-85cc-4b8e-9975-431b20de30d9",
+            "21b33cdb-3eac-46b2-86c1-6dc22621fbbe",
+            "57b4d663-4c50-470d-9a7e-9ba317b5a7a2",
+            "3cdfdec4-42fb-40d2-b645-6ccaebe6bb17",
         ],
     },
     {
@@ -559,9 +559,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "4d80dc0b-ffd2-49a9-89bb-ef27a740066b",
-            "f36ac7f5-8723-4c15-bd70-95c8f433d353",
-            "379e6c21-db85-4227-ad3a-000ce4b15fac",
+            "0bc0068d-e19c-4cc3-b0ce-9cb1d8aa3e06",
+            "2ace10fc-542c-4e5b-b6fd-17d749c7a105",
+            "419c414c-2a43-48f6-a16c-889d7088a738",
         ],
     },
     {
@@ -572,9 +572,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "130e380d-cafa-4e5e-9b55-b2a6a5aac05a",
-            "53a9471e-7855-460d-995a-d000e78decf8",
-            "5385ca92-6eb9-4566-8abc-7cd1ea21cde0",
+            "8361ca3e-10ce-43fd-8c66-608909783ba0",
+            "c0f532c7-6eb7-416b-a232-847b04300898",
+            "bc22fa9a-9962-4d65-8338-cc682badf456",
         ],
     },
     {
@@ -585,9 +585,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "23b3b99e-0e96-4d9d-bce8-599f72916adb",
-            "e667bfe9-3d89-46e1-b091-452097362098",
-            "79df4893-ee51-40b8-8fac-d1d52585f631",
+            "cb5f11d8-cc9c-4ffa-b478-3150ccc57bfe",
+            "f155eda1-e304-48fd-a367-f38cda24110a",
+            "758d5a72-063a-4fd0-ab67-0dc0ac579471",
         ],
     },
     {
@@ -598,9 +598,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "hard",
         language: "id",
         relevantChunkIds: [
-            "9405c0b1-212d-4505-87bc-9753eb3fbc9a",
-            "c4b90997-b4e0-429a-b8a3-52c72f4f7c61",
-            "ecd9ff4d-8a31-419d-84d6-249bfddf463d",
+            "1e6db96a-1860-4531-aaad-f85f3857b398",
+            "39703a29-ba70-42d9-b01c-86b33631bc8d",
+            "358bd814-1970-40d7-bc2a-c69599feb1a9",
         ],
     },
     {
@@ -610,9 +610,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "easy",
         language: "id",
         relevantChunkIds: [
-            "1f79e456-b8a8-4119-af70-f589ea63e1ea",
-            "c39ede11-386d-4220-9492-4a3a9b20ce64",
-            "e9a686d2-8bae-49b7-98d7-91dccab2e3d0",
+            "b9ac2d8c-995b-4c5a-95c9-83b8feed4490",
+            "01945f2c-0aea-4ae8-90ff-3755c7cf2f6e",
+            "b39d49e8-d28d-4239-9bd4-664faf701e5a",
         ],
     },
     {
@@ -623,9 +623,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "easy",
         language: "id",
         relevantChunkIds: [
-            "bb30b182-0c1a-4d89-94e2-990e02d88c8c",
-            "20e4d21f-07c5-46d9-b54a-ede4a25dc8e2",
-            "e529107a-2887-4895-b9e0-7b231575fe11",
+            "3055d32a-3580-4281-a0a1-05f8362419f7",
+            "4eaa0d48-6d7a-4627-baeb-67655ea1f8cc",
+            "5801637a-44ae-4c47-80ce-6f83c37a620e",
         ],
     },
     {
@@ -636,9 +636,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "3d87d8c9-3921-47d4-ae86-fe0bd82410db",
-            "9d4f67a2-0c51-4934-bb46-00db00105883",
-            "547cd6dd-d6b6-4374-a159-ed6784b05cbc",
+            "7eed7ac7-be26-4e2b-bdee-50b1f72f29df",
+            "2532ef31-8150-4624-b1f6-2d96cf4a39eb",
+            "43de42fc-87c4-4a24-8156-220a5a4a3d5a",
         ],
     },
     {
@@ -649,9 +649,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "4dba46cd-7757-4f7b-91e8-0ecd9b5f3a81",
-            "6acb82c7-aa42-40a5-a9fc-d2297dece253",
-            "6ad65b5e-7d9c-4ab4-bfb4-62727b7917f8",
+            "83784abc-7051-4d3a-8822-e7e2b82ee063",
+            "7aff6f5d-17a2-423b-8e90-791ec6b45e43",
+            "6de02535-693e-43ed-aaf6-6d326a0d73e2",
         ],
     },
     {
@@ -662,9 +662,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "988f894a-415d-4a60-9f56-b1bcf7825689",
-            "e0849ed4-db06-4591-9bda-90ea94ef012d",
-            "b8e2ce59-cc28-4466-bfb3-f33667da75c7",
+            "97ce3ae6-efd3-4502-960d-95fd70e87635",
+            "76e448fe-d6f6-42b3-8cbc-0be1eb85a303",
+            "d2cd5e44-9cd6-42a6-91c4-bb6665d3fe1d",
         ],
     },
     {
@@ -674,9 +674,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "easy",
         language: "id",
         relevantChunkIds: [
-            "3f892370-1c6e-4f39-b908-a52075d6a8c5",
-            "4d47ff88-94ef-404b-8050-f3b90019b8a6",
-            "23b3b99e-0e96-4d9d-bce8-599f72916adb",
+            "27ab35ff-8c5a-4686-ab4b-7ddc9239b00b",
+            "ce734452-4a6f-4db1-86b2-63845b342992",
+            "f155eda1-e304-48fd-a367-f38cda24110a",
         ],
     },
 ];
