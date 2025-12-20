@@ -86,13 +86,25 @@ Modul evaluasi terintegrasi untuk keperluan akademik:
 Sistem ini menyediakan dasbor evaluasi komprehensif (`/evaluation`) untuk menjalankan eksperimen terkontrol:
 
 1. **Dataset Pertanyaan:** Kumpulan pertanyaan standar (`ACADEMIC_QUESTIONS`) mencakup regulasi, prosedur, dan fakta kampus.
-2. **Metrics:**
-   - **Faithfulness:** Seberapa taat jawaban terhadap konteks (0-1).
-   - **Answer Relevancy:** Seberapa relevan jawaban terhadap pertanyaan (0-1).
-   - **Context Recall:** Seberapa lengkap informasi yang diambil (0-1).
-   - **Hallucination Rate:** Persentase informasi yang tidak berdasar.
-3. **Statistical Analysis:**
-   - **Paired t-test:** Membandingkan performa RAG vs Non-RAG pada pertanyaan yang sama.
+
+### 1. Component-Level Metrics (RAGAS)
+Berfokus pada kualitas retrieval dan generation per pertanyaan individual:
+- **Faithfulness:** Seberapa taat jawaban terhadap konteks (0-1).
+- **Answer Relevancy:** Seberapa relevan jawaban terhadap pertanyaan (0-1).
+- **Context Recall:** Seberapa lengkap informasi yang diambil (0-1).
+- **Hallucination Rate:** Persentase informasi yang tidak berdasar.
+
+### 2. System-Level Evaluation (Simulated User)
+Mengevaluasi implementasi sistem secara menyeluruh menggunakan **LLM-based User Simulation** untuk mengatasi gap antara metrik komponen dan klaim "Implementasi":
+- **Metodologi:** Menggunakan persona (Mahasiswa Baru, Mahasiswa Tingkat Akhir, Dosen) untuk melakukan percakapan multi-turn.
+- **Metrics:**
+  - **Task Completion Rate:** Keberhasilan pengguna mencapai tujuan informasi.
+  - **Conversation Coherence:** Kualitas alur percakapan antar giliran.
+  - **Context Retention:** Kemampuan sistem mengingat konteks sebelumnya.
+- **Justifikasi:** Memvalidasi aspek interaksi UI/UX dan alur percakapan yang tidak tertangkap oleh RAGAS.
+
+### 3. Statistical Analysis
+- **Paired t-test:** Membandingkan performa RAG vs Non-RAG pada pertanyaan yang sama.
    - **One-way ANOVA:** Membandingkan berbagai strategi chunking/retrieval.
    - **Bootstrap Confidence Interval:** Estimasi rentang kepercayaan untuk metrik rata-rata.
 

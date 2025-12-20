@@ -649,7 +649,27 @@ $$TokensPerSecond = \frac{|Tokens_{output}|}{Latency_{ms}} \times 1000$$
 
 ---
 
-## 8. Referensi Silang
+## 8. System-Level Evaluation (Simulated User)
+
+Evaluasi tingkat sistem menggunakan **Simulated User Testing** untuk memvalidasi implementasi chatbot secara menyeluruh (End-to-End), melengkapi metrik komponen RAGAS.
+
+**Lokasi Dokumen Detail**: `docs/10_simulated_user_testing.md`
+
+### 8.1 Tujuan
+Mengatasi kesenjangan metodologi antara metrik komponen (RAGAS) dengan klaim "Implementasi Sistem" pada judul penelitian. Memastikan sistem berfungsi baik dalam skenario percakapan multi-turn yang realistis.
+
+### 8.2 Metrik Utama
+*   **Task Completion Rate**: Persentase percakapan di mana pengguna (simulasi) berhasil mendapatkan informasi yang dicari.
+*   **Conversation Coherence (0-1)**: Konsistensi dan kelancaran alur percakapan antar giliran (turn).
+*   **Context Retention Rate**: Kemampuan sistem mengingat entitas atau konteks dari pertanyaan sebelumnya (misal: "Berapa biayanya?" merujuk ke topik sebelumnya).
+*   **Information Coverage**: Kelengkapan informasi yang diberikan dibandingkan dengan kebutuhan skenario.
+
+### 8.3 Keterbatasan
+Evaluasi ini menggunakan LLM sebagai proxy pengguna. Meskipun valid secara metodologis dalam riset IR/NLP, ini bukan pengganti *human user study* (UX Research) untuk aspek subjektif seperti kepuasan pengguna atau desain antarmuka.
+
+---
+
+## 9. Referensi Silang
 
 | Dokumen                                                    | Konten             |
 | ---------------------------------------------------------- | ------------------ |

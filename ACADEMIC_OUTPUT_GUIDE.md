@@ -32,6 +32,13 @@ Metrik-metrik ini dihitung untuk setiap pertanyaan dalam satu kali proses evalua
 *   **Agent Planning/Reasoning/Synthesis:** Waktu untuk langkah kognitif spesifik (untuk alur kerja Agentic).
 *   **Agent Steps Used (`agentStepsUsed`):** Ukuran kompleksitas jalur penalaran agen.
 
+#### E. Metrik Tingkat Sistem (Simulated User)
+Metrik ini dihasilkan dari pengujian pengguna tersimulasi (`bun test:simulated-user`) untuk memvalidasi alur percakapan multi-turn.
+*   **Task Completion Rate:** Persentase skenario sukses (0.0 - 1.0).
+*   **Conversation Coherence:** Skor kelancaran dialog (0.0 - 1.0).
+*   **Context Retention:** Akurasi pemeliharaan konteks antar turn.
+*   **Information Coverage:** Kelengkapan informasi terhadap tujuan skenario.
+
 ### 2. Analisis Statistik
 Script `scripts/run-statistical-analysis.ts` melakukan pengujian ketat pada metrik.
 
@@ -95,6 +102,11 @@ Di sini Anda menempelkan output dari script dan dashboard.
 *   **Visual:** Scatter plot (Latency vs. Correctness).
 *   **Teks:** "Meskipun alur kerja Agentic mencapai Akurasi tertinggi (0.92), hal ini menyebabkan penalti latensi 3x lipat dibandingkan RAG standar (Mean: 4500ms vs 1500ms)."
 *   **Data Kunci:** Gunakan bagian "Latency Analysis" dari script CLI.
+
+#### Sub-bab 3.4: Evaluasi Tingkat Sistem (End-to-End)
+*   **Visual:** Tabel ringkasan performa per skenario (Task Completion Rate & Coherence).
+*   **Teks:** "Pengujian simulated user menunjukkan Task Completion Rate rata-rata 85% pada skenario KRS, memvalidasi kemampuan sistem menangani percakapan multi-turn yang kompleks."
+*   **Data Kunci:** Output dari `bun test:simulated-user`.
 
 ### 4. Discussion (Pembahasan)
 *   **Interpretasi:** Jelaskan *mengapa* angkanya demikian.
