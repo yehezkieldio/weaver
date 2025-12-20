@@ -414,26 +414,35 @@ describe("RAG Pipeline Integration Tests", () => {
         });
 
         it("should handle generation errors gracefully", async () => {
-            // Override mock to simulate error
-            mock.module("ai", () => ({
-                generateText: () => {
-                    throw new Error("LLM API error");
-                },
-                stepCountIs: (count: number) => () => count,
-                NoSuchToolError: {
-                    isInstance: (_error: unknown) => false,
-                },
-            }));
+            // Suppress console.error for this test since we expect an error
+            const originalConsoleError = console.error;
+            console.error = () => {};
 
-            const { runAgenticRag } = await import("@/lib/rag/agentic-rag");
+            try {
+                // Override mock to simulate error
+                mock.module("ai", () => {
+                    const originalModule = require("ai");
+                    return {
+                        ...originalModule,
+                        generateText: () => {
+                            throw new Error("LLM API error");
+                        },
+                    };
+                });
 
-            // Should throw or return error message
-            await expect(
-                runAgenticRag("Test query", {
-                    maxSteps: 3,
-                    enableGuardrails: false,
-                })
-            ).rejects.toThrow();
+                const { runAgenticRag } = await import("@/lib/rag/agentic-rag");
+
+                // Should throw the expected error
+                await expect(
+                    runAgenticRag("Test query", {
+                        maxSteps: 3,
+                        enableGuardrails: false,
+                    })
+                ).rejects.toThrow("LLM API error");
+            } finally {
+                // Restore console.error
+                console.error = originalConsoleError;
+            }
         });
     });
 
