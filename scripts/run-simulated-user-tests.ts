@@ -22,6 +22,8 @@ import { runSimulatedUserTests } from "@/lib/simulated-user/conversation-runner"
 import { ALL_SCENARIOS } from "@/lib/simulated-user/scenarios";
 import type { SimulatedUserTestConfig, SystemLevelMetrics } from "@/lib/simulated-user/types";
 
+consola.level = 4;
+
 /**
  * Parse command line arguments
  */

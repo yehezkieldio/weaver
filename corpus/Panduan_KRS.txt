@@ -1,0 +1,29 @@
+Panduan KRS
+
+Berikut ini adalah langkah-langkah untuk mengisi KRS mahasiswa universitas mulia untuk keberlangsungan proses perkuliahan. Berikut merupakan langkah – langkah yang wajib di tempuh.
+
+Langkah awal adalah login pada website sistem informasi akademik universitas mulia yang dapat diakses pada website Sistem Informasi Akademik Universitas Mulia
+
+Apabila login telah berhasil dilakukan, jika Anda belum pernah melakukan update biodata maka akad diarahkan pada form biodata selanjutnya isi biodata diri yang sesuai dengan Ijazah terakhir terkhususnya nama, tempat tanggal lahir, dan informasi penting lainnya. Harap berhati-hati dengan biodata yang Anda isi, data tersebut digunakan untuk mencetak ijazah, transkip nilai, SKPI, dan berkas akademik lainnya.
+
+Pastikan Anda telah melakukan pembayaran dengan ketentuan yang diberikan BAK (Biro Administrasi Keuangan) sehingga sudah dinyatakan REGISTRASI AKTIF agar dapat mengisi KRS secara daring.
+
+Pengisian KRS (Etri KRS) bisa dilakukan apabila registrasi telah aktif. Anda dapat mengisi KRS dengan memilih menu Akademik dan memilih Entri KRS pada sub menu Akademik.
+
+Sebelum Anda memilih KRS anda akan diarahkan ke menu ISI KELAS MAHASISWA. menu ini digunakan untuk memilih waktu kuliah Anda. Pastikan waktu kuliah anda sesuai dengan data pendartaran PMB. (Setelah pilih waktu kuliah harap tunggu kurang lebih 1 x 24 jam untuk aktivasi status Anda dan bisa dilanjutkan dengan Pilih KRS).
+
+Selanjutnya Anda dapat mengisi KRS sesuai dengan mata kuliah yang tersedia dengan cara mengklik button Tambah di pojok kanan atas.
+
+Setelah klik tambah, maka Anda dapat melihat daftar mata kuliah yang tersedia. Anda dapat memilih mata kuliah yang diinginkan sesuai dengan pedoman kurikulum pada program studi yang anda ambil atau bisa melihan pedoman kurikulum pada website BAAK. Dan klik Pilih untuk memilih jadwal mata kuliah.
+
+Apabila Anda telah menekan jadwal kuliah maka button/tombol Pilih menjadi warna hijau yang berarti Anda telah memilih jadwal kuliah. Apabila kelas dinyatakan penuh pada field Pst(Peserta) silahkan pilih kelas lain. Note : Perhatikan agar tidak terjadi bentrok antar jadwal kuliah, dan pastikan tidak memilih kelas yang berbeda.
+
+KRS yang Anda pilih akan muncul di halaman Entry KRS atau menekan tombol kembali pada bagian kanan bawah pengisian KRS.
+
+Apabila telah selesai memilih jadwal mata kuliah yang sesuai. Selanjutnya Anda dapat mengirim pesan ke Dosen Penasehat Akademik agar Dosen PA segera melakukan validasi KRS. Halaman untuk megirim pesan ke dosen PA ada di menu Akun sub menu Pesan.
+
+Selanjutnya Anda dapat mengirim pesan ke dosen PA dengan memilih pesan yang ditujukan ke SIMA(Dosen). Dan klik Kirim.
+
+Pastikan KRS Anda sudah di validasi oleh Dosen Penasehat Akademik supaya saat perkuliahan Anda bisa melakukan absensi sesuai kelas Anda.
+
+Apabila dalam pelaksanaanya terdapat permasalahan / hal yang menyulitkan saat akses KRS Online dapat berkonsultasi ke Prodi masing-masing. Terima kasih.

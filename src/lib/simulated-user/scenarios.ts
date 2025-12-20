@@ -64,9 +64,10 @@ export const KRS_REGISTRATION_SCENARIO: ConversationScenario = {
         minimumCoherenceScore: 0.7,
         maximumTurns: 5,
         requiredInformationCoverage: [
-            "sistem SIAS untuk pengisian KRS secara daring", // semantic: SIAS
-            "konsultasi dengan Penasehat Akademik atau PA", // semantic: PA wajib
-            "KPRS atau perubahan mata kuliah maksimal 2 minggu", // semantic: perubahan
+            "pengisian KRS dilakukan secara daring melalui Sistem Informasi Akademik Universitas Mulia", // login SIAS
+            "registrasi aktif dan pembayaran harus dilakukan sebelum mengisi KRS", // syarat awal
+            "setelah memilih jadwal, KRS harus divalidasi oleh Dosen Penasehat Akademik melalui pesan di sistem", // validasi PA
+            "jika ada kendala, mahasiswa dapat berkonsultasi ke Prodi masing-masing", // bantuan prodi
         ],
         acceptableLatencyMs: 5000,
     },
@@ -123,10 +124,10 @@ export const GRADUATION_REQUIREMENTS_SCENARIO: ConversationScenario = {
         minimumCoherenceScore: 0.75,
         maximumTurns: 6,
         requiredInformationCoverage: [
-            "144 SKS atau beban studi untuk kelulusan", // semantic: jumlah SKS
-            "Skripsi atau Tugas Akhir wajib", // semantic: skripsi
-            "yudisium setelah memenuhi syarat akademik dan administratif", // semantic: yudisium
-            "persyaratan administrasi dan keuangan", // semantic: administrasi
+            "yudisium adalah proses penetapan kelulusan dan nilai akhir mahasiswa oleh Dekan atau Direktur Program Pascasarjana", // definisi dan penetapan
+            "syarat yudisium meliputi pengumpulan formulir daftar yudisium, SKPI, Tracer Study, Jurnal, dan surat pernyataan keaslian dokumen", // daftar persyaratan
+            "formulir SKPI harus diisi lengkap dan dokumen SKPI ditandatangani Dekan FEB", // detail SKPI
+            "rapat yudisium diselenggarakan oleh Senat Fakultas, keputusan oleh Dekan", // proses dan penetapan
         ],
         acceptableLatencyMs: 5000,
     },
@@ -171,13 +172,13 @@ export const ACADEMIC_LEAVE_SCENARIO: ConversationScenario = {
     ],
     successCriteria: {
         mustContainKeywords: ["cuti"],
-        mustRetainContext: ["cuti", "akademik", "permohonan", "Dekan", "Rektor"],
+        mustRetainContext: ["cuti", "akademik", "permohonan", "BAAK", "form persetujuan"],
         minimumCoherenceScore: 0.7,
         maximumTurns: 5,
         requiredInformationCoverage: [
-            "permohonan melalui Dekan untuk izin Rektor", // semantic: prosedur pengajuan
-            "cuti akademik berbeda dengan non-aktif", // semantic: perbedaan status
-            "izin resmi dari Rektor", // semantic: persetujuan
+            "permohonan cuti diajukan dengan mengambil dan menyerahkan form ke BAAK Fakultas setelah mendapat persetujuan", // prosedur pengajuan
+            "cuti akademik adalah status mahasiswa yang tidak terdaftar karena izin, berbeda dengan non-aktif", // perbedaan status
+            "izin cuti maksimum 3 semester, tidak boleh berturut-turut", // ketentuan cuti
         ],
         acceptableLatencyMs: 5000,
     },
@@ -226,9 +227,9 @@ export const ORGANIZATIONAL_STRUCTURE_SCENARIO: ConversationScenario = {
         minimumCoherenceScore: 0.7,
         maximumTurns: 5,
         requiredInformationCoverage: [
-            "Kepala Biro bertanggung jawab kepada Wakil Rektor", // semantic: struktur
-            "tiga bagian: Akademik, Pusat Sistem dan Teknologi Informasi, Media Kreatif", // semantic: sub-unit
-            "sistem informasi, jaringan, keamanan data", // semantic: tugas bagian IT
+            "struktur organisasi terdiri dari Pembina, Ketua Yayasan, Direktur Eksekutif, Rektor, Wakil Rektor, Dekan, Kepala Kantor, dan Kepala Lembaga", // struktur utama
+            "Wakil Rektor membawahi bidang Akademik & Sistem Informasi, Sumber Daya, Kemahasiswaan & Alumni", // fungsi wakil rektor
+            "setiap fakultas dipimpin oleh Dekan, dan terdapat lembaga seperti LPPM dan LPMPP", // sub-unit dan lembaga
         ],
         acceptableLatencyMs: 5000,
     },

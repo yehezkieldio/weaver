@@ -1,0 +1,21 @@
+Berikut adalah tatacara validasi KRS mahasiswa bimbingan akademik yang dilaksanakan oleh Dosen Pembimbing Akademik. Berikut merupakan langkah – langkah yang dilakukan :
+
+Dosen Penasehat Akademik login pada website sistem informasi akademik Universitas Mulia (SIMA).
+
+Apabila login telah berhasil, langkah selanjutnya adalah memilih menu Validasi yang tertera pada bagian menu. Selanjutnya klik menu Validasi KRS.
+
+Selanjutnya sistem akan menampilkan data – data mahasiswa bimbingan akademik yang memiliki 3 (tiga) status validasi yang berbeda-beda. sebagai berikut:
+
+BELUM ADA DATA KRS. Status ini bermakna mahasiswa belum mengisi KRS, dosen pembimbing akademik dapat memberikan informasi kepada mahasiswa bersangkutan untuk mengisi data KRS.
+
+BELUM DIVALIDASI. Status ini merupakan mahasiswa yang telah melakukan pembayaran dan berhasil mengisi KRS sesuai jadwal yang tersedia. Apabila mahasiswa
+
+VALID. Status ini menunjukan Dosen telah berhasil melakukan validasi KRS mahasiswa, dan mahasiswa dapat melakukan perkuliahan.
+
+Apabila status mahasiswa adalah BELUM DIVALIDASI maka sistem akan mengubah nim mahasiswa berwarna biru (button/tombol), langkah Dosen pembimbing selanjutnya adalah menekan tombol tersebut, dan sistem akan menampilkan data KRS mahasiswa bimbingan akademik.
+
+Sistem akan memberikan informasi mata kuliah dan kelas yang telah dipilih mahasiswa dan Dosen pembimbing dapat mengecek kebenaran data KRS mahasiswa serta dapat/berhak menolak mata kuliah yang dipilih oleh mahasiswa bimbingan akademik, dengan menekan button/tombol “Tolak” jika data KRS yang dipilih mahasiswa belum sesuai dengan panduan kurikulum atau aturan terbaru lainnya.
+
+Apabila tidak terdapat permasalahan (telah oke), dosen pembimbing akademik dapat menyetujui/validasi KRS mahasiswa bimbingan akademik dengan klik tombol setuju.
+
+Apabila dalam pelaksanaanya terdapat permasalahan / hal yang menyulitkan saat akses Validasi KRS dapat berkonsultasi kepada Prodi masing-masing. Terima kasih.
