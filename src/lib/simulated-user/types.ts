@@ -184,6 +184,18 @@ export interface SystemLevelMetrics {
     totalErrors: number;
     errorsByType: Map<string, number>;
 
+    // Raw scenario results for detailed reporting
+    scenarioResults?: Array<{
+        scenarioId: string;
+        scenarioName: string;
+        taskCompleted: boolean;
+        coherenceScore: number;
+        contextRetentionRate: number;
+        informationCoverageRate: number;
+        averageLatencyMs: number;
+        turnsToCompletion: number;
+    }>;
+
     // Comparison with Component-Level
     componentVsSystemComparison?: {
         ragasFaithfulness: number;

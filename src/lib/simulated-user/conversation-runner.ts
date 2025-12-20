@@ -570,6 +570,18 @@ function aggregateSystemMetrics(results: SimulatedConversationResult[]): SystemL
         0
     );
 
+    // Build raw scenario results for detailed reporting
+    const scenarioResults = results.map((r) => ({
+        scenarioId: r.scenarioId,
+        scenarioName: r.scenarioId, // Use ID as name for now; can enhance later
+        taskCompleted: r.taskCompleted,
+        coherenceScore: r.metrics.averageCoherenceScore,
+        contextRetentionRate: r.metrics.contextRetentionRate,
+        informationCoverageRate: r.metrics.informationCoverageRate,
+        averageLatencyMs: r.metrics.averageLatencyMs,
+        turnsToCompletion: r.metrics.turnsToCompletion,
+    }));
+
     return {
         totalScenarios,
         successfulScenarios,
@@ -584,5 +596,6 @@ function aggregateSystemMetrics(results: SimulatedConversationResult[]): SystemL
         metricsByCategory,
         totalErrors,
         errorsByType: new Map(),
+        scenarioResults, // Add raw results for detailed reporting
     };
 }
