@@ -8,7 +8,7 @@ Proyek ini dikembangkan sebagai objek penelitian untuk Skripsi/Tugas Akhir mahas
 
 ## 📄 Informasi Penelitian
 
-- **Judul Penelitian:** Implementasi Agentic Retrieval-Augmented Generation (RAG) dengan Hybrid Retrieval dan Re-ranking untuk Sistem Tanya Jawab Akademik
+- **Judul Penelitian:** Implementasi Agentic Retrieval-Augmented Generation (RAG) Untuk Sistem Layanan Informasi Perguruan Tinggi: Studi Kasus pada Universitas Mulia Balikpapan
 - **Peneliti:**
   1. Yehezkiel Dio Sinolungan
   2. Adryo Faresy Devera
