@@ -13,8 +13,9 @@ async function main() {
 
         // Use ground truth to find the chunks that contain the answer (Gold Standard)
         // We use hybrid strategy with a higher topK to cast a wider net, then we'll take the top ones.
+        // NOTE: topK=5 matches the evaluation retrieval to ensure fair comparison
         const result = await retrieveContext(q.groundTruth, {
-            topK: 3, // We usually want the top 1-3 chunks that contain the answer
+            topK: 5, // Match evaluation topK for fair retrieval metric calculation
             strategy: "hybrid",
             minSimilarity: 0.01, // Lower threshold to ensure we find candidates (RRF scores are typically low)
         });
