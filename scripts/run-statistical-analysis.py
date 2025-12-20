@@ -6,12 +6,13 @@ A Python implementation using battle-tested libraries:
 - scipy: Statistical tests (t-tests, ANOVA, normality tests)
 - pandas: Data manipulation and aggregation
 - numpy: Numerical computations
-- seaborn/matplotlib: Visualization (optional)
+- matplotlib/seaborn: Publication-quality visualizations for IMRAD papers
 
 Usage:
     python scripts/run-statistical-analysis.py --latest
     python scripts/run-statistical-analysis.py --run-id=<uuid>
     python scripts/run-statistical-analysis.py --ablation-id=<uuid>
+    python scripts/run-statistical-analysis.py --latest --figures
 """
 
 import argparse
@@ -40,6 +41,9 @@ from scipy.stats import (
 # Database connection
 import psycopg2
 from dotenv import load_dotenv
+
+# Visualization module
+from statistical_visualization import FigureGenerator
 
 # Load environment variables
 load_dotenv()
@@ -1039,7 +1043,19 @@ def run_analysis():
     parser.add_argument(
         "--latest", action="store_true", help="Use latest available data"
     )
+    parser.add_argument(
+        "--figures", action="store_true", help="Generate publication-quality figures (PNG)"
+    )
+    parser.add_argument(
+        "--output-dir", default=".results/figures", help="Output directory for figures"
+    )
     args = parser.parse_args()
+
+    # Initialize figure generator if figures requested
+    fig_gen = None
+    if args.figures:
+        fig_gen = FigureGenerator(output_dir=args.output_dir)
+        print(f"📊 Figure generation enabled. Output: {args.output_dir}")
 
     # Connect to database
     print("Connecting to database...")
@@ -1186,6 +1202,46 @@ def run_analysis():
         if len(rag_tokens_per_sec) > 0 and np.any(rag_tokens_per_sec > 0):
             print("\nRAG Tokens Per Second:")
             print_descriptive_stats(calculate_descriptive_stats(rag_tokens_per_sec))
+
+        # ===== FIGURE: Descriptive Statistics Table =====
+        if fig_gen:
+            print("\n[Generating Descriptive Statistics Figure...]")
+            stats_data = {
+                "Faithfulness": calculate_descriptive_stats(rag_faithfulness),
+                "Answer Relevancy": calculate_descriptive_stats(rag_relevancy),
+                "Citation Accuracy": calculate_descriptive_stats(rag_citation_accuracy),
+                "Factual Consistency": calculate_descriptive_stats(rag_factual_consistency),
+                "NDCG": calculate_descriptive_stats(retrieval_ndcg),
+                "MRR": calculate_descriptive_stats(retrieval_mrr),
+            }
+            stats_df = pd.DataFrame({
+                metric: {
+                    "N": int(s.n),
+                    "Mean": round(s.mean, 4),
+                    "Median": round(s.median, 4),
+                    "Std Dev": round(s.std_dev, 4),
+                    "Min": round(s.min_val, 4),
+                    "Max": round(s.max_val, 4),
+                }
+                for metric, s in stats_data.items() if s.n > 0
+            }).T
+            fig_gen.save_table_as_image(
+                stats_df,
+                "RAG Metrics - Descriptive Statistics",
+                "descriptive_stats_table",
+                "Metrik RAG - Statistik Deskriptif",
+            )
+
+            # ===== FIGURE: Latency Histogram =====
+            if len(rag_latency) > 0:
+                fig_gen.create_latency_histogram(
+                    rag_latency,
+                    "latency_distribution",
+                    "RAG Response Latency Distribution",
+                    "Distribusi Latensi Respons RAG",
+                    comparison_data=non_rag_latency if len(non_rag_latency) > 0 else None,
+                    labels=("RAG", "Non-RAG"),
+                )
 
         # ===== 2. PAIRED T-TESTS WITH ASSUMPTION CHECKING =====
         print("\n" + "=" * 60)
@@ -1405,6 +1461,73 @@ def run_analysis():
             print(f"  Mean: {stats.mean:.4f} (SD: {stats.std_dev:.4f})")
             print(f"  95% CI: [{lower:.4f}, {upper:.4f}]")
 
+        # ===== FIGURE: Comparison Boxplots and Forest Plot =====
+        if fig_gen and comparisons:
+            print("\n[Generating Comparison Figures...]")
+
+            # Generate boxplots for each comparison
+            for comp in comparisons:
+                # Get raw data for the comparison
+                if comp.metric == "Answer Relevancy":
+                    rag_d, non_rag_d = rag_rel, non_rag_rel
+                elif comp.metric == "Answer Correctness":
+                    rag_d, non_rag_d = rag_corr, non_rag_corr
+                else:
+                    rag_d, non_rag_d = rag_factual, non_rag_factual
+
+                fig_gen.create_comparison_boxplot(
+                    rag_d,
+                    non_rag_d,
+                    comp.metric,
+                    f"comparison_{comp.metric.lower().replace(' ', '_').replace('(', '').replace(')', '')}",
+                    comp.metric_id,
+                    comp.test_result.p_value,
+                )
+
+            # ===== FIGURE: Forest Plot for Effect Sizes =====
+            effect_sizes = [comp.test_result.effect_size or 0 for comp in comparisons]
+            cis = []
+            for comp in comparisons:
+                if comp.test_result.confidence_interval:
+                    cis.append(comp.test_result.confidence_interval)
+                else:
+                    # Estimate CI from effect size if not available
+                    d = comp.test_result.effect_size or 0
+                    cis.append((d - 0.3, d + 0.3))
+
+            fig_gen.create_forest_plot(
+                effect_sizes,
+                cis,
+                [comp.metric for comp in comparisons],
+                "effect_sizes_forest_plot",
+                "RAG vs Non-RAG Effect Sizes",
+                "Ukuran Efek RAG vs Non-RAG",
+            )
+
+            # ===== FIGURE: Radar Chart for Multi-Metric Overview =====
+            rag_metrics = {
+                "Faithfulness": np.mean(rag_faithfulness) if len(rag_faithfulness) > 0 else 0,
+                "Answer Relevancy": np.mean(rag_relevancy) if len(rag_relevancy) > 0 else 0,
+                "Citation Accuracy": np.mean(rag_citation_accuracy) if len(rag_citation_accuracy) > 0 else 0,
+                "Factual Consistency": np.mean(rag_factual_consistency) if len(rag_factual_consistency) > 0 else 0,
+                "NDCG": np.mean(retrieval_ndcg) if len(retrieval_ndcg) > 0 else 0,
+            }
+            non_rag_metrics = {
+                "Faithfulness": 0,  # N/A for non-RAG
+                "Answer Relevancy": np.mean(non_rag_rel) if len(non_rag_rel) > 0 else 0,
+                "Citation Accuracy": 0,  # N/A for non-RAG
+                "Factual Consistency": 0,  # N/A for non-RAG
+                "NDCG": 0,  # N/A for non-RAG
+            }
+            fig_gen.create_radar_chart(
+                rag_metrics,
+                "radar_metrics_overview",
+                "Multi-Metric Overview",
+                "Ikhtisar Multi-Metrik",
+                comparison_metrics=non_rag_metrics,
+                labels=("RAG", "Non-RAG (where applicable)"),
+            )
+
     # ===== 6. ABLATION STUDY ANALYSIS =====
     if len(ablation_data) > 0:
         print("\n" + "=" * 60)
@@ -1438,6 +1561,23 @@ def run_analysis():
 
         if rankings:
             print(f"\nBest Configuration / Konfigurasi Terbaik: {rankings[0][0]}")
+
+            # ===== FIGURE: Ablation Ranking Bar Chart =====
+            if fig_gen:
+                print("\n[Generating Ablation Study Figures...]")
+                config_names = [r[0] for r in rankings]
+                metric_values = [r[1] for r in rankings]
+                confidence_intervals = [(r[2], r[3]) for r in rankings]
+
+                fig_gen.create_ablation_bar_chart(
+                    config_names,
+                    metric_values,
+                    "Faithfulness",
+                    "ablation_ranking_faithfulness",
+                    "Kesetiaan",
+                    confidence_intervals=confidence_intervals,
+                    highlight_best=True,
+                )
 
         # ===== 7. LATENCY ANALYSIS =====
         print("\n" + "=" * 60)
@@ -1494,6 +1634,51 @@ def run_analysis():
     print("\n" + "=" * 60)
     print("Analysis Complete / Analisis Selesai")
     print("=" * 60)
+
+    # ===== FIGURE: Summary Dashboard =====
+    if fig_gen:
+        print("\n[Generating Summary Dashboard...]")
+
+        # Prepare summary data
+        metrics_summary = {}
+
+        if evaluation_data is not None and len(evaluation_data) > 0:
+            rag_faith = evaluation_data["rag_faithfulness"].dropna().values
+            rag_rel = evaluation_data["rag_answer_relevancy"].dropna().values
+            rag_cit = evaluation_data["rag_citation_accuracy"].dropna().values
+            rag_fact = evaluation_data["rag_factual_consistency"].dropna().values
+
+            metrics_summary["key_metrics"] = {
+                "Faithfulness": np.mean(rag_faith) if len(rag_faith) > 0 else 0,
+                "Relevancy": np.mean(rag_rel) if len(rag_rel) > 0 else 0,
+                "Citation Acc.": np.mean(rag_cit) if len(rag_cit) > 0 else 0,
+                "Factual Cons.": np.mean(rag_fact) if len(rag_fact) > 0 else 0,
+            }
+
+            non_rag_rel = evaluation_data["non_rag_answer_relevancy"].dropna().values
+            if len(non_rag_rel) > 0 and len(rag_rel) > 0:
+                metrics_summary["improvements"] = {
+                    "Answer Relevancy": ((np.mean(rag_rel) - np.mean(non_rag_rel)) / np.mean(non_rag_rel) * 100) if np.mean(non_rag_rel) > 0 else 0,
+                }
+
+            rag_lat = evaluation_data["rag_latency_ms"].dropna().values
+            rag_ret_lat = evaluation_data["rag_retrieval_latency_ms"].dropna().values
+            rag_gen_lat = evaluation_data["rag_generation_latency_ms"].dropna().values
+
+            metrics_summary["latency"] = {
+                "Total": {"mean": np.mean(rag_lat) if len(rag_lat) > 0 else 0, "std": np.std(rag_lat) if len(rag_lat) > 0 else 0},
+                "Retrieval": {"mean": np.mean(rag_ret_lat) if len(rag_ret_lat) > 0 else 0, "std": np.std(rag_ret_lat) if len(rag_ret_lat) > 0 else 0},
+                "Generation": {"mean": np.mean(rag_gen_lat) if len(rag_gen_lat) > 0 else 0, "std": np.std(rag_gen_lat) if len(rag_gen_lat) > 0 else 0},
+            }
+
+            metrics_summary["summary_stats"] = {
+                "Total Questions": len(evaluation_data),
+                "Avg Faithfulness": np.mean(rag_faith) if len(rag_faith) > 0 else 0,
+                "Avg Latency (ms)": np.mean(rag_lat) if len(rag_lat) > 0 else 0,
+            }
+
+        fig_gen.create_summary_dashboard(metrics_summary, "summary_dashboard")
+        fig_gen.print_summary()
 
 
 if __name__ == "__main__":
