@@ -20,8 +20,11 @@ import { generateEmbedding } from "@/lib/ai/embeddings";
  * - Embedding API calls are slow (~100-200ms each)
  * - Same text may be embedded multiple times across evaluation runs
  * - Reduces API costs and improves execution time
+ *
+ * Cache size increased to 1000 to accommodate 50-question evaluation runs
+ * where ground truth texts are repeatedly embedded.
  */
-const EMBEDDING_CACHE_MAX_SIZE = 500;
+const EMBEDDING_CACHE_MAX_SIZE = 1000;
 
 interface CacheEntry {
     embedding: number[];
@@ -29,6 +32,8 @@ interface CacheEntry {
 }
 
 const embeddingCache = new Map<string, CacheEntry>();
+let cacheHits = 0;
+let cacheMisses = 0;
 
 /**
  * Get embedding with caching. Uses LRU eviction when cache is full.
@@ -39,11 +44,15 @@ export async function getCachedEmbedding(text: string): Promise<{ embedding: num
     const cached = embeddingCache.get(cacheKey);
     if (cached) {
         cached.lastUsed = Date.now();
-        consola.debug(`[EmbeddingCache] HIT for text: "${text.substring(0, 50)}..."`);
+        cacheHits += 1;
+        const hitRate = ((cacheHits / (cacheHits + cacheMisses)) * 100).toFixed(1);
+        consola.debug(`[EmbeddingCache] HIT (${hitRate}% hit rate) for text: "${text.substring(0, 50)}..."`);
         return { embedding: cached.embedding };
     }
 
-    consola.debug(`[EmbeddingCache] MISS for text: "${text.substring(0, 50)}..."`);
+    cacheMisses += 1;
+    const hitRate = ((cacheHits / (cacheHits + cacheMisses)) * 100).toFixed(1);
+    consola.debug(`[EmbeddingCache] MISS (${hitRate}% hit rate) for text: "${text.substring(0, 50)}..."`);
     const result = await generateEmbedding(text);
 
     // Evict oldest entry if cache is full
@@ -58,6 +67,7 @@ export async function getCachedEmbedding(text: string): Promise<{ embedding: num
         }
         if (oldestKey) {
             embeddingCache.delete(oldestKey);
+            consola.debug(`[EmbeddingCache] Evicted oldest entry (cache full at ${EMBEDDING_CACHE_MAX_SIZE})`);
         }
     }
 
@@ -74,16 +84,28 @@ export async function getCachedEmbedding(text: string): Promise<{ embedding: num
  */
 export function clearEmbeddingCache(): void {
     embeddingCache.clear();
-    consola.debug("[EmbeddingCache] Cache cleared");
+    cacheHits = 0;
+    cacheMisses = 0;
+    consola.debug("[EmbeddingCache] Cache cleared, statistics reset");
 }
 
 /**
  * Get cache statistics for debugging.
  */
-export function getEmbeddingCacheStats(): { size: number; maxSize: number } {
+export function getEmbeddingCacheStats(): {
+    size: number;
+    maxSize: number;
+    hits: number;
+    misses: number;
+    hitRate: number;
+} {
+    const total = cacheHits + cacheMisses;
     return {
         size: embeddingCache.size,
         maxSize: EMBEDDING_CACHE_MAX_SIZE,
+        hits: cacheHits,
+        misses: cacheMisses,
+        hitRate: total > 0 ? cacheHits / total : 0,
     };
 }
 

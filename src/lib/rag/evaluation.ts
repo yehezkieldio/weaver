@@ -30,7 +30,6 @@ import { cosineSimilarity, generateObject, generateText } from "ai";
 import consola from "consola";
 import { z } from "zod";
 import { CHAT_MODEL, JUDGE_MODEL, telemetryConfig } from "@/lib/ai";
-import { generateEmbedding } from "@/lib/ai/embeddings";
 import { runAgenticRag } from "./agentic-rag";
 import { buildRagPrompt, SYSTEM_PROMPTS } from "./context-builder";
 import { getCachedEmbedding } from "./evaluation-utils";
@@ -595,14 +594,27 @@ function detectIdFormatMismatch(retrievedIds: string[], relevantIds: Set<string>
  * This implementation follows the original RAGAS paper (Shahul et al., 2023):
  * 1. Decompose the answer into individual factual claims
  * 2. Check each claim against the context using NLI (entailment)
- * 3. Return the proportion of claims that are supported
+ * 3. Return the proportion of claims that are supported (with Laplace smoothing)
  *
  * WHY this approach:
  * - More granular than single-score LLM judgment
  * - Each claim is independently verified
  * - Aligns with academic NLI-based factuality research
+ *
+ * WHY Laplace smoothing:
+ * - Prevents extreme binary outcomes (0.0, 0.33, 0.67, 1.0) that cause kurtosis > 45
+ * - Smoothing factor α=0.5 provides reasonable regularization
+ * - Formula: (supported + α) / (total + 2α)
+ *
+ * @param answer - Generated answer to evaluate
+ * @param contexts - Retrieved context chunks
+ * @param smoothingFactor - Laplace smoothing parameter (default: 0.5)
  */
-export async function calculateFaithfulness(answer: string, contexts: string[]): Promise<number> {
+export async function calculateFaithfulness(
+    answer: string,
+    contexts: string[],
+    smoothingFactor = 0.5
+): Promise<number> {
     consola.debug(
         `[calculateFaithfulness] RAGAS-faithful calculation - answer: ${answer.length} chars, contexts: ${contexts.length}`
     );
@@ -628,7 +640,7 @@ Ekstrak klaim-klaim faktual dari jawaban. Jika tidak ada klaim faktual, kembalik
         const claims = claimsResult.claims;
 
         if (claims.length === 0) {
-            consola.debug("[calculateFaithfulness] No claims found, returning 1.0");
+            consola.debug("[calculateFaithfulness] No claims found, returning 1.0 (no smoothing applied)");
             return 1.0; // No claims to verify = faithful by default
         }
 
@@ -656,11 +668,23 @@ Ekstrak klaim-klaim faktual dari jawaban. Jika tidak ada klaim faktual, kembalik
             supportedCount += results.filter(Boolean).length;
         }
 
-        const result = supportedCount / claims.length;
+        // Apply Laplace smoothing to prevent extreme binary outcomes
+        const rawScore = supportedCount / claims.length;
+        const smoothedScore = (supportedCount + smoothingFactor) / (claims.length + 2 * smoothingFactor);
+
         consola.debug(
-            `[calculateFaithfulness] Result: ${result.toFixed(3)} (${supportedCount}/${claims.length} claims supported)`
+            `[calculateFaithfulness] Result: ${smoothedScore.toFixed(3)} (raw: ${rawScore.toFixed(3)}, ${supportedCount}/${claims.length} claims supported, smoothing: α=${smoothingFactor})`
         );
-        return result;
+
+        // Log claim verification distribution for diagnostics
+        const supportRate = supportedCount / claims.length;
+        if (supportRate === 0 || supportRate === 1) {
+            consola.debug(
+                `[calculateFaithfulness] ⚠️  Extreme binary outcome detected - all claims ${supportRate === 1 ? "supported" : "unsupported"}`
+            );
+        }
+
+        return smoothedScore;
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         consola.error(
@@ -864,8 +888,8 @@ export async function calculateAnswerCorrectness(answer: string, groundTruth: st
 
     try {
         const [answerEmbed, truthEmbed] = await Promise.all([
-            generateEmbedding(answer),
-            generateEmbedding(groundTruth),
+            getCachedEmbedding(answer),
+            getCachedEmbedding(groundTruth),
         ]);
 
         const semanticSimilarity = cosineSimilarity(answerEmbed.embedding, truthEmbed.embedding);
@@ -1080,16 +1104,23 @@ Berikan skor KEBEBASAN KONTRADIKSI 0-1 (1 = tidak ada kontradiksi, 0 = kontradik
  */
 export function calculateNDCG(retrievedIds: string[], relevantIds: Set<string>, k?: number): number {
     const results = k ? retrievedIds.slice(0, k) : retrievedIds;
-    if (results.length === 0 || relevantIds.size === 0) return 0;
+    if (results.length === 0 || relevantIds.size === 0) {
+        consola.debug(`[calculateNDCG] Empty input - retrieved: ${retrievedIds.length}, relevant: ${relevantIds.size}`);
+        return 0;
+    }
 
     // Normalize relevant IDs for comparison
     const normalizedRelevantIds = new Set([...relevantIds].map(normalizeChunkId));
+    const normalizedRetrieved = results.map(normalizeChunkId);
 
     let dcg = 0;
+    const matchPositions: number[] = [];
     results.forEach((id, idx) => {
-        if (normalizedRelevantIds.has(normalizeChunkId(id))) {
+        const normalizedId = normalizeChunkId(id);
+        if (normalizedRelevantIds.has(normalizedId)) {
             // Formula: rel_i / log2(i + 1). In code: 1 / log2(idx + 2)
             dcg += 1 / Math.log2(idx + 2);
+            matchPositions.push(idx + 1); // 1-indexed for readability
         }
     });
 
@@ -1100,7 +1131,21 @@ export function calculateNDCG(retrievedIds: string[], relevantIds: Set<string>, 
         idcg += 1 / Math.log2(i + 2);
     }
 
-    return idcg > 0 ? dcg / idcg : 0;
+    const ndcg = idcg > 0 ? dcg / idcg : 0;
+
+    // Diagnostic logging
+    consola.debug(
+        `[calculateNDCG] NDCG=${ndcg.toFixed(3)} - ${matchPositions.length}/${relevantIds.size} relevant docs found at positions: [${matchPositions.slice(0, 5).join(", ")}${matchPositions.length > 5 ? "..." : ""}]`
+    );
+
+    if (matchPositions.length === 0) {
+        consola.warn(`[calculateNDCG] ⚠️  No relevant documents found in top-${results.length} results!`);
+        consola.debug(
+            `[calculateNDCG] Sample normalized IDs - Retrieved[0]: "${normalizedRetrieved[0]}", Relevant[0]: "${[...normalizedRelevantIds][0]}"`
+        );
+    }
+
+    return ndcg;
 }
 
 /**
@@ -1114,14 +1159,27 @@ export function calculateNDCG(retrievedIds: string[], relevantIds: Set<string>, 
  * @returns MRR score between 0 and 1
  */
 export function calculateMRR(retrievedIds: string[], relevantIds: Set<string>): number {
+    if (retrievedIds.length === 0 || relevantIds.size === 0) {
+        consola.debug(`[calculateMRR] Empty input - retrieved: ${retrievedIds.length}, relevant: ${relevantIds.size}`);
+        return 0;
+    }
+
     // Normalize relevant IDs for comparison
     const normalizedRelevantIds = new Set([...relevantIds].map(normalizeChunkId));
 
     for (let i = 0; i < retrievedIds.length; i++) {
-        if (normalizedRelevantIds.has(normalizeChunkId(retrievedIds[i]))) {
-            return 1 / (i + 1);
+        const normalizedId = normalizeChunkId(retrievedIds[i]);
+        if (normalizedRelevantIds.has(normalizedId)) {
+            const mrr = 1 / (i + 1);
+            consola.debug(`[calculateMRR] MRR=${mrr.toFixed(3)} - First relevant doc found at rank ${i + 1}`);
+            return mrr;
         }
     }
+
+    consola.warn(`[calculateMRR] ⚠️  No relevant documents found in ${retrievedIds.length} retrieved results!`);
+    consola.debug(
+        `[calculateMRR] Sample IDs - Retrieved[0]: "${retrievedIds[0]}", Relevant[0]: "${[...relevantIds][0]}"`
+    );
     return 0;
 }
 
@@ -1138,13 +1196,37 @@ export function calculateMRR(retrievedIds: string[], relevantIds: Set<string>): 
  */
 export function calculateRetrievalPrecision(retrievedIds: string[], relevantIds: Set<string>, k?: number): number {
     const results = k ? retrievedIds.slice(0, k) : retrievedIds;
-    if (results.length === 0) return 0;
+    if (results.length === 0) {
+        consola.debug("[calculateRetrievalPrecision] Empty retrieved results");
+        return 0;
+    }
 
     // Normalize relevant IDs for comparison
     const normalizedRelevantIds = new Set([...relevantIds].map(normalizeChunkId));
-    const relevant = results.filter((id) => normalizedRelevantIds.has(normalizeChunkId(id))).length;
+    const normalizedResults = results.map(normalizeChunkId);
+    const matchingIds = normalizedResults.filter((id) => normalizedRelevantIds.has(id));
+    const relevant = matchingIds.length;
+    const precision = relevant / results.length;
 
-    return relevant / results.length;
+    // Diagnostic logging
+    consola.debug(
+        `[calculateRetrievalPrecision] Precision@${k || results.length}=${precision.toFixed(3)} - ${relevant}/${results.length} docs relevant`
+    );
+
+    // Log detailed ID matching for first few results
+    if (results.length > 0 && relevantIds.size > 0) {
+        consola.debug(
+            `[calculateRetrievalPrecision] ID comparison sample - Retrieved[0]: "${results[0]}" (normalized: "${normalizedResults[0]}"), match: ${normalizedRelevantIds.has(normalizedResults[0])}`
+        );
+    }
+
+    if (relevant === 0 && relevantIds.size > 0) {
+        consola.warn(
+            `[calculateRetrievalPrecision] ⚠️  Zero precision despite ${relevantIds.size} relevant docs available!`
+        );
+    }
+
+    return precision;
 }
 
 export async function calculateAllMetrics(

@@ -18,7 +18,8 @@ import argparse
 import json
 import os
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
+from datetime import datetime
 from typing import Any, Optional
 
 import numpy as np
@@ -60,6 +61,14 @@ class DescriptiveStats:
     q1: float
     q3: float
     iqr: float
+    # Robust statistics for non-normal distributions
+    p25: float  # 25th percentile (same as q1, but explicit)
+    p75: float  # 75th percentile (same as q3, but explicit)
+    p90: float
+    p95: float
+    p99: float
+    mad: float  # Median Absolute Deviation
+    trimmed_mean: float  # 10% trimmed mean
 
 
 @dataclass
@@ -324,7 +333,7 @@ def fetch_ablation_study_data(conn, study_id: str) -> dict[str, pd.DataFrame]:
 
 # ===== STATISTICAL FUNCTIONS =====
 def calculate_descriptive_stats(data: np.ndarray) -> DescriptiveStats:
-    """Calculate comprehensive descriptive statistics."""
+    """Calculate comprehensive descriptive statistics including robust measures."""
     data = np.array(data)
     data = data[~np.isnan(data)]
 
@@ -343,25 +352,58 @@ def calculate_descriptive_stats(data: np.ndarray) -> DescriptiveStats:
             q1=0,
             q3=0,
             iqr=0,
+            p25=0,
+            p75=0,
+            p90=0,
+            p95=0,
+            p99=0,
+            mad=0,
+            trimmed_mean=0,
         )
 
+    # Basic percentiles
     q1 = np.percentile(data, 25)
     q3 = np.percentile(data, 75)
+    p90 = np.percentile(data, 90)
+    p95 = np.percentile(data, 95)
+    p99 = np.percentile(data, 99)
+
+    # Robust statistics
+    median = np.median(data)
+    mad = np.median(np.abs(data - median))  # Median Absolute Deviation
+    trimmed_mean = stats.trim_mean(data, 0.1) if len(data) > 10 else np.mean(data)  # 10% trimmed
+
+    # Standard statistics
+    kurtosis_val = stats.kurtosis(data) if len(data) > 3 else 0
+    skewness_val = stats.skew(data) if len(data) > 2 else 0
+
+    # Warn for extreme distributions
+    if abs(kurtosis_val) > 10:
+        print(f"  ⚠️  WARNING: Extreme kurtosis detected ({kurtosis_val:.2f}) - highly non-normal distribution")
+    if abs(skewness_val) > 2:
+        print(f"  ⚠️  WARNING: Extreme skewness detected ({skewness_val:.2f}) - asymmetric distribution")
 
     return DescriptiveStats(
         n=len(data),
         mean=np.mean(data),
-        median=np.median(data),
+        median=median,
         std_dev=np.std(data, ddof=1) if len(data) > 1 else 0,
         variance=np.var(data, ddof=1) if len(data) > 1 else 0,
         min_val=np.min(data),
         max_val=np.max(data),
         sem=stats.sem(data) if len(data) > 1 else 0,
-        skewness=stats.skew(data) if len(data) > 2 else 0,
-        kurtosis=stats.kurtosis(data) if len(data) > 3 else 0,
+        skewness=skewness_val,
+        kurtosis=kurtosis_val,
         q1=q1,
         q3=q3,
         iqr=q3 - q1,
+        p25=q1,  # Same as q1, but explicit
+        p75=q3,  # Same as q3, but explicit
+        p90=p90,
+        p95=p95,
+        p99=p99,
+        mad=mad,
+        trimmed_mean=trimmed_mean,
     )
 
 
@@ -919,7 +961,7 @@ def compare_rag_vs_non_rag(
 
 
 # ===== PRINTING FUNCTIONS =====
-def print_descriptive_stats(stats: DescriptiveStats):
+def print_descriptive_stats(stats: DescriptiveStats, show_robust: bool = True):
     """Print formatted descriptive statistics."""
     print(f"  N: {stats.n}")
     print(f"  Mean: {stats.mean:.4f}")
@@ -930,6 +972,14 @@ def print_descriptive_stats(stats: DescriptiveStats):
     print(f"  SEM: {stats.sem:.4f}")
     print(f"  Skewness: {stats.skewness:.4f}")
     print(f"  Kurtosis: {stats.kurtosis:.4f}")
+
+    # Show robust statistics if requested (useful for non-normal distributions)
+    if show_robust and (abs(stats.kurtosis) > 3 or abs(stats.skewness) > 1):
+        print("\n  Robust Statistics (for non-normal distribution):")
+        print(f"    Trimmed Mean (10%): {stats.trimmed_mean:.4f}")
+        print(f"    MAD (Median Absolute Deviation): {stats.mad:.4f}")
+        print(f"    Percentiles: P25={stats.p25:.4f}, P75={stats.p75:.4f}, P90={stats.p90:.4f}, P95={stats.p95:.4f}, P99={stats.p99:.4f}")
+        print(f"    IQR: {stats.iqr:.4f}")
 
 
 def print_test_result(result: TestResult):
