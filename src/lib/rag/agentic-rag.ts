@@ -35,7 +35,7 @@ import consola from "consola";
 import { z } from "zod";
 import { CHAT_MODEL, telemetryConfig } from "@/lib/ai";
 import { detectNegativeReaction, type GuardrailResult, validateInput, validateOutput } from "./guardrails";
-import { hybridRetrieve, type RetrievalResult } from "./hybrid-retrieval";
+import { hybridRetrieve, hybridRetrieveWithMetrics, type RetrievalResult } from "./hybrid-retrieval";
 import type { RerankerStrategy } from "./reranker";
 import { detectQueryLanguage, expandQueryIndonesian, expandQueryWithSynonyms } from "./university-domain";
 
@@ -116,6 +116,7 @@ export interface AgenticRagResult {
 interface StreamingState {
     retrievedChunks: RetrievalResult[];
     citationManager: CitationManager;
+    rerankingLatencyMs: number; // Accumulated reranking time from all search_documents calls
 }
 
 // ==================== Citation Manager ====================
@@ -171,6 +172,7 @@ function getOrCreateStreamingState(sessionId: string): StreamingState {
         state = {
             retrievedChunks: [],
             citationManager: new CitationManager(),
+            rerankingLatencyMs: 0,
         };
         sessionStates.set(sessionId, state);
     }
@@ -217,15 +219,18 @@ function createSearchTool(language: "id", streamingState?: StreamingState) {
             consola.debug(
                 `[searchTool] Executing search - query: "${query.substring(0, 80)}...", strategy: ${strategy}, topK: ${topK}`
             );
-            const results = await hybridRetrieve(query, {
+
+            // Use hybridRetrieveWithMetrics to track reranking latency
+            const { results, latency } = await hybridRetrieveWithMetrics(query, {
                 strategy,
                 topK,
                 language,
                 useReranker: true,
                 rerankerStrategy: "cross_encoder",
             });
+
             consola.debug(
-                `[searchTool] Retrieved ${results.length} results with average score ${(results.reduce((sum, r) => sum + r.fusedScore, 0) / results.length).toFixed(3)}`
+                `[searchTool] Retrieved ${results.length} results (avg score: ${(results.reduce((sum, r) => sum + r.fusedScore, 0) / results.length).toFixed(3)}, reranking: ${latency.rerankingMs}ms)`
             );
 
             // Add to streaming state if available
@@ -240,8 +245,12 @@ function createSearchTool(language: "id", streamingState?: StreamingState) {
                         newChunks += 1;
                     }
                 }
+
+                // Accumulate reranking latency across all search_documents calls
+                streamingState.rerankingLatencyMs += latency.rerankingMs;
+
                 consola.debug(
-                    `[searchTool] Added ${newChunks} new chunks to streaming state (total: ${streamingState.retrievedChunks.length})`
+                    `[searchTool] Added ${newChunks} new chunks (total: ${streamingState.retrievedChunks.length}, cumulative reranking: ${streamingState.rerankingLatencyMs}ms)`
                 );
             }
 
@@ -478,9 +487,9 @@ export async function runAgenticRag(
         consola.debug(`[runAgenticRag] Answer Preview: ${result.text.substring(0, 50)}...`);
 
         // Calculate latency breakdown from steps
-        const latencyBreakdown = calculateLatencyBreakdown(steps, totalLatencyMs);
+        const latencyBreakdown = calculateLatencyBreakdown(steps, totalLatencyMs, streamingState.rerankingLatencyMs);
         consola.debug(
-            `[runAgenticRag] Latency breakdown - planning: ${latencyBreakdown.planningMs}ms, synthesis: ${latencyBreakdown.synthesisMs}ms, toolCall: ${latencyBreakdown.toolCallMs}ms`
+            `[runAgenticRag] Latency breakdown - planning: ${latencyBreakdown.planningMs}ms, synthesis: ${latencyBreakdown.synthesisMs}ms, toolCall: ${latencyBreakdown.toolCallMs}ms, reranking: ${latencyBreakdown.rerankingMs}ms`
         );
 
         return {
@@ -745,21 +754,21 @@ function calculateStepDurations(steps: AgentStep[]): void {
  *
  * APPROACH:
  * - Tool calls and retrieval: Summed from step durations
- * - Reranking: Currently not tracked separately (happens inside search_documents)
+ * - Reranking: Passed in from streaming state (accumulated across search_documents calls)
  * - Synthesis: Calculated as residual = totalMs - (planning + toolCall + retrieval + reranking)
  * - Planning & Reasoning: Estimated from first step duration (LLM thinking time)
  *
  * @param steps - Array of completed agent steps with durations
  * @param totalMs - Total execution time in milliseconds
+ * @param rerankingMs - Reranking latency from streaming state (accumulated across all search calls)
  * @returns Aggregated latency breakdown by phase
  */
-function calculateLatencyBreakdown(steps: AgentStep[], totalMs: number): AgenticLatencyBreakdown {
+function calculateLatencyBreakdown(steps: AgentStep[], totalMs: number, rerankingMs = 0): AgenticLatencyBreakdown {
     let planningMs = 0;
     let reasoningMs = 0;
     let toolCallMs = 0;
     let synthesisMs = 0;
     let retrievalMs = 0;
-    let rerankingMs = 0;
 
     // Sum up actual tracked step durations
     for (const step of steps) {
@@ -785,7 +794,7 @@ function calculateLatencyBreakdown(steps: AgentStep[], totalMs: number): Agentic
                 retrievalMs += step.durationMs;
                 break;
             case "reranking":
-                rerankingMs += step.durationMs;
+                // Legacy - not used anymore, reranking comes from streaming state parameter
                 break;
             default:
                 // Unknown step type - ignore for latency calculation
@@ -829,7 +838,7 @@ function calculateLatencyBreakdown(steps: AgentStep[], totalMs: number): Agentic
         toolCallMs,
         synthesisMs,
         retrievalMs,
-        rerankingMs, // Currently 0 - not separately tracked
+        rerankingMs, // Now uses value from streaming state
         totalMs,
     };
 }
