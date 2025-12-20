@@ -4,6 +4,8 @@
 
 Proyek ini dikembangkan sebagai objek penelitian untuk Skripsi/Tugas Akhir mahasiswa Program Studi Informatika, Fakultas Ilmu Komputer, Universitas Mulia.
 
+Lihat folder `.results` untuk hasils.
+
 ---
 
 ## 📄 Informasi Penelitian
