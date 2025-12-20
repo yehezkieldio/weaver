@@ -49,6 +49,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "18193a76-a679-45f3-883d-43403e5e1d76",
             "e22ca8ee-f47c-4c48-865e-f1fefa125bff",
             "5cf230ab-dbf2-42a0-a469-d29d067ffb95",
+            "937eac96-5f63-45f1-985c-f904076cbe33",
+            "b367eca2-84ef-4c1d-a25f-99cd07e47383",
         ],
     },
     {
@@ -62,6 +64,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "1350b3d7-009f-4e24-bacb-ab1c299de364",
             "0f903b35-487c-493f-b208-a7632d387b58",
             "426926af-51dc-4103-8da5-818730694450",
+            "9011ab5d-bf4e-4321-b78e-7be57a88f1f2",
+            "420a8849-61f7-4854-8c42-c431a647d1ce",
         ],
     },
     {
@@ -73,8 +77,10 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         language: "id",
         relevantChunkIds: [
             "6a5e7a49-4717-47d8-bedd-77ee2aef784e",
-            "fa16e6db-5448-4961-a6c2-451e24e79231",
             "e784b190-fbfe-407b-b8ab-a77865f16828",
+            "fa16e6db-5448-4961-a6c2-451e24e79231",
+            "42a4c1e7-dc82-4e68-9f77-eba126b09e1d",
+            "c38d30b4-40d8-4358-82ac-1367dcb1ecd3",
         ],
     },
     {
@@ -88,6 +94,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "c97681df-8046-4369-8c17-427c63cb99bf",
             "284bbca2-0836-440d-9295-196bf108f07f",
             "7eed7ac7-be26-4e2b-bdee-50b1f72f29df",
+            "0a015bf0-db07-4a98-b535-cac8032156c9",
+            "26aa2bf2-1e62-4131-b6f0-7c9eec6dda0a",
         ],
     },
     {
@@ -101,6 +109,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "284bbca2-0836-440d-9295-196bf108f07f",
             "0a015bf0-db07-4a98-b535-cac8032156c9",
             "c97681df-8046-4369-8c17-427c63cb99bf",
+            "7eed7ac7-be26-4e2b-bdee-50b1f72f29df",
+            "01b5c01b-a374-40b1-b648-8f69dd229d2b",
         ],
     },
     {
@@ -112,8 +122,10 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         language: "id",
         relevantChunkIds: [
             "7eed7ac7-be26-4e2b-bdee-50b1f72f29df",
-            "40184998-147c-44d0-bfed-3081251f0035",
             "97ce3ae6-efd3-4502-960d-95fd70e87635",
+            "40184998-147c-44d0-bfed-3081251f0035",
+            "91a59503-e54d-42a9-9ab1-3c5c109130bd",
+            "284bbca2-0836-440d-9295-196bf108f07f",
         ],
     },
     {
@@ -126,7 +138,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         relevantChunkIds: [
             "7eed7ac7-be26-4e2b-bdee-50b1f72f29df",
             "c8bbc8de-16cc-4881-a648-f7583311ee22",
+            "b367eca2-84ef-4c1d-a25f-99cd07e47383",
             "5ed878e9-9205-4331-8674-1436bd304a22",
+            "c97681df-8046-4369-8c17-427c63cb99bf",
         ],
     },
     {
@@ -140,6 +154,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "173bec65-4635-4816-afb5-ee720f95b4f2",
             "f155eda1-e304-48fd-a367-f38cda24110a",
             "76732e4c-5f94-43da-9afb-c3ab5f4e2b38",
+            "c592323c-1a8b-47bf-8441-1253eb8d243e",
+            "3cdfdec4-42fb-40d2-b645-6ccaebe6bb17",
         ],
     },
     {
@@ -153,6 +169,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "455d8792-7649-4c4c-ba5d-4a2a46461b90",
             "9b572438-e518-4043-b103-ced4d8ce5805",
             "c9091263-406c-44df-acf5-6e48e6bfc5e3",
+            "16b2c027-02f6-4fc6-90a4-a7838601d6e0",
+            "a28d8d68-89ea-4e82-b640-6a22abb85923",
         ],
     },
     {
@@ -166,6 +184,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "7317e629-d696-4ed8-89b2-897623c2ab96",
             "62d53d92-9659-4e34-bece-7bf6d0bd6871",
             "814be061-57b5-4308-ac78-e9c31a8a5524",
+            "f4c31154-244e-4269-ab50-6f39b5b5818a",
+            "0f2a8a54-cee5-4794-904d-73ef17aa5492",
         ],
     },
     {
@@ -178,7 +198,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         relevantChunkIds: [
             "3ca2fb7a-bb51-47aa-998c-131fffc20dde",
             "0e0ce5a0-ea1f-4fec-9765-c675e5c460a0",
+            "9269f132-8180-4bd5-82f7-f4ad70689c2b",
             "6229b224-39e9-40cf-8df5-dcccc729f10d",
+            "71b2fde2-fd88-4929-8e82-aaaf91f16cb1",
         ],
     },
     {
@@ -192,6 +214,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "83784abc-7051-4d3a-8822-e7e2b82ee063",
             "7aff6f5d-17a2-423b-8e90-791ec6b45e43",
             "f4c31154-244e-4269-ab50-6f39b5b5818a",
+            "ceb0d03c-df2a-472a-bec8-beb99f58125a",
+            "ce734452-4a6f-4db1-86b2-63845b342992",
         ],
     },
     {
@@ -205,6 +229,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "618c530a-c451-49bb-baf3-992ef2f94e93",
             "b72e7142-57a4-4c2b-acad-8ecf1b782ead",
             "4eaa0d48-6d7a-4627-baeb-67655ea1f8cc",
+            "89a445f9-6467-4f0e-93ae-13ea06d3ebf2",
+            "a28d8d68-89ea-4e82-b640-6a22abb85923",
         ],
     },
     {
@@ -218,6 +244,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "b72e7142-57a4-4c2b-acad-8ecf1b782ead",
             "c5a8bda0-8325-486d-a79f-e7a09319222c",
             "4eaa0d48-6d7a-4627-baeb-67655ea1f8cc",
+            "618c530a-c451-49bb-baf3-992ef2f94e93",
+            "3055d32a-3580-4281-a0a1-05f8362419f7",
         ],
     },
     {
@@ -230,7 +258,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         relevantChunkIds: [
             "248289a7-9df7-4157-8c34-4518fb4a6722",
             "6bf8e66f-d05d-451d-89a0-73965ba99e5d",
-            "5c942a48-d81c-45c2-8383-50090eb0c4ff",
+            "4eaa0d48-6d7a-4627-baeb-67655ea1f8cc",
+            "2e1e43b9-9b41-44d7-8aef-f0807e191e4b",
+            "b9303676-7900-4801-bf51-915887f125cb",
         ],
     },
     {
@@ -244,6 +274,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "c93a712c-65ca-4e19-9c4b-b1b1f9bc8a7d",
             "6bf8e66f-d05d-451d-89a0-73965ba99e5d",
             "bc3b66fa-39da-49d7-80d7-9b83494ef016",
+            "4eaa0d48-6d7a-4627-baeb-67655ea1f8cc",
+            "b72e7142-57a4-4c2b-acad-8ecf1b782ead",
         ],
     },
     {
@@ -255,8 +287,10 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         language: "id",
         relevantChunkIds: [
             "618c530a-c451-49bb-baf3-992ef2f94e93",
-            "ceb0d03c-df2a-472a-bec8-beb99f58125a",
             "4eaa0d48-6d7a-4627-baeb-67655ea1f8cc",
+            "ceb0d03c-df2a-472a-bec8-beb99f58125a",
+            "b72e7142-57a4-4c2b-acad-8ecf1b782ead",
+            "6bf8e66f-d05d-451d-89a0-73965ba99e5d",
         ],
     },
     {
@@ -270,6 +304,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "1f4118f6-2e61-4f9a-ae41-a1873d0e45e3",
             "366ff68b-5d61-40d5-ad3a-0950faa755a5",
             "3a655432-6344-4db4-88a0-31b9fc75513c",
+            "3b879555-7d04-4216-b4c5-b084c707a571",
+            "804ef4cc-2a3f-433d-be5f-cfc86ade7c16",
         ],
     },
     {
@@ -283,6 +319,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "366ff68b-5d61-40d5-ad3a-0950faa755a5",
             "1f4118f6-2e61-4f9a-ae41-a1873d0e45e3",
             "3b879555-7d04-4216-b4c5-b084c707a571",
+            "e57ea410-ddce-4a1e-b4df-dd84518babf3",
+            "eb23827f-f250-4517-baeb-558c313ce4f1",
         ],
     },
     {
@@ -296,6 +334,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "7e7bb48a-7b41-4ea4-ba1a-500eac7f7659",
             "7124fc89-f897-429f-bfa7-479392cce0d0",
             "c1c5183b-3bdb-4b23-9cc2-515121b09608",
+            "8199619a-4f55-4822-ba93-52f66a334dde",
+            "f3381d58-b2b3-4a0d-83ee-613cfa611f4f",
         ],
     },
     {
@@ -307,8 +347,10 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         language: "id",
         relevantChunkIds: [
             "935556a2-cee8-4301-814c-9988a5b6aa5c",
-            "57b39761-06b4-49a8-97f5-9bb7f3f537e8",
             "d38d00cc-b201-476f-899e-c258217505d8",
+            "57b39761-06b4-49a8-97f5-9bb7f3f537e8",
+            "2ec22a71-b950-446f-a324-82d10417f8a8",
+            "62c01541-d395-4e4a-9b55-271cb3220ab9",
         ],
     },
     {
@@ -321,6 +363,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "2a4abe54-92fb-4799-83a0-c6b62f50d7eb",
             "8e833bf3-292b-42b1-85b7-33ea079eba11",
             "3b74f220-ad6c-4ae6-a186-4a4954d11c74",
+            "bb5560e5-13cc-44ed-894b-a3c1d68997fe",
+            "69bef58b-9e3a-4b7f-ba59-b129e5d664bc",
         ],
     },
     {
@@ -331,9 +375,11 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "a9eb21f5-db74-4f7a-baba-5832e5ad4912",
             "bb5560e5-13cc-44ed-894b-a3c1d68997fe",
+            "a9eb21f5-db74-4f7a-baba-5832e5ad4912",
+            "4aaf661b-88ec-4670-9fb7-cceb1e49eed0",
             "b547b277-14d8-4615-8361-ad5d3b390cee",
+            "b39d49e8-d28d-4239-9bd4-664faf701e5a",
         ],
     },
     {
@@ -347,6 +393,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "2447b7b2-7f15-4d67-9745-b80115d95070",
             "b547b277-14d8-4615-8361-ad5d3b390cee",
             "08f00ae7-6517-4801-9647-f17506eb0779",
+            "230942ba-a964-480f-864a-06664117f897",
+            "318c9e56-4011-41ba-861a-693959d7cab5",
         ],
     },
     {
@@ -359,6 +407,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "4d1fe3d9-f04f-4faf-a4a2-b5a760e67898",
             "60cdfdb9-504e-494e-bd88-ca262c81c074",
             "21b33cdb-3eac-46b2-86c1-6dc22621fbbe",
+            "fd9df994-5189-4bf6-8566-40f0641dffa1",
+            "57b4d663-4c50-470d-9a7e-9ba317b5a7a2",
         ],
     },
     {
@@ -370,8 +420,10 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         language: "id",
         relevantChunkIds: [
             "aaca2731-fb9f-4749-876d-da968863cb86",
-            "b2eb112b-4afc-491e-b005-972121e0ace6",
             "1a040052-b302-4381-806a-08fcbaaee8ab",
+            "3cd2ec3c-d14f-456b-9898-0da0083491d4",
+            "b2eb112b-4afc-491e-b005-972121e0ace6",
+            "109c226b-42db-4f7f-8d67-3ba277d00ead",
         ],
     },
     {
@@ -385,6 +437,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "60cdfdb9-504e-494e-bd88-ca262c81c074",
             "f155eda1-e304-48fd-a367-f38cda24110a",
             "76732e4c-5f94-43da-9afb-c3ab5f4e2b38",
+            "3cdfdec4-42fb-40d2-b645-6ccaebe6bb17",
+            "8f425bb0-6195-487f-89e1-e968ae2b697b",
         ],
     },
     {
@@ -398,6 +452,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "02439f98-ffdd-4d8b-9b5b-169a30263d38",
             "d082a844-e0ef-48c5-99ee-830c505ba875",
             "659baefc-bd1f-4680-b42a-37a36e2f7ee3",
+            "3bd4144d-b242-4ea0-a0f1-a0d692d2db75",
+            "a9eb21f5-db74-4f7a-baba-5832e5ad4912",
         ],
     },
     {
@@ -410,6 +466,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         relevantChunkIds: [
             "3055d32a-3580-4281-a0a1-05f8362419f7",
             "4eaa0d48-6d7a-4627-baeb-67655ea1f8cc",
+            "935a0b15-c045-4bd9-a0d0-c09db768f3db",
+            "f61702f3-7d3b-47c7-ac45-7a1bd8774089",
             "9033709d-99ba-4e09-bbfe-4a747d58967d",
         ],
     },
@@ -422,8 +480,10 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         language: "id",
         relevantChunkIds: [
             "8f568dc3-0b87-4a1c-ae55-e7480f73dc46",
-            "8361ca3e-10ce-43fd-8c66-608909783ba0",
             "60a356c5-b25c-429c-b7af-f9b96559d909",
+            "8361ca3e-10ce-43fd-8c66-608909783ba0",
+            "643d64d3-8925-4ad3-ae5d-bb87bdb3f52f",
+            "b2eebd81-ba87-4559-b1ba-b1719f34a7fe",
         ],
     },
     {
@@ -437,6 +497,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "ce863b6f-89e1-4233-8a56-0590c3b319a6",
             "569f9543-2db2-4ddb-b64e-619ea2f45739",
             "a11bbe09-a074-4a2a-b362-5b16c628d557",
+            "005c89fa-657d-460e-9c67-c042a95182bd",
+            "8909a29f-efdb-43bb-961c-4fea5096d3f6",
         ],
     },
     {
@@ -450,6 +512,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "64f743a0-48a0-4219-ad05-19c9ffa22d32",
             "ce996b7f-a418-4763-8768-b7cfe9ddbb94",
             "39757a0f-a968-481f-98b4-cc926daa6b97",
+            "2710efc0-6d5c-4557-9358-31f210f4befb",
+            "48ce4714-8af1-40e8-bc31-5c5859b556b8",
         ],
     },
     {
@@ -463,6 +527,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "3b22d8a1-7990-4049-aba5-e540189c0727",
             "74d83acd-0211-4d3c-b77d-6446ef7e2aee",
             "8c503427-2039-43fc-b65a-d16a409107c9",
+            "1e6db96a-1860-4531-aaad-f85f3857b398",
+            "1124eebf-6e69-4376-b2b4-93291d6d81a0",
         ],
     },
     {
@@ -475,6 +541,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "34f4f5a7-f7cd-4db1-98e0-a07810071950",
             "aafb4b99-c98a-4b7d-aa21-e2e7fa48edf2",
             "ecd796bd-7ce9-4eb2-ab2f-c45caba569c7",
+            "490616a2-cb70-477c-a6b3-fc6eeaa385d3",
+            "036328ba-ab22-4786-957b-ccb2aef5c749",
         ],
     },
     {
@@ -487,6 +555,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "8e833bf3-292b-42b1-85b7-33ea079eba11",
             "3b74f220-ad6c-4ae6-a186-4a4954d11c74",
             "d8f33552-6077-4fed-b7ab-612b7cd9b191",
+            "d5fdc2ca-f067-4f48-bcd5-03c4af2f388d",
+            "945f0a59-58b8-4eab-b3fc-d3869e4943ce",
         ],
     },
     {
@@ -499,6 +569,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "0ddd6b09-373e-48cc-8b31-47a6a8e483b4",
             "94a525f7-04b0-433f-b25f-35d9388ca046",
             "1c173324-8f2b-45bf-8aff-147d0e7cd606",
+            "a1d9a05f-19ca-4957-9457-1f05377781cf",
+            "7068bebb-4ac3-44a6-8166-960270de7da1",
         ],
     },
     {
@@ -512,6 +584,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "248289a7-9df7-4157-8c34-4518fb4a6722",
             "6bf8e66f-d05d-451d-89a0-73965ba99e5d",
             "b72e7142-57a4-4c2b-acad-8ecf1b782ead",
+            "c5904239-d874-450a-b8b5-001420bf2f77",
+            "4eaa0d48-6d7a-4627-baeb-67655ea1f8cc",
         ],
     },
     {
@@ -525,6 +599,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "c5599ea1-14d9-47cb-bf23-84bbff47e15b",
             "e27c1534-a819-44e8-b2e5-2a9933ed29ef",
             "904ac012-5a23-4786-b3a7-aeec57e22e73",
+            "30c4b6ad-9801-48ce-aba2-4ad14a552b7f",
+            "520a0eda-8b68-4d4c-b6db-e7713223c8cf",
         ],
     },
     {
@@ -537,6 +613,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "0cc6f3c2-e51f-4550-b0ca-c9d00a636f56",
             "fd9df994-5189-4bf6-8566-40f0641dffa1",
             "df9ec856-65b0-42b8-9a2a-4c47ef38b5a2",
+            "76b6fb73-7c86-4af4-91de-284a83d0f93b",
+            "db6d2626-af44-4d60-90c8-828264f1d95a",
         ],
     },
     {
@@ -549,6 +627,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "21b33cdb-3eac-46b2-86c1-6dc22621fbbe",
             "57b4d663-4c50-470d-9a7e-9ba317b5a7a2",
             "3cdfdec4-42fb-40d2-b645-6ccaebe6bb17",
+            "8a7523cd-8138-4e36-afde-175f43be82b5",
+            "fd9df994-5189-4bf6-8566-40f0641dffa1",
         ],
     },
     {
@@ -562,6 +642,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "0bc0068d-e19c-4cc3-b0ce-9cb1d8aa3e06",
             "2ace10fc-542c-4e5b-b6fd-17d749c7a105",
             "419c414c-2a43-48f6-a16c-889d7088a738",
+            "6af680f1-5554-41d4-af31-ac18ac38f9f3",
+            "284bbca2-0836-440d-9295-196bf108f07f",
         ],
     },
     {
@@ -575,6 +657,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "8361ca3e-10ce-43fd-8c66-608909783ba0",
             "c0f532c7-6eb7-416b-a232-847b04300898",
             "bc22fa9a-9962-4d65-8338-cc682badf456",
+            "2f42c48c-fbcb-4630-b231-4d14dbb75036",
+            "f36b043b-b4c0-482b-a73a-2a0724984d5e",
         ],
     },
     {
@@ -585,9 +669,11 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         difficulty: "medium",
         language: "id",
         relevantChunkIds: [
-            "cb5f11d8-cc9c-4ffa-b478-3150ccc57bfe",
             "f155eda1-e304-48fd-a367-f38cda24110a",
+            "cb5f11d8-cc9c-4ffa-b478-3150ccc57bfe",
             "758d5a72-063a-4fd0-ab67-0dc0ac579471",
+            "50e0917b-bf23-46bb-92fe-598989a104f3",
+            "21b33cdb-3eac-46b2-86c1-6dc22621fbbe",
         ],
     },
     {
@@ -601,6 +687,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "1e6db96a-1860-4531-aaad-f85f3857b398",
             "39703a29-ba70-42d9-b01c-86b33631bc8d",
             "358bd814-1970-40d7-bc2a-c69599feb1a9",
+            "891a8240-4bd5-4f28-bbab-208b426778f1",
+            "a25da059-8ac3-457b-b765-30de5c181094",
         ],
     },
     {
@@ -611,8 +699,10 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         language: "id",
         relevantChunkIds: [
             "b9ac2d8c-995b-4c5a-95c9-83b8feed4490",
-            "01945f2c-0aea-4ae8-90ff-3755c7cf2f6e",
-            "b39d49e8-d28d-4239-9bd4-664faf701e5a",
+            "1e63dde3-19d1-464d-8af0-96db694191ab",
+            "a89d5c70-09d8-4d19-ba14-1cc859c3c8c9",
+            "e27c1534-a819-44e8-b2e5-2a9933ed29ef",
+            "b547b277-14d8-4615-8361-ad5d3b390cee",
         ],
     },
     {
@@ -626,6 +716,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "3055d32a-3580-4281-a0a1-05f8362419f7",
             "4eaa0d48-6d7a-4627-baeb-67655ea1f8cc",
             "5801637a-44ae-4c47-80ce-6f83c37a620e",
+            "b72e7142-57a4-4c2b-acad-8ecf1b782ead",
+            "c93a712c-65ca-4e19-9c4b-b1b1f9bc8a7d",
         ],
     },
     {
@@ -638,7 +730,9 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
         relevantChunkIds: [
             "7eed7ac7-be26-4e2b-bdee-50b1f72f29df",
             "2532ef31-8150-4624-b1f6-2d96cf4a39eb",
+            "91a59503-e54d-42a9-9ab1-3c5c109130bd",
             "43de42fc-87c4-4a24-8156-220a5a4a3d5a",
+            "1e820482-1766-4824-817e-81f58de868c2",
         ],
     },
     {
@@ -652,6 +746,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "83784abc-7051-4d3a-8822-e7e2b82ee063",
             "7aff6f5d-17a2-423b-8e90-791ec6b45e43",
             "6de02535-693e-43ed-aaf6-6d326a0d73e2",
+            "76732e4c-5f94-43da-9afb-c3ab5f4e2b38",
+            "ce734452-4a6f-4db1-86b2-63845b342992",
         ],
     },
     {
@@ -665,6 +761,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "97ce3ae6-efd3-4502-960d-95fd70e87635",
             "76e448fe-d6f6-42b3-8cbc-0be1eb85a303",
             "d2cd5e44-9cd6-42a6-91c4-bb6665d3fe1d",
+            "977b3613-a4d2-4b87-9418-74cf1ae6c8d7",
+            "40184998-147c-44d0-bfed-3081251f0035",
         ],
     },
     {
@@ -677,6 +775,8 @@ export const ACADEMIC_QUESTIONS: EvaluationQuestion[] = [
             "27ab35ff-8c5a-4686-ab4b-7ddc9239b00b",
             "ce734452-4a6f-4db1-86b2-63845b342992",
             "f155eda1-e304-48fd-a367-f38cda24110a",
+            "7d086420-2ee5-405b-a0b1-d301b1de8b1a",
+            "90c4c987-060a-4cbc-a2c9-10f5b182956a",
         ],
     },
 ];
