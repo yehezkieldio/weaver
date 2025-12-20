@@ -251,83 +251,44 @@ def fetch_ablation_study_data(conn, study_id: str) -> dict[str, pd.DataFrame]:
             config_name = result.get("configName", "Unknown")
 
             if config_name not in config_data:
-                config_data[config_name] = {
-                    "faithfulness": [],
-                    "answer_relevancy": [],
-                    "context_precision": [],
-                    "context_recall": [],
-                    "context_relevancy": [],
-                    "answer_correctness": [],
-                    "hallucination_rate": [],
-                    "latency_ms": [],
-                    "planning_latency_ms": [],
-                    "synthesis_latency_ms": [],
-                    "avg_step_latency_ms": [],
-                }
+                config_data[config_name] = []
 
             # Extract per-question metrics if available
             per_question = result.get("perQuestionMetrics", [])
             if per_question:
                 for pq in per_question:
-                    if pq.get("faithfulness") is not None:
-                        config_data[config_name]["faithfulness"].append(
-                            pq["faithfulness"]
-                        )
-                    if pq.get("answerRelevancy") is not None:
-                        config_data[config_name]["answer_relevancy"].append(
-                            pq["answerRelevancy"]
-                        )
-                    if pq.get("contextPrecision") is not None:
-                        config_data[config_name]["context_precision"].append(
-                            pq["contextPrecision"]
-                        )
-                    if pq.get("contextRecall") is not None:
-                        config_data[config_name]["context_recall"].append(
-                            pq["contextRecall"]
-                        )
-                    if pq.get("contextRelevancy") is not None:
-                        config_data[config_name]["context_relevancy"].append(
-                            pq["contextRelevancy"]
-                        )
-                    if pq.get("answerCorrectness") is not None:
-                        config_data[config_name]["answer_correctness"].append(
-                            pq["answerCorrectness"]
-                        )
-                    if pq.get("hallucinationRate") is not None:
-                        config_data[config_name]["hallucination_rate"].append(
-                            pq["hallucinationRate"]
-                        )
-                    if pq.get("totalLatencyMs") is not None:
-                        config_data[config_name]["latency_ms"].append(
-                            pq["totalLatencyMs"]
-                        )
-                    if pq.get("planningLatencyMs") is not None:
-                        config_data[config_name]["planning_latency_ms"].append(
-                            pq["planningLatencyMs"]
-                        )
-                    if pq.get("synthesisLatencyMs") is not None:
-                        config_data[config_name]["synthesis_latency_ms"].append(
-                            pq["synthesisLatencyMs"]
-                        )
-                    if pq.get("avgStepLatencyMs") is not None:
-                        config_data[config_name]["avg_step_latency_ms"].append(
-                            pq["avgStepLatencyMs"]
-                        )
+                    record = {
+                        "faithfulness": pq.get("faithfulness"),
+                        "answer_relevancy": pq.get("answerRelevancy"),
+                        "context_precision": pq.get("contextPrecision"),
+                        "context_recall": pq.get("contextRecall"),
+                        "context_relevancy": pq.get("contextRelevancy"),
+                        "answer_correctness": pq.get("answerCorrectness"),
+                        "hallucination_rate": pq.get("hallucinationRate"),
+                        "latency_ms": pq.get("totalLatencyMs"),
+                        "planning_latency_ms": pq.get("planningLatencyMs"),
+                        "synthesis_latency_ms": pq.get("synthesisLatencyMs"),
+                        "avg_step_latency_ms": pq.get("avgStepLatencyMs"),
+                    }
+                    config_data[config_name].append(record)
             else:
                 # Fallback to aggregated metrics
                 metrics = result.get("metrics", {})
-                if metrics.get("faithfulness") is not None:
-                    config_data[config_name]["faithfulness"].append(
-                        metrics["faithfulness"]
-                    )
-                if metrics.get("answerRelevancy") is not None:
-                    config_data[config_name]["answer_relevancy"].append(
-                        metrics["answerRelevancy"]
-                    )
-                if metrics.get("totalLatencyMs") is not None:
-                    config_data[config_name]["latency_ms"].append(
-                        metrics["totalLatencyMs"]
-                    )
+                if metrics:
+                    record = {
+                        "faithfulness": metrics.get("faithfulness"),
+                        "answer_relevancy": metrics.get("answerRelevancy"),
+                        "context_precision": metrics.get("contextPrecision"),
+                        "context_recall": metrics.get("contextRecall"),
+                        "context_relevancy": metrics.get("contextRelevancy"),
+                        "answer_correctness": metrics.get("answerCorrectness"),
+                        "hallucination_rate": metrics.get("hallucinationRate"),
+                        "latency_ms": metrics.get("totalLatencyMs"),
+                        "planning_latency_ms": metrics.get("planningLatencyMs"),
+                        "synthesis_latency_ms": metrics.get("synthesisLatencyMs"),
+                        "avg_step_latency_ms": metrics.get("avgStepLatencyMs"),
+                    }
+                    config_data[config_name].append(record)
 
         # Convert to DataFrames
         return {

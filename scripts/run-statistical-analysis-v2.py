@@ -34,7 +34,7 @@ def main():
     args = [a for a in args if a != "--no-figures"]
 
     # Build command with default arguments
-    cmd = ["python3", "scripts/run-statistical-analysis.py"] + args
+    cmd = ["uv", "run",  "scripts/run-statistical-analysis.py"] + args
 
     # Add figures flag if not disabled
     if enable_figures:

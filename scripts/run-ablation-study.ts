@@ -98,6 +98,10 @@ async function main() {
                 contextRelevancy: m.contextRelevancy,
                 answerCorrectness: m.answerCorrectness,
                 hallucinationRate: m.hallucinationRate,
+                totalLatencyMs: m.totalLatencyMs,
+                planningLatencyMs: m.planningLatencyMs,
+                synthesisLatencyMs: m.synthesisLatencyMs,
+                avgStepLatencyMs: m.avgStepLatencyMs,
             })),
         }));
 
