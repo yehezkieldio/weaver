@@ -33,6 +33,96 @@ import type {
 import { generateUserMessage, getUserMessageFromTemplate, shouldContinueConversation } from "./user-simulator";
 
 /**
+ * Retrieved chunk structure from the API
+ */
+interface RetrievedChunk {
+    chunkId: string;
+    documentTitle: string;
+    content: string;
+    similarity: number;
+    retrievalMethod?: "vector" | "keyword" | "hybrid";
+    vectorScore?: number;
+    bm25Score?: number;
+}
+
+/**
+ * Parse Vercel AI SDK UI Message Stream format
+ *
+ * The AI SDK uses a specific stream protocol with different message types:
+ * - `0:` - Text chunks (JSON strings)
+ * - `2:` - Data parts (arrays of data)
+ * - `8:` - Finish messages
+ * - `e:` - Error messages
+ * - `d:` - Done signals
+ *
+ * This parser handles all these formats robustly.
+ */
+function parseAISDKStream(rawStream: string): {
+    text: string;
+    retrievedChunks: RetrievedChunk[];
+} {
+    let text = "";
+    const retrievedChunks: RetrievedChunk[] = [];
+    const lines = rawStream.split("\n");
+
+    for (const line of lines) {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) continue;
+
+        // Match the protocol format: TYPE:DATA
+        const colonIndex = trimmedLine.indexOf(":");
+        if (colonIndex === -1) continue;
+
+        const typeCode = trimmedLine.substring(0, colonIndex);
+        const dataStr = trimmedLine.substring(colonIndex + 1);
+
+        try {
+            switch (typeCode) {
+                case "0": {
+                    // Text chunk - the data is a JSON-encoded string
+                    const textContent = JSON.parse(dataStr);
+                    if (typeof textContent === "string") {
+                        text += textContent;
+                    }
+                    break;
+                }
+                case "2": {
+                    // Data part - contains arrays of structured data
+                    const dataParts = JSON.parse(dataStr);
+                    if (Array.isArray(dataParts)) {
+                        for (const part of dataParts) {
+                            // Handle retrieved-chunk-data type
+                            if (part?.type === "data-retrieved-chunk" && part?.data) {
+                                const chunk = part.data as RetrievedChunk;
+                                if (chunk.chunkId && !retrievedChunks.some((c) => c.chunkId === chunk.chunkId)) {
+                                    retrievedChunks.push({
+                                        chunkId: chunk.chunkId,
+                                        documentTitle: chunk.documentTitle || "",
+                                        content: chunk.content || "",
+                                        similarity: chunk.similarity || 0,
+                                        retrievalMethod: chunk.retrievalMethod,
+                                        vectorScore: chunk.vectorScore,
+                                        bm25Score: chunk.bm25Score,
+                                    });
+                                }
+                            }
+                        }
+                    }
+                    break;
+                }
+                default:
+                    // Types 8, e, d are finish/error/done signals - skip for content extraction
+                    break;
+            }
+        } catch (_parseError) {
+            // Skip unparseable lines - this is expected for some protocol messages
+        }
+    }
+
+    return { text, retrievedChunks };
+}
+
+/**
  * Call the chat API to get a response
  * This simulates a real user interacting with the system
  */
@@ -72,52 +162,40 @@ async function callChatAPI(
             throw new Error(`API call failed: ${response.statusText}`);
         }
 
-        // For streaming responses, we need to read the full stream
+        // Read the full stream
         const reader = response.body?.getReader();
         const decoder = new TextDecoder();
-        let fullResponse = "";
-        const retrievedChunks: Array<{
-            chunkId: string;
-            documentTitle: string;
-            content: string;
-            similarity: number;
-            retrievalMethod?: "vector" | "keyword" | "hybrid";
-        }> = [];
+        let rawStream = "";
 
         if (reader) {
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
-
-                const chunk = decoder.decode(value);
-                const lines = chunk.split("\n").filter((line) => line.trim().startsWith("0:"));
-
-                for (const line of lines) {
-                    try {
-                        const jsonStr = line.substring(2); // Remove "0:" prefix
-                        const data = JSON.parse(jsonStr);
-
-                        if (data.type === "text") {
-                            fullResponse += data.value;
-                        } else if (data.type === "retrieved-chunk-data") {
-                            retrievedChunks.push(data);
-                        }
-                    } catch (e) {
-                        // Skip unparseable lines
-                    }
-                }
+                rawStream += decoder.decode(value, { stream: true });
             }
+            // Final decode to flush any remaining bytes
+            rawStream += decoder.decode();
         }
+
+        // Parse the AI SDK stream format
+        const { text, retrievedChunks } = parseAISDKStream(rawStream);
 
         const latencyMs = Date.now() - startTime;
 
+        // Log for debugging if response is empty
+        if (!text && rawStream.length > 0) {
+            consola.debug(
+                `[callChatAPI] Empty text extracted from stream. Raw stream length: ${rawStream.length}, first 500 chars: ${rawStream.substring(0, 500)}`
+            );
+        }
+
         return {
-            response: fullResponse,
+            response: text,
             retrievedChunks: retrievedChunks.map((chunk) => ({
-                chunkId: chunk.chunkId || "",
-                documentTitle: chunk.documentTitle || "",
-                content: chunk.content || "",
-                relevanceScore: chunk.similarity || 0,
+                chunkId: chunk.chunkId,
+                documentTitle: chunk.documentTitle,
+                content: chunk.content,
+                relevanceScore: chunk.similarity,
             })),
             latencyMs,
         };
@@ -270,8 +348,8 @@ export async function runConversationScenario(
         }
     }
 
-    // Calculate metrics
-    const metrics = await calculateConversationMetrics(turns, scenario.successCriteria, taskCompleted);
+    // Calculate metrics (synchronous - no LLM call needed)
+    const metrics = calculateConversationMetrics(turns, scenario.successCriteria, taskCompleted);
 
     const result: SimulatedConversationResult = {
         scenarioId: scenario.id,

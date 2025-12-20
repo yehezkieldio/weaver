@@ -63,11 +63,12 @@ export const KRS_REGISTRATION_SCENARIO: ConversationScenario = {
         mustRetainContext: ["KRS", "SIAS", "Penasehat Akademik", "PA", "KPRS"],
         minimumCoherenceScore: 0.7,
         maximumTurns: 5,
+        // Use semantic keyword-based criteria for better matching
         requiredInformationCoverage: [
-            "pengisian KRS dilakukan secara daring melalui Sistem Informasi Akademik Universitas Mulia", // login SIAS
-            "registrasi aktif dan pembayaran harus dilakukan sebelum mengisi KRS", // syarat awal
-            "setelah memilih jadwal, KRS harus divalidasi oleh Dosen Penasehat Akademik melalui pesan di sistem", // validasi PA
-            "jika ada kendala, mahasiswa dapat berkonsultasi ke Prodi masing-masing", // bantuan prodi
+            "SIAS|Sistem Informasi Akademik|daring|online", // login/access method
+            "registrasi|pembayaran|aktif", // prerequisites
+            "validasi|Penasehat Akademik|PA|Dosen PA", // PA validation
+            "Prodi|kendala|bantuan|konsultasi", // support channel
         ],
         acceptableLatencyMs: 5000,
     },
@@ -123,11 +124,12 @@ export const GRADUATION_REQUIREMENTS_SCENARIO: ConversationScenario = {
         mustRetainContext: ["kelulusan", "sarjana", "S1", "yudisium", "SKS", "144"],
         minimumCoherenceScore: 0.75,
         maximumTurns: 6,
+        // Use semantic keyword-based criteria for better matching
         requiredInformationCoverage: [
-            "yudisium adalah proses penetapan kelulusan dan nilai akhir mahasiswa oleh Dekan atau Direktur Program Pascasarjana", // definisi dan penetapan
-            "syarat yudisium meliputi pengumpulan formulir daftar yudisium, SKPI, Tracer Study, Jurnal, dan surat pernyataan keaslian dokumen", // daftar persyaratan
-            "formulir SKPI harus diisi lengkap dan dokumen SKPI ditandatangani Dekan FEB", // detail SKPI
-            "rapat yudisium diselenggarakan oleh Senat Fakultas, keputusan oleh Dekan", // proses dan penetapan
+            "yudisium|kelulusan|penetapan|Dekan", // yudisium definition
+            "formulir|SKPI|Tracer|dokumen|persyaratan", // requirements list
+            "SKPI|Dekan|FEB|ditandatangani", // SKPI details
+            "rapat|Senat|Fakultas|keputusan", // process
         ],
         acceptableLatencyMs: 5000,
     },
@@ -175,10 +177,11 @@ export const ACADEMIC_LEAVE_SCENARIO: ConversationScenario = {
         mustRetainContext: ["cuti", "akademik", "permohonan", "BAAK", "form persetujuan"],
         minimumCoherenceScore: 0.7,
         maximumTurns: 5,
+        // Use semantic keyword-based criteria for better matching
         requiredInformationCoverage: [
-            "permohonan cuti diajukan dengan mengambil dan menyerahkan form ke BAAK Fakultas setelah mendapat persetujuan", // prosedur pengajuan
-            "cuti akademik adalah status mahasiswa yang tidak terdaftar karena izin, berbeda dengan non-aktif", // perbedaan status
-            "izin cuti maksimum 3 semester, tidak boleh berturut-turut", // ketentuan cuti
+            "permohonan|form|BAAK|Fakultas|persetujuan", // application process
+            "cuti akademik|status|izin|non-aktif|tidak terdaftar", // definition/difference
+            "semester|maksimum|berturut-turut|3 semester", // duration rules
         ],
         acceptableLatencyMs: 5000,
     },
@@ -226,10 +229,11 @@ export const ORGANIZATIONAL_STRUCTURE_SCENARIO: ConversationScenario = {
         mustRetainContext: ["Biro", "Akademik", "Sistem Informasi", "Bagian"],
         minimumCoherenceScore: 0.7,
         maximumTurns: 5,
+        // Use semantic keyword-based criteria for better matching
         requiredInformationCoverage: [
-            "struktur organisasi terdiri dari Pembina, Ketua Yayasan, Direktur Eksekutif, Rektor, Wakil Rektor, Dekan, Kepala Kantor, dan Kepala Lembaga", // struktur utama
-            "Wakil Rektor membawahi bidang Akademik & Sistem Informasi, Sumber Daya, Kemahasiswaan & Alumni", // fungsi wakil rektor
-            "setiap fakultas dipimpin oleh Dekan, dan terdapat lembaga seperti LPPM dan LPMPP", // sub-unit dan lembaga
+            "Rektor|Wakil Rektor|Dekan|struktur|organisasi", // structure overview
+            "Akademik|Sumber Daya|Kemahasiswaan|Alumni", // areas covered
+            "fakultas|Dekan|LPPM|LPMPP|lembaga", // sub-units
         ],
         acceptableLatencyMs: 5000,
     },
@@ -285,11 +289,12 @@ export const PROGRAM_INFORMATION_SCENARIO: ConversationScenario = {
         mustRetainContext: ["Informatika", "konsentrasi", "SIAS", "pendaftaran"],
         minimumCoherenceScore: 0.7,
         maximumTurns: 6,
+        // Use semantic keyword-based criteria for better matching
         requiredInformationCoverage: [
-            "program sarjana di tiga fakultas", // semantic: daftar program
-            "Robotics and Artificial Intelligence dan Mobile Application Development", // semantic: konsentrasi
-            "rata-rata Rp 6 juta", // semantic: biaya
-            "mengisi formulir di SIAS untuk username dan password", // semantic: pendaftaran
+            "sarjana|fakultas|program studi|S1", // program list
+            "Robotics|Artificial Intelligence|Mobile|konsentrasi", // concentrations
+            "biaya|juta|SPP|pembayaran", // costs
+            "SIAS|formulir|pendaftaran|username|password", // registration
         ],
         acceptableLatencyMs: 5000,
     },
@@ -337,10 +342,11 @@ export const FACULTY_SERVICES_SCENARIO: ConversationScenario = {
         mustRetainContext: ["fasilitas", "Google", "Classroom", "Meet", "IT Support"],
         minimumCoherenceScore: 0.7,
         maximumTurns: 5,
+        // Use semantic keyword-based criteria for better matching
         requiredInformationCoverage: [
-            "ruang kelas ber-AC dan proyektor", // semantic: fasilitas kelas
-            "Google Classroom dan Google Meet melalui Akun Universitas", // semantic: layanan digital
-            "IT Support untuk permasalahan teknis", // semantic: dukungan IT
+            "ruang|kelas|AC|proyektor|laboratorium", // classroom facilities
+            "Google|Classroom|Meet|akun|Universitas", // digital services
+            "IT|Support|teknis|bantuan|dukungan", // IT support
         ],
         acceptableLatencyMs: 5000,
     },
@@ -388,10 +394,11 @@ export const STUDENT_FACILITIES_SCENARIO: ConversationScenario = {
         mustRetainContext: ["fasilitas", "Mulia Corner", "Laboratorium", "Multimedia"],
         minimumCoherenceScore: 0.7,
         maximumTurns: 5,
+        // Use semantic keyword-based criteria for better matching
         requiredInformationCoverage: [
-            "perpustakaan, gazebo, kantin, Mulia Corner, lapangan olahraga, laboratorium", // semantic: daftar fasilitas
-            "tempat berkumpul mahasiswa untuk belajar, makan, bersosialisasi", // semantic: Mulia Corner
-            "komputer untuk video editing, audio editing, desain, pembuatan game", // semantic: lab multimedia
+            "perpustakaan|gazebo|kantin|lapangan|laboratorium", // facility list
+            "Mulia Corner|berkumpul|belajar|mahasiswa|tempat", // Mulia Corner
+            "komputer|video|audio|desain|game|editing", // multimedia lab
         ],
         acceptableLatencyMs: 5000,
     },

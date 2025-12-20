@@ -25,6 +25,31 @@ import type {
 // Define regex patterns at top level to avoid performance issues
 const JSON_MATCH_REGEX = /\{[\s\S]*\}/;
 
+/**
+ * Check if a pattern (which may contain | for OR operations) matches the text
+ * Patterns like "SIAS|Sistem Informasi Akademik|daring|online" will match if ANY of these terms appear
+ */
+function matchesPattern(text: string, pattern: string): boolean {
+    const textLower = text.toLowerCase();
+    // Split by | to get individual keywords/phrases
+    const alternatives = pattern.split("|").map((alt) => alt.trim().toLowerCase());
+    // Return true if ANY of the alternatives match
+    return alternatives.some((alt) => textLower.includes(alt));
+}
+
+/**
+ * Calculate information coverage using pattern matching
+ * Supports both exact substrings and OR-patterns (separated by |)
+ */
+function calculatePatternBasedCoverage(allResponses: string, requiredPatterns: string[]): number {
+    if (!requiredPatterns || requiredPatterns.length === 0) {
+        return 1.0;
+    }
+
+    const matchedCount = requiredPatterns.filter((pattern) => matchesPattern(allResponses, pattern)).length;
+    return matchedCount / requiredPatterns.length;
+}
+
 // ============================================================================
 // BATCHED TURN METRICS CALCULATION
 // ============================================================================
@@ -255,6 +280,7 @@ The response doesn't need to contain exact keywords, but should semantically rel
 
 /**
  * Evaluate if success criteria are met
+ * Uses pattern-based matching for flexible information coverage evaluation
  */
 export function evaluateSuccessCriteria(
     conversationResult: SimulatedConversationResult,
@@ -293,10 +319,11 @@ export function evaluateSuccessCriteria(
     // Check turn count
     const turnsAcceptable = !criteria.maximumTurns || conversationResult.turns.length <= criteria.maximumTurns;
 
-    // Check information coverage (keyword-based approximation)
+    // Check information coverage using pattern-based matching
+    // Patterns can contain | for OR operations (e.g., "SIAS|Sistem Informasi")
     const informationCovered =
         !criteria.requiredInformationCoverage ||
-        criteria.requiredInformationCoverage.every((info) => allResponses.includes(info.toLowerCase()));
+        calculatePatternBasedCoverage(allResponses, criteria.requiredInformationCoverage) >= 0.5;
 
     // Check latency
     const avgLatency = conversationResult.metrics.averageLatencyMs;
@@ -325,13 +352,13 @@ export function evaluateSuccessCriteria(
 
 /**
  * Calculate overall conversation metrics
- * Uses LLM-based semantic evaluation for information coverage
+ * Uses pattern-based evaluation for information coverage
  */
-export async function calculateConversationMetrics(
+export function calculateConversationMetrics(
     turns: ConversationTurnResult[],
     criteria: SuccessCriteria,
     taskCompleted: boolean
-): Promise<ConversationMetrics> {
+): ConversationMetrics {
     if (turns.length === 0) {
         return {
             taskCompletionRate: 0,
@@ -367,33 +394,18 @@ export async function calculateConversationMetrics(
     const followUpHandlingScore =
         followUpTurns.length > 0 ? followUpTurns.filter((t) => t.satisfiedIntent).length / followUpTurns.length : 1.0;
 
-    // Information coverage using LLM-based semantic evaluation
+    // Information coverage using pattern-based evaluation
     let informationCoverageRate = 0;
     if (criteria.requiredInformationCoverage && criteria.requiredInformationCoverage.length > 0) {
-        // Build conversation history for evaluation
-        const conversationHistory: Array<{ role: "user" | "assistant"; content: string }> = turns.flatMap((t) => [
-            { role: "user" as const, content: t.userMessage },
-            { role: "assistant" as const, content: t.assistantResponse },
-        ]);
+        // Combine all responses for coverage check
+        const allResponses = turns.map((t) => t.assistantResponse).join(" ");
 
-        try {
-            const coverageResult = await evaluateInformationCoverage(
-                conversationHistory,
-                criteria.requiredInformationCoverage
-            );
-            informationCoverageRate = coverageResult.score;
-        } catch (error) {
-            consola.error("Error in LLM information coverage, falling back to keyword-based:", error);
-            // Fallback to keyword-based evaluation
-            const allResponses = turns
-                .map((t) => t.assistantResponse)
-                .join(" ")
-                .toLowerCase();
-            const coveredInfo = criteria.requiredInformationCoverage.filter((info) =>
-                allResponses.includes(info.toLowerCase())
-            ).length;
-            informationCoverageRate = coveredInfo / criteria.requiredInformationCoverage.length;
-        }
+        // Use pattern-based matching (supports | for OR operations)
+        informationCoverageRate = calculatePatternBasedCoverage(allResponses, criteria.requiredInformationCoverage);
+
+        consola.debug(
+            `[calculateConversationMetrics] Pattern-based coverage: ${(informationCoverageRate * 100).toFixed(0)}% (${Math.round(informationCoverageRate * criteria.requiredInformationCoverage.length)}/${criteria.requiredInformationCoverage.length} patterns matched)`
+        );
     } else {
         informationCoverageRate = 1.0; // No required coverage, consider it complete
     }

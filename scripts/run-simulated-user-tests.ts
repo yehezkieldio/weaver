@@ -271,6 +271,8 @@ async function main() {
         consola.info(`P95 Latency: ${metrics.p95LatencyMs.toFixed(0)}ms`);
         consola.info(`\n📄 Report saved to: ${reportPath}`);
         consola.success("\nSimulated user testing completed successfully!");
+
+        process.exit(0);
     } catch (error) {
         consola.error("\nError running simulated user tests:", error);
         process.exit(1);
