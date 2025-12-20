@@ -115,9 +115,9 @@ def get_latest_evaluation_run(conn) -> Optional[dict]:
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT id, name, created_at 
-            FROM evaluation_runs 
-            ORDER BY created_at DESC 
+            SELECT id, name, created_at
+            FROM evaluation_runs
+            ORDER BY created_at DESC
             LIMIT 1
         """
         )
@@ -132,9 +132,9 @@ def get_latest_ablation_study(conn) -> Optional[dict]:
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT id, name, created_at, results 
-            FROM ablation_studies 
-            ORDER BY created_at DESC 
+            SELECT id, name, created_at, results
+            FROM ablation_studies
+            ORDER BY created_at DESC
             LIMIT 1
         """
         )
@@ -154,7 +154,7 @@ def fetch_evaluation_run_data(conn, run_id: str) -> pd.DataFrame:
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT 
+            SELECT
                 id, question,
                 rag_faithfulness, rag_answer_relevancy, rag_context_precision,
                 rag_context_recall, rag_context_relevancy, rag_answer_correctness,
