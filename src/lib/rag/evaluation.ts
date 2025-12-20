@@ -1004,17 +1004,20 @@ Berikan skor KEBEBASAN KONTRADIKSI 0-1 (1 = tidak ada kontradiksi, 0 = kontradik
 
 export function calculateNDCG(retrievedIds: string[], relevantIds: Set<string>, k?: number): number {
     const results = k ? retrievedIds.slice(0, k) : retrievedIds;
+    if (results.length === 0 || relevantIds.size === 0) return 0;
 
     let dcg = 0;
-    let idcg = 0;
-    const relevantCount = Math.min(relevantIds.size, results.length);
-
     results.forEach((id, idx) => {
-        const rel = relevantIds.has(id) ? 1 : 0;
-        dcg += rel / Math.log2(idx + 2);
+        if (relevantIds.has(id)) {
+            // Formula: rel_i / log2(i + 1). In code: 1 / log2(idx + 2)
+            dcg += 1 / Math.log2(idx + 2);
+        }
     });
 
-    for (let i = 0; i < relevantCount; i++) {
+    // Ideal DCG: Assume the top N results were all relevant (where N = size of relevant set)
+    let idcg = 0;
+    const maxPossibleRelevant = Math.min(relevantIds.size, results.length);
+    for (let i = 0; i < maxPossibleRelevant; i++) {
         idcg += 1 / Math.log2(i + 2);
     }
 
