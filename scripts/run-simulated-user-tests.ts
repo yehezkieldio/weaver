@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+
 /**
  * @fileoverview Script to Run Simulated User Testing
  *
@@ -15,47 +16,69 @@
  *   bun scripts/run-simulated-user-tests.ts --all-scenarios
  */
 
-import { ALL_SCENARIOS, runSimulatedUserTests, type SimulatedUserTestConfig } from "@/lib/simulated-user";
+import { writeFileSync } from "node:fs";
+import { runSimulatedUserTests } from "@/lib/simulated-user/conversation-runner";
+import { ALL_SCENARIOS } from "@/lib/simulated-user/scenarios";
+import type { SimulatedUserTestConfig, SystemLevelMetrics } from "@/lib/simulated-user/types";
 
 /**
  * Parse command line arguments
  */
 function parseArgs(): {
-	scenarioId?: string;
-	quick?: boolean;
-	allScenarios?: boolean;
-	repetitions?: number;
-	agentic?: boolean;
+    scenarioId?: string;
+    quick?: boolean;
+    allScenarios?: boolean;
+    repetitions?: number;
+    agentic?: boolean;
 } {
-	const args = process.argv.slice(2);
-	const parsed: any = {};
+    const args = process.argv.slice(2);
+    const parsed: {
+        scenarioId?: string;
+        quick?: boolean;
+        allScenarios?: boolean;
+        repetitions?: number;
+        agentic?: boolean;
+    } = {};
 
-	for (let i = 0; i < args.length; i++) {
-		const arg = args[i];
+    for (let i = 0; i < args.length; i++) {
+        const arg = args[i];
 
-		if (arg === "--scenario" && i + 1 < args.length) {
-			parsed.scenarioId = args[++i];
-		} else if (arg === "--quick") {
-			parsed.quick = true;
-		} else if (arg === "--all-scenarios") {
-			parsed.allScenarios = true;
-		} else if (arg === "--repetitions" && i + 1 < args.length) {
-			parsed.repetitions = Number.parseInt(args[++i], 10);
-		} else if (arg === "--no-agentic") {
-			parsed.agentic = false;
-		}
-	}
+        if (arg === "--scenario" && i + 1 < args.length) {
+            i += 1;
+            parsed.scenarioId = args[i];
+        } else if (arg === "--quick") {
+            parsed.quick = true;
+        } else if (arg === "--all-scenarios") {
+            parsed.allScenarios = true;
+        } else if (arg === "--repetitions" && i + 1 < args.length) {
+            i += 1;
+            parsed.repetitions = Number.parseInt(args[i], 10);
+        } else if (arg === "--no-agentic") {
+            parsed.agentic = false;
+        }
+    }
 
-	return parsed;
+    return parsed;
 }
 
-/**
- * Generate markdown report from results
+/** * Get interpretation label for a score
  */
-function generateMarkdownReport(metrics: any, startTime: Date, endTime: Date): string {
-	const duration = ((endTime.getTime() - startTime.getTime()) / 1000).toFixed(1);
+function getInterpretation(score: number): string {
+    if (score >= 0.8) {
+        return "✅ Excellent";
+    }
+    if (score >= 0.6) {
+        return "⚠️ Good";
+    }
+    return "❌ Needs Improvement";
+}
 
-	return `
+/** * Generate markdown report from results
+ */
+function generateMarkdownReport(metrics: SystemLevelMetrics, startTime: Date, endTime: Date): string {
+    const duration = ((endTime.getTime() - startTime.getTime()) / 1000).toFixed(1);
+
+    return `
 # Simulated User Testing Report
 
 **Generated**: ${endTime.toISOString()}
@@ -78,9 +101,9 @@ function generateMarkdownReport(metrics: any, startTime: Date, endTime: Date): s
 
 | Metric | Score | Interpretation |
 |--------|-------|----------------|
-| **Conversation Coherence** | ${metrics.averageCoherenceScore.toFixed(2)} | ${metrics.averageCoherenceScore >= 0.8 ? "✅ Excellent" : metrics.averageCoherenceScore >= 0.6 ? "⚠️ Good" : "❌ Needs Improvement"} |
-| **Context Retention Rate** | ${(metrics.averageContextRetentionRate * 100).toFixed(0)}% | ${metrics.averageContextRetentionRate >= 0.8 ? "✅ Excellent" : metrics.averageContextRetentionRate >= 0.6 ? "⚠️ Good" : "❌ Needs Improvement"} |
-| **Information Coverage** | ${(metrics.averageInformationCoverageRate * 100).toFixed(0)}% | ${metrics.averageInformationCoverageRate >= 0.8 ? "✅ Excellent" : metrics.averageInformationCoverageRate >= 0.6 ? "⚠️ Good" : "❌ Needs Improvement"} |
+| **Conversation Coherence** | ${metrics.averageCoherenceScore.toFixed(2)} | ${getInterpretation(metrics.averageCoherenceScore)} |
+| **Context Retention Rate** | ${(metrics.averageContextRetentionRate * 100).toFixed(0)}% | ${getInterpretation(metrics.averageContextRetentionRate)} |
+| **Information Coverage** | ${(metrics.averageInformationCoverageRate * 100).toFixed(0)}% | ${getInterpretation(metrics.averageInformationCoverageRate)} |
 
 ---
 
@@ -102,7 +125,7 @@ function generateMarkdownReport(metrics: any, startTime: Date, endTime: Date): s
 ## Error Analysis
 
 - **Total Errors**: ${metrics.totalErrors}
-- **Error Rate**: ${metrics.totalScenarios > 0 ? (metrics.totalErrors / metrics.totalScenarios * 100).toFixed(1) : 0}%
+- **Error Rate**: ${metrics.totalScenarios > 0 ? ((metrics.totalErrors / metrics.totalScenarios) * 100).toFixed(1) : 0}%
 
 ---
 
@@ -148,7 +171,7 @@ This simulated user testing directly addresses the methodology gap identified in
 
 **Paper Title**: "Implementasi Agentic Retrieval-Augmented Generation (RAG) Untuk Sistem Layanan Informasi Perguruan Tinggi"
 
-**The Gap**: 
+**The Gap**:
 - Title claims **"Implementasi"** (implementation)
 - Previous evaluation only measured **component-level RAG metrics**
 - No validation of **complete system** including conversation flow, task completion
@@ -176,82 +199,82 @@ This simulated user testing directly addresses the methodology gap identified in
  * Main execution
  */
 async function main() {
-	console.log("🚀 Simulated User Testing for MuliaChat RAG System\n");
+    console.log("🚀 Simulated User Testing for MuliaChat RAG System\n");
 
-	const args = parseArgs();
+    const args = parseArgs();
 
-	// Determine which scenarios to run
-	let scenarios = ALL_SCENARIOS;
+    // Determine which scenarios to run
+    let scenarios = ALL_SCENARIOS;
 
-	if (args.scenarioId) {
-		const scenario = ALL_SCENARIOS.find((s) => s.id === args.scenarioId);
-		if (!scenario) {
-			console.error(`❌ Scenario not found: ${args.scenarioId}`);
-			console.log("\nAvailable scenarios:");
-			for (const s of ALL_SCENARIOS) {
-				console.log(`  - ${s.id}: ${s.name}`);
-			}
-			process.exit(1);
-		}
-		scenarios = [scenario];
-		console.log(`📋 Running single scenario: ${scenario.name}\n`);
-	} else if (args.quick) {
-		// Quick mode: run first 3 scenarios
-		scenarios = ALL_SCENARIOS.slice(0, 3);
-		console.log(`⚡ Quick mode: Running ${scenarios.length} scenarios\n`);
-	} else {
-		console.log(`📋 Running all ${scenarios.length} scenarios\n`);
-	}
+    if (args.scenarioId) {
+        const scenario = ALL_SCENARIOS.find((s) => s.id === args.scenarioId);
+        if (!scenario) {
+            console.error(`❌ Scenario not found: ${args.scenarioId}`);
+            console.log("\nAvailable scenarios:");
+            for (const s of ALL_SCENARIOS) {
+                console.log(`  - ${s.id}: ${s.name}`);
+            }
+            process.exit(1);
+        }
+        scenarios = [scenario];
+        console.log(`📋 Running single scenario: ${scenario.name}\n`);
+    } else if (args.quick) {
+        // Quick mode: run first 3 scenarios
+        scenarios = ALL_SCENARIOS.slice(0, 3);
+        console.log(`⚡ Quick mode: Running ${scenarios.length} scenarios\n`);
+    } else {
+        console.log(`📋 Running all ${scenarios.length} scenarios\n`);
+    }
 
-	const config: SimulatedUserTestConfig = {
-		scenarios,
-		repetitionsPerScenario: args.repetitions || 1,
-		useAgenticMode: args.agentic !== false,
-		retrievalStrategy: "hybrid",
-		enableGuardrails: true,
-		maxTurnsPerConversation: 10,
-		saveDetailedLogs: true,
-	};
+    const config: SimulatedUserTestConfig = {
+        scenarios,
+        repetitionsPerScenario: args.repetitions || 1,
+        useAgenticMode: args.agentic !== false,
+        retrievalStrategy: "hybrid",
+        enableGuardrails: true,
+        maxTurnsPerConversation: 10,
+        saveDetailedLogs: true,
+    };
 
-	console.log("Configuration:");
-	console.log(`  Scenarios: ${config.scenarios.length}`);
-	console.log(`  Repetitions: ${config.repetitionsPerScenario}`);
-	console.log(`  Agentic Mode: ${config.useAgenticMode ? "enabled" : "disabled"}`);
-	console.log(`  Max Turns: ${config.maxTurnsPerConversation}`);
-	console.log();
+    console.log("Configuration:");
+    console.log(`  Scenarios: ${config.scenarios.length}`);
+    console.log(`  Repetitions: ${config.repetitionsPerScenario}`);
+    console.log(`  Agentic Mode: ${config.useAgenticMode ? "enabled" : "disabled"}`);
+    console.log(`  Max Turns: ${config.maxTurnsPerConversation}`);
+    console.log();
 
-	const startTime = new Date();
+    const startTime = new Date();
 
-	try {
-		// Run tests
-		const metrics = await runSimulatedUserTests(config);
+    try {
+        // Run tests
+        const metrics = await runSimulatedUserTests(config);
 
-		const endTime = new Date();
+        const endTime = new Date();
 
-		// Generate report
-		const report = generateMarkdownReport(metrics, startTime, endTime);
+        // Generate report
+        const report = generateMarkdownReport(metrics, startTime, endTime);
 
-		// Save report
-		const reportPath = `/tmp/simulated-user-testing-report-${Date.now()}.md`;
-		await Bun.write(reportPath, report);
+        // Save report
+        const reportPath = `/tmp/simulated-user-testing-report-${Date.now()}.md`;
+        writeFileSync(reportPath, report, "utf-8");
 
-		console.log("\n" + "=".repeat(80));
-		console.log("📊 FINAL RESULTS");
-		console.log("=".repeat(80));
-		console.log(`\nTask Completion Rate: ${(metrics.overallTaskCompletionRate * 100).toFixed(1)}%`);
-		console.log(`Successful Scenarios: ${metrics.successfulScenarios}/${metrics.totalScenarios}`);
-		console.log(`Average Coherence: ${metrics.averageCoherenceScore.toFixed(2)}`);
-		console.log(`Average Latency: ${metrics.averageLatencyMs.toFixed(0)}ms`);
-		console.log(`P95 Latency: ${metrics.p95LatencyMs.toFixed(0)}ms`);
-		console.log(`\n📄 Report saved to: ${reportPath}`);
-		console.log("\n✅ Simulated user testing completed successfully!");
-	} catch (error) {
-		console.error("\n❌ Error running simulated user tests:", error);
-		process.exit(1);
-	}
+        console.log(`\n${"=".repeat(80)}`);
+        console.log("📊 FINAL RESULTS");
+        console.log("=".repeat(80));
+        console.log(`\nTask Completion Rate: ${(metrics.overallTaskCompletionRate * 100).toFixed(1)}%`);
+        console.log(`Successful Scenarios: ${metrics.successfulScenarios}/${metrics.totalScenarios}`);
+        console.log(`Average Coherence: ${metrics.averageCoherenceScore.toFixed(2)}`);
+        console.log(`Average Latency: ${metrics.averageLatencyMs.toFixed(0)}ms`);
+        console.log(`P95 Latency: ${metrics.p95LatencyMs.toFixed(0)}ms`);
+        console.log(`\n📄 Report saved to: ${reportPath}`);
+        console.log("\n✅ Simulated user testing completed successfully!");
+    } catch (error) {
+        console.error("\n❌ Error running simulated user tests:", error);
+        process.exit(1);
+    }
 }
 
 // Run if called directly
 if (import.meta.main) {
-	main();
+    main();
 }

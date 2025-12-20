@@ -9,66 +9,13 @@
  * - Scenarios: Conversation scenarios for testing
  * - Runner: Main orchestrator for running simulated conversations
  * - Evaluator: Metrics calculation and evaluation
+ *
+ * Note: Direct imports are used instead of barrel exports to improve performance.
+ * Import specific functions from their respective modules:
+ * - conversation-runner: runConversationScenario, runSimulatedUserTests
+ * - evaluator: calculateConversationMetrics, evaluateCoherence, etc.
+ * - personas: ALL_PERSONAS, NEW_STUDENT_PERSONA, etc.
+ * - scenarios: ALL_SCENARIOS, PROGRAM_INFORMATION_SCENARIO, etc.
+ * - types: ConversationMetrics, UserPersona, etc.
+ * - user-simulator: generateUserMessage, evaluateFollowUpQuality, etc.
  */
-
-// Types
-export type {
-	UserPersona,
-	ConversationScenario,
-	ConversationTurn,
-	SuccessCriteria,
-	SimulatedConversationResult,
-	ConversationTurnResult,
-	ConversationMetrics,
-	SystemLevelMetrics,
-	SimulatedUserTestConfig,
-	UserSimulatorConfig,
-} from "./types";
-
-// Personas
-export {
-	NEW_STUDENT_PERSONA,
-	SENIOR_STUDENT_PERSONA,
-	FACULTY_PERSONA,
-	STAFF_PERSONA,
-	PROSPECTIVE_STUDENT_PERSONA,
-	ALL_PERSONAS,
-	getPersonaById,
-	getPersonasByKnowledge,
-} from "./personas";
-
-// Scenarios
-export {
-	KRS_REGISTRATION_SCENARIO,
-	GRADUATION_REQUIREMENTS_SCENARIO,
-	ACADEMIC_LEAVE_SCENARIO,
-	ORGANIZATIONAL_STRUCTURE_SCENARIO,
-	PROGRAM_INFORMATION_SCENARIO,
-	FACULTY_SERVICES_SCENARIO,
-	STUDENT_FACILITIES_SCENARIO,
-	ALL_SCENARIOS,
-	getScenarioById,
-	getScenariosByCategory,
-	getScenariosByPersona,
-} from "./scenarios";
-
-// Runner
-export { runConversationScenario, runSimulatedUserTests } from "./conversation-runner";
-
-// Evaluator
-export {
-	evaluateCoherence,
-	evaluateContextRetention,
-	evaluateSuccessCriteria,
-	calculateConversationMetrics,
-	evaluateInformationCoverage,
-} from "./evaluator";
-
-// User Simulator
-export {
-	generateUserMessage,
-	getUserMessageFromTemplate,
-	evaluateFollowUpQuality,
-	generateFollowUpQuestion,
-	shouldContinueConversation,
-} from "./user-simulator";
