@@ -158,10 +158,16 @@ def fetch_evaluation_run_data(conn, run_id: str) -> pd.DataFrame:
                 id, question,
                 rag_faithfulness, rag_answer_relevancy, rag_context_precision,
                 rag_context_recall, rag_context_relevancy, rag_answer_correctness,
-                rag_hallucination_rate, rag_latency_ms, rag_retrieval_latency_ms,
+                rag_citation_accuracy,
+                rag_hallucination_rate, rag_factual_consistency, rag_source_attribution,
+                rag_contradiction_score,
+                retrieval_ndcg, retrieval_mrr, retrieval_precision,
+                rag_latency_ms, rag_retrieval_latency_ms,
                 rag_reranking_latency_ms, rag_generation_latency_ms,
                 rag_agent_reasoning_latency_ms, rag_planning_latency_ms,
                 rag_synthesis_latency_ms, rag_avg_step_latency_ms,
+                rag_tool_call_latency_ms, rag_tokens_per_second,
+                agent_steps_used, retrieval_method, reranker_strategy,
                 non_rag_answer_relevancy, non_rag_answer_correctness,
                 non_rag_hallucination_rate, non_rag_latency_ms
             FROM evaluation_questions
@@ -179,7 +185,14 @@ def fetch_evaluation_run_data(conn, run_id: str) -> pd.DataFrame:
             "rag_context_recall",
             "rag_context_relevancy",
             "rag_answer_correctness",
+            "rag_citation_accuracy",
             "rag_hallucination_rate",
+            "rag_factual_consistency",
+            "rag_source_attribution",
+            "rag_contradiction_score",
+            "retrieval_ndcg",
+            "retrieval_mrr",
+            "retrieval_precision",
             "rag_latency_ms",
             "rag_retrieval_latency_ms",
             "rag_reranking_latency_ms",
@@ -188,6 +201,11 @@ def fetch_evaluation_run_data(conn, run_id: str) -> pd.DataFrame:
             "rag_planning_latency_ms",
             "rag_synthesis_latency_ms",
             "rag_avg_step_latency_ms",
+            "rag_tool_call_latency_ms",
+            "rag_tokens_per_second",
+            "agent_steps_used",
+            "retrieval_method",
+            "reranker_strategy",
             "non_rag_answer_relevancy",
             "non_rag_answer_correctness",
             "non_rag_hallucination_rate",
@@ -1042,10 +1060,19 @@ def run_analysis():
 
         rag_faithfulness = evaluation_data["rag_faithfulness"].dropna().values
         rag_relevancy = evaluation_data["rag_answer_relevancy"].dropna().values
+        rag_citation_accuracy = evaluation_data["rag_citation_accuracy"].dropna().values
+        rag_factual_consistency = evaluation_data["rag_factual_consistency"].dropna().values
+        rag_source_attribution = evaluation_data["rag_source_attribution"].dropna().values
+        rag_contradiction_score = evaluation_data["rag_contradiction_score"].dropna().values
+        retrieval_ndcg = evaluation_data["retrieval_ndcg"].dropna().values
+        retrieval_mrr = evaluation_data["retrieval_mrr"].dropna().values
+        retrieval_precision = evaluation_data["retrieval_precision"].dropna().values
         rag_latency = evaluation_data["rag_latency_ms"].dropna().values
         rag_planning = evaluation_data["rag_planning_latency_ms"].dropna().values
         rag_synthesis = evaluation_data["rag_synthesis_latency_ms"].dropna().values
         rag_avg_step = evaluation_data["rag_avg_step_latency_ms"].dropna().values
+        rag_tool_call = evaluation_data["rag_tool_call_latency_ms"].dropna().values
+        rag_tokens_per_sec = evaluation_data["rag_tokens_per_second"].dropna().values
 
         non_rag_relevancy = evaluation_data["non_rag_answer_relevancy"].dropna().values
         non_rag_latency = evaluation_data["non_rag_latency_ms"].dropna().values
@@ -1053,6 +1080,34 @@ def run_analysis():
         if len(rag_faithfulness) > 0:
             print("\nRAG Faithfulness:")
             print_descriptive_stats(calculate_descriptive_stats(rag_faithfulness))
+
+        if len(rag_citation_accuracy) > 0:
+            print("\nRAG Citation Accuracy:")
+            print_descriptive_stats(calculate_descriptive_stats(rag_citation_accuracy))
+
+        if len(rag_factual_consistency) > 0:
+            print("\nRAG Factual Consistency:")
+            print_descriptive_stats(calculate_descriptive_stats(rag_factual_consistency))
+
+        if len(rag_source_attribution) > 0:
+            print("\nRAG Source Attribution:")
+            print_descriptive_stats(calculate_descriptive_stats(rag_source_attribution))
+
+        if len(rag_contradiction_score) > 0:
+            print("\nRAG Contradiction Score (lower is better):")
+            print_descriptive_stats(calculate_descriptive_stats(rag_contradiction_score))
+
+        if len(retrieval_ndcg) > 0:
+            print("\nRetrieval NDCG:")
+            print_descriptive_stats(calculate_descriptive_stats(retrieval_ndcg))
+
+        if len(retrieval_mrr) > 0:
+            print("\nRetrieval MRR (Mean Reciprocal Rank):")
+            print_descriptive_stats(calculate_descriptive_stats(retrieval_mrr))
+
+        if len(retrieval_precision) > 0:
+            print("\nRetrieval Precision:")
+            print_descriptive_stats(calculate_descriptive_stats(retrieval_precision))
 
         if len(rag_relevancy) > 0:
             print("\nRAG Answer Relevancy:")
@@ -1073,6 +1128,14 @@ def run_analysis():
         if len(rag_avg_step) > 0 and np.any(rag_avg_step > 0):
             print("\nRAG Avg Step Latency (ms):")
             print_descriptive_stats(calculate_descriptive_stats(rag_avg_step))
+
+        if len(rag_tool_call) > 0 and np.any(rag_tool_call > 0):
+            print("\nRAG Tool Call Latency (ms):")
+            print_descriptive_stats(calculate_descriptive_stats(rag_tool_call))
+
+        if len(rag_tokens_per_sec) > 0 and np.any(rag_tokens_per_sec > 0):
+            print("\nRAG Tokens Per Second:")
+            print_descriptive_stats(calculate_descriptive_stats(rag_tokens_per_sec))
 
         # ===== 2. PAIRED T-TESTS WITH ASSUMPTION CHECKING =====
         print("\n" + "=" * 60)
@@ -1242,6 +1305,11 @@ def run_analysis():
                 )
             )
 
+        # Additional hallucination sub-metrics (RAG only - no non-RAG comparison)
+        rag_factual_consistency = evaluation_data["rag_factual_consistency"].dropna().values
+        rag_source_attribution = evaluation_data["rag_source_attribution"].dropna().values
+        rag_citation_accuracy = evaluation_data["rag_citation_accuracy"].dropna().values
+
         for comp in comparisons:
             print(f"\n{comp.metric} / {comp.metric_id}:")
             print(
@@ -1261,6 +1329,31 @@ def run_analysis():
                 print(
                     f"  Effect Size: {comp.test_result.effect_size:.3f} ({comp.test_result.effect_size_interpretation})"
                 )
+
+        # Display RAG-only detailed metrics
+        if len(rag_factual_consistency) > 0:
+            print("\n" + "-" * 50)
+            print("RAG Factual Consistency (detailed metric):")
+            stats = calculate_descriptive_stats(rag_factual_consistency)
+            mean, lower, upper, _ = confidence_interval(rag_factual_consistency, 0.95)
+            print(f"  Mean: {stats.mean:.4f} (SD: {stats.std_dev:.4f})")
+            print(f"  95% CI: [{lower:.4f}, {upper:.4f}]")
+
+        if len(rag_source_attribution) > 0:
+            print("\n" + "-" * 50)
+            print("RAG Source Attribution:")
+            stats = calculate_descriptive_stats(rag_source_attribution)
+            mean, lower, upper, _ = confidence_interval(rag_source_attribution, 0.95)
+            print(f"  Mean: {stats.mean:.4f} (SD: {stats.std_dev:.4f})")
+            print(f"  95% CI: [{lower:.4f}, {upper:.4f}]")
+
+        if len(rag_citation_accuracy) > 0:
+            print("\n" + "-" * 50)
+            print("RAG Citation Accuracy:")
+            stats = calculate_descriptive_stats(rag_citation_accuracy)
+            mean, lower, upper, _ = confidence_interval(rag_citation_accuracy, 0.95)
+            print(f"  Mean: {stats.mean:.4f} (SD: {stats.std_dev:.4f})")
+            print(f"  95% CI: [{lower:.4f}, {upper:.4f}]")
 
     # ===== 6. ABLATION STUDY ANALYSIS =====
     if len(ablation_data) > 0:
