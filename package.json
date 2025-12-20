@@ -17,7 +17,9 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "test:ai-models": "bun ./scripts/test-ai-models.ts"
+    "test:ai-models": "bun ./scripts/test-ai-models.ts",
+    "test:simulated-user": "bun ./scripts/run-simulated-user-tests.ts",
+    "test:simulated-user:quick": "bun ./scripts/run-simulated-user-tests.ts --quick"
   },
   "dependencies": {
     "@ai-sdk/azure": "^2.0.88",
