@@ -46,11 +46,31 @@ interface RetrievedChunk {
 }
 
 /**
- * Try to parse SSE JSON payload and extract retrieved chunks
+ * Result of parsing an SSE JSON payload
  */
-function tryParseSSEPayload(contentLine: string, retrievedChunks: RetrievedChunk[]): boolean {
+interface SSEParseResult {
+    handled: boolean;
+    textDelta?: string;
+}
+
+/**
+ * Try to parse SSE JSON payload and extract retrieved chunks or text deltas
+ *
+ * The newer Vercel AI SDK UI message stream format uses JSON payloads like:
+ * - {"type":"data-retrieved-chunk","data":{...}} - Retrieved document chunks
+ * - {"type":"text-delta","id":"0","delta":"..."} - Text content deltas
+ * - {"type":"text-end","id":"0"} - End of text stream
+ * - {"type":"data-agent-progress",...} - Agent progress updates (ignored for text)
+ * - {"type":"tool-input-start/delta/available",...} - Tool calls (ignored for text)
+ */
+function tryParseSSEPayload(contentLine: string, retrievedChunks: RetrievedChunk[]): SSEParseResult {
     try {
         const ssePayload = JSON.parse(contentLine);
+
+        // Handle text-delta type - this contains the actual response text
+        if (ssePayload?.type === "text-delta" && typeof ssePayload?.delta === "string") {
+            return { handled: true, textDelta: ssePayload.delta };
+        }
 
         // Handle data-retrieved-chunk type in SSE format
         if (ssePayload?.type === "data-retrieved-chunk" && ssePayload?.data) {
@@ -66,12 +86,29 @@ function tryParseSSEPayload(contentLine: string, retrievedChunks: RetrievedChunk
                     bm25Score: chunk.bm25Score,
                 });
             }
-            return true;
+            return { handled: true };
+        }
+
+        // Handle other known types that don't contribute to text
+        if (
+            ssePayload?.type === "data-agent-progress" ||
+            ssePayload?.type === "data-agent-step" ||
+            ssePayload?.type === "data-agent-result" ||
+            ssePayload?.type === "tool-input-start" ||
+            ssePayload?.type === "tool-input-delta" ||
+            ssePayload?.type === "tool-input-available" ||
+            ssePayload?.type === "tool-output-available" ||
+            ssePayload?.type === "start-step" ||
+            ssePayload?.type === "finish-step" ||
+            ssePayload?.type === "text-end" ||
+            ssePayload?.type === "finish"
+        ) {
+            return { handled: true };
         }
     } catch {
         // Not a JSON payload
     }
-    return false;
+    return { handled: false };
 }
 
 /**
@@ -122,14 +159,24 @@ function parseDataParts(dataStr: string, retrievedChunks: RetrievedChunk[]): voi
  * Parse Vercel AI SDK UI Message Stream format
  *
  * The stream format uses Server-Sent Events (SSE) with "data:" prefix.
- * Inside the SSE payload, the AI SDK uses a specific protocol with different message types:
+ * Inside the SSE payload, the AI SDK uses different message formats:
+ *
+ * NEW FORMAT (createUIMessageStream):
+ * - {"type":"text-delta","id":"0","delta":"..."} - Text chunks
+ * - {"type":"text-end","id":"0"} - End of text
+ * - {"type":"data-retrieved-chunk","data":{...}} - Retrieved chunks
+ * - {"type":"data-agent-progress",...} - Agent progress
+ * - {"type":"tool-input-start/delta/available",...} - Tool calls
+ * - {"type":"finish","finishReason":"stop"} - Stream finished
+ *
+ * LEGACY FORMAT (streamText):
  * - `0:` - Text chunks (JSON strings)
  * - `2:` - Data parts (arrays of data)
  * - `8:` - Finish messages
  * - `e:` - Error messages
  * - `d:` - Done signals
  *
- * This parser handles both the SSE wrapper and the AI SDK protocol.
+ * This parser handles both formats for compatibility.
  */
 function parseAISDKStream(rawStream: string): {
     text: string;
@@ -143,18 +190,32 @@ function parseAISDKStream(rawStream: string): {
         const trimmedLine = line.trim();
         if (!trimmedLine) continue;
 
+        // Skip SSE comments and [DONE] markers
+        if (trimmedLine.startsWith(":") || trimmedLine === "[DONE]" || trimmedLine === "data: [DONE]") {
+            continue;
+        }
+
         // Handle SSE format: "data: {...}" or direct protocol format "0:..."
         let contentLine = trimmedLine;
         if (trimmedLine.startsWith("data:")) {
             contentLine = trimmedLine.substring(5).trim();
 
-            // Try to parse as SSE JSON payload
-            if (tryParseSSEPayload(contentLine, retrievedChunks)) {
+            // Skip empty data or [DONE]
+            if (!contentLine || contentLine === "[DONE]") {
+                continue;
+            }
+
+            // Try to parse as SSE JSON payload (new format)
+            const sseResult = tryParseSSEPayload(contentLine, retrievedChunks);
+            if (sseResult.handled) {
+                if (sseResult.textDelta) {
+                    text += sseResult.textDelta;
+                }
                 continue;
             }
         }
 
-        // Parse AI SDK protocol format: TYPE:DATA
+        // Parse legacy AI SDK protocol format: TYPE:DATA
         const colonIndex = contentLine.indexOf(":");
         if (colonIndex === -1) continue;
 
@@ -163,11 +224,11 @@ function parseAISDKStream(rawStream: string): {
 
         switch (typeCode) {
             case "0":
-                // Text chunk
+                // Text chunk (legacy format)
                 text += parseTextChunk(dataStr);
                 break;
             case "2":
-                // Data parts
+                // Data parts (legacy format)
                 parseDataParts(dataStr, retrievedChunks);
                 break;
             default:

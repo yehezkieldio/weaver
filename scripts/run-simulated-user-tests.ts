@@ -223,7 +223,7 @@ async function main() {
         consola.info(`Running single scenario: ${scenario.name}\n`);
     } else if (args.quick) {
         // Quick mode: run first 3 scenarios
-        scenarios = ALL_SCENARIOS.slice(0, 3);
+        scenarios = ALL_SCENARIOS.slice(0, 2);
         consola.info(`Quick mode: Running ${scenarios.length} scenarios\n`);
     } else {
         consola.info(`Running all ${scenarios.length} scenarios\n`);
