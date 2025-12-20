@@ -72,7 +72,12 @@ async function runRequest(id: number): Promise<TestResult> {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                messages: [{ role: "user", content: question }],
+                messages: [
+                    {
+                        role: "user",
+                        parts: [{ type: "text", text: question }],
+                    },
+                ],
                 useRag: true,
                 useAgenticMode: false, // Use standard RAG for faster/simpler stress testing
                 stream: true,
