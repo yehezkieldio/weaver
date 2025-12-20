@@ -1,6 +1,188 @@
 import { parseArgs } from "node:util";
 import consola from "consola";
 
+/**
+ * Retrieved chunk structure from the API
+ */
+interface RetrievedChunk {
+    chunkId: string;
+    documentTitle: string;
+    content: string;
+    similarity: number;
+    retrievalMethod?: "vector" | "keyword" | "hybrid";
+    vectorScore?: number;
+    bm25Score?: number;
+}
+
+/**
+ * Result of parsing an SSE JSON payload
+ */
+interface SSEParseResult {
+    handled: boolean;
+    textDelta?: string;
+}
+
+/**
+ * Try to parse SSE JSON payload and extract retrieved chunks or text deltas
+ */
+function tryParseSSEPayload(contentLine: string, retrievedChunks: RetrievedChunk[]): SSEParseResult {
+    try {
+        const ssePayload = JSON.parse(contentLine);
+
+        // Handle text-delta type - this contains the actual response text
+        if (ssePayload?.type === "text-delta" && typeof ssePayload?.delta === "string") {
+            return { handled: true, textDelta: ssePayload.delta };
+        }
+
+        // Handle data-retrieved-chunk type in SSE format
+        if (ssePayload?.type === "data-retrieved-chunk" && ssePayload?.data) {
+            const chunk = ssePayload.data as RetrievedChunk;
+            if (chunk.chunkId && !retrievedChunks.some((c) => c.chunkId === chunk.chunkId)) {
+                retrievedChunks.push({
+                    chunkId: chunk.chunkId,
+                    documentTitle: chunk.documentTitle || "",
+                    content: chunk.content || "",
+                    similarity: chunk.similarity || 0,
+                    retrievalMethod: chunk.retrievalMethod,
+                    vectorScore: chunk.vectorScore,
+                    bm25Score: chunk.bm25Score,
+                });
+            }
+            return { handled: true };
+        }
+
+        // Handle other known types that don't contribute to text
+        if (
+            ssePayload?.type === "data-agent-progress" ||
+            ssePayload?.type === "data-agent-step" ||
+            ssePayload?.type === "data-agent-result" ||
+            ssePayload?.type === "tool-input-start" ||
+            ssePayload?.type === "tool-input-delta" ||
+            ssePayload?.type === "tool-input-available" ||
+            ssePayload?.type === "tool-output-available" ||
+            ssePayload?.type === "start-step" ||
+            ssePayload?.type === "finish-step" ||
+            ssePayload?.type === "text-end" ||
+            ssePayload?.type === "finish"
+        ) {
+            return { handled: true };
+        }
+    } catch {
+        // Not a JSON payload
+    }
+    return { handled: false };
+}
+
+/**
+ * Parse AI SDK protocol text chunks (type 0)
+ */
+function parseTextChunk(dataStr: string): string {
+    try {
+        const textContent = JSON.parse(dataStr);
+        if (typeof textContent === "string") {
+            return textContent;
+        }
+    } catch {
+        // Ignore parse errors
+    }
+    return "";
+}
+
+/**
+ * Parse AI SDK protocol data parts (type 2)
+ */
+function parseDataParts(dataStr: string, retrievedChunks: RetrievedChunk[]): void {
+    try {
+        const dataParts = JSON.parse(dataStr);
+        if (Array.isArray(dataParts)) {
+            for (const part of dataParts) {
+                if (part?.type === "data-retrieved-chunk" && part?.data) {
+                    const chunk = part.data as RetrievedChunk;
+                    if (chunk.chunkId && !retrievedChunks.some((c) => c.chunkId === chunk.chunkId)) {
+                        retrievedChunks.push({
+                            chunkId: chunk.chunkId,
+                            documentTitle: chunk.documentTitle || "",
+                            content: chunk.content || "",
+                            similarity: chunk.similarity || 0,
+                            retrievalMethod: chunk.retrievalMethod,
+                            vectorScore: chunk.vectorScore,
+                            bm25Score: chunk.bm25Score,
+                        });
+                    }
+                }
+            }
+        }
+    } catch {
+        // Ignore parse errors
+    }
+}
+
+/**
+ * Parse Vercel AI SDK UI Message Stream format
+ * Handles both new (createUIMessageStream) and legacy (streamText) formats
+ */
+function parseAISDKStream(rawStream: string): {
+    text: string;
+    retrievedChunks: RetrievedChunk[];
+} {
+    let text = "";
+    const retrievedChunks: RetrievedChunk[] = [];
+    const lines = rawStream.split("\n");
+
+    for (const line of lines) {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) continue;
+
+        // Skip SSE comments and [DONE] markers
+        if (trimmedLine.startsWith(":") || trimmedLine === "[DONE]" || trimmedLine === "data: [DONE]") {
+            continue;
+        }
+
+        // Handle SSE format: "data: {...}" or direct protocol format "0:..."
+        let contentLine = trimmedLine;
+        if (trimmedLine.startsWith("data:")) {
+            contentLine = trimmedLine.substring(5).trim();
+
+            // Skip empty data or [DONE]
+            if (!contentLine || contentLine === "[DONE]") {
+                continue;
+            }
+
+            // Try to parse as SSE JSON payload (new format)
+            const sseResult = tryParseSSEPayload(contentLine, retrievedChunks);
+            if (sseResult.handled) {
+                if (sseResult.textDelta) {
+                    text += sseResult.textDelta;
+                }
+                continue;
+            }
+        }
+
+        // Parse legacy AI SDK protocol format: TYPE:DATA
+        const colonIndex = contentLine.indexOf(":");
+        if (colonIndex === -1) continue;
+
+        const typeCode = contentLine.substring(0, colonIndex);
+        const dataStr = contentLine.substring(colonIndex + 1);
+
+        switch (typeCode) {
+            case "0":
+                // Text chunk (legacy format)
+                text += parseTextChunk(dataStr);
+                break;
+            case "2":
+                // Data parts (legacy format)
+                parseDataParts(dataStr, retrievedChunks);
+                break;
+            default:
+                // Types 8, e, d are finish/error/done signals - skip
+                break;
+        }
+    }
+
+    return { text, retrievedChunks };
+}
+
 // Regex constants for validation
 const REGEX_UNIVERSITAS_MULIA = /Universitas Mulia/i;
 const REGEX_UNIVERSITY = /University/i;
@@ -111,31 +293,23 @@ async function runTest(testCase: TestCase): Promise<boolean> {
             throw new Error(`HTTP ${response.status}`);
         }
 
-        // The API returns a stream even if we don't ask for it (based on route code),
-        // unless we use useChat hook client side.
-        // The route.ts always uses `streamText` or `createUIMessageStreamResponse`.
-        // So we must parse the stream.
-
+        // Read the full stream
         const reader = response.body?.getReader();
         if (!reader) throw new Error("No body");
 
         const decoder = new TextDecoder();
-        let fullText = "";
+        let rawStream = "";
 
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
-            const chunk = decoder.decode(value);
-            // The chunk is in AI SDK format, which is complex to parse manually regex.
-            // Format is typically: 0:"text content"\n
-            // We will just look for the raw text inside the chunks.
-            fullText += chunk;
+            rawStream += decoder.decode(value, { stream: true });
         }
+        // Final decode to flush any remaining bytes
+        rawStream += decoder.decode();
 
-        // Simple cleanup to extract readable text from stream protocol if needed.
-        // AI SDK stream format is like: 0:"Hello" 0:" world"
-        // We can just strip the protocol markers roughly.
-        const cleanText = fullText.replace(/^\d+:/gm, "").replace(/"/g, "").replace(/\n/g, " ");
+        // Parse the AI SDK stream format using the robust parser
+        const { text: cleanText } = parseAISDKStream(rawStream);
 
         if (VERBOSE) {
             consola.debug(`[Response]: ${cleanText.substring(0, 100)}...`);
