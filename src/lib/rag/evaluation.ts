@@ -123,6 +123,9 @@ export interface EvaluationMetrics {
 // Top-level regex used for token splitting to avoid re-creating the literal repeatedly
 export const WHITESPACE_REGEX = /\s+/;
 
+// UUID pattern for chunk ID format validation (moved to top-level for performance)
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // Zod schemas for structured LLM outputs
 const GroundingMetricsSchema = z.object({
     faithfulness: z.number().min(0).max(1).describe("How much of the answer is supported by context (0-1)"),
@@ -516,6 +519,68 @@ function clampScore(score: unknown): number {
     const num = Number(score);
     if (Number.isNaN(num)) return 0;
     return Math.max(0, Math.min(1, num));
+}
+
+/**
+ * Normalize chunk ID for consistent comparison
+ *
+ * WHY:
+ * - Retrieved chunk IDs may have different casing or whitespace
+ * - Ground truth IDs are canonical UUIDs (lowercase with hyphens)
+ * - Without normalization, exact string matching fails and retrieval metrics return 0
+ *
+ * @param id - Chunk ID to normalize
+ * @returns Normalized ID (lowercase, trimmed)
+ */
+function normalizeChunkId(id: string): string {
+    return id.trim().toLowerCase();
+}
+
+/**
+ * Check if two chunk IDs match (normalized comparison)
+ *
+ * @param id1 - First chunk ID
+ * @param id2 - Second chunk ID
+ * @returns True if IDs match after normalization
+ */
+function chunkIdsMatch(id1: string, id2: string): boolean {
+    return normalizeChunkId(id1) === normalizeChunkId(id2);
+}
+
+/**
+ * Detect if there's a format mismatch between ID sets and log diagnostic info
+ *
+ * @param retrievedIds - IDs from retrieval system
+ * @param relevantIds - Ground truth IDs
+ */
+function detectIdFormatMismatch(retrievedIds: string[], relevantIds: Set<string>): void {
+    if (retrievedIds.length === 0 || relevantIds.size === 0) return;
+
+    const sampleRetrieved = retrievedIds[0];
+    const sampleRelevant = [...relevantIds][0];
+
+    // Check for case mismatch
+    const hasCaseMismatch =
+        sampleRetrieved !== sampleRetrieved.toLowerCase() || sampleRelevant !== sampleRelevant.toLowerCase();
+
+    // Check for whitespace issues
+    const hasWhitespaceMismatch =
+        sampleRetrieved !== sampleRetrieved.trim() || sampleRelevant !== sampleRelevant.trim();
+
+    // Check UUID format using top-level constant
+    const retrievedIsUuid = UUID_PATTERN.test(sampleRetrieved);
+    const relevantIsUuid = UUID_PATTERN.test(sampleRelevant);
+
+    if (hasCaseMismatch || hasWhitespaceMismatch || !retrievedIsUuid || !relevantIsUuid) {
+        console.log("[ID Format Check] Potential mismatch detected:");
+        console.log(
+            `  - Retrieved sample: "${sampleRetrieved}" (${sampleRetrieved.length} chars, UUID: ${retrievedIsUuid})`
+        );
+        console.log(
+            `  - Relevant sample: "${sampleRelevant}" (${sampleRelevant.length} chars, UUID: ${relevantIsUuid})`
+        );
+        console.log(`  - Case mismatch: ${hasCaseMismatch}, Whitespace: ${hasWhitespaceMismatch}`);
+    }
 }
 
 // ============================================================================
@@ -1002,13 +1067,27 @@ Berikan skor KEBEBASAN KONTRADIKSI 0-1 (1 = tidak ada kontradiksi, 0 = kontradik
     }
 }
 
+/**
+ * Calculate Normalized Discounted Cumulative Gain (NDCG)
+ *
+ * NDCG measures ranking quality - how well relevant documents are ranked at the top.
+ * Uses normalized chunk ID comparison for robustness.
+ *
+ * @param retrievedIds - Array of retrieved chunk IDs (in order)
+ * @param relevantIds - Set of ground truth relevant chunk IDs
+ * @param k - Optional cutoff (NDCG@k)
+ * @returns NDCG score between 0 and 1
+ */
 export function calculateNDCG(retrievedIds: string[], relevantIds: Set<string>, k?: number): number {
     const results = k ? retrievedIds.slice(0, k) : retrievedIds;
     if (results.length === 0 || relevantIds.size === 0) return 0;
 
+    // Normalize relevant IDs for comparison
+    const normalizedRelevantIds = new Set([...relevantIds].map(normalizeChunkId));
+
     let dcg = 0;
     results.forEach((id, idx) => {
-        if (relevantIds.has(id)) {
+        if (normalizedRelevantIds.has(normalizeChunkId(id))) {
             // Formula: rel_i / log2(i + 1). In code: 1 / log2(idx + 2)
             dcg += 1 / Math.log2(idx + 2);
         }
@@ -1024,19 +1103,48 @@ export function calculateNDCG(retrievedIds: string[], relevantIds: Set<string>, 
     return idcg > 0 ? dcg / idcg : 0;
 }
 
+/**
+ * Calculate Mean Reciprocal Rank (MRR)
+ *
+ * MRR measures how early the first relevant result appears.
+ * Uses normalized chunk ID comparison for robustness.
+ *
+ * @param retrievedIds - Array of retrieved chunk IDs (in order)
+ * @param relevantIds - Set of ground truth relevant chunk IDs
+ * @returns MRR score between 0 and 1
+ */
 export function calculateMRR(retrievedIds: string[], relevantIds: Set<string>): number {
+    // Normalize relevant IDs for comparison
+    const normalizedRelevantIds = new Set([...relevantIds].map(normalizeChunkId));
+
     for (let i = 0; i < retrievedIds.length; i++) {
-        if (relevantIds.has(retrievedIds[i])) {
+        if (normalizedRelevantIds.has(normalizeChunkId(retrievedIds[i]))) {
             return 1 / (i + 1);
         }
     }
     return 0;
 }
 
+/**
+ * Calculate Retrieval Precision at K
+ *
+ * Precision measures what proportion of retrieved documents are relevant.
+ * Uses normalized chunk ID comparison for robustness.
+ *
+ * @param retrievedIds - Array of retrieved chunk IDs
+ * @param relevantIds - Set of ground truth relevant chunk IDs
+ * @param k - Optional cutoff (Precision@k)
+ * @returns Precision score between 0 and 1
+ */
 export function calculateRetrievalPrecision(retrievedIds: string[], relevantIds: Set<string>, k?: number): number {
     const results = k ? retrievedIds.slice(0, k) : retrievedIds;
-    const relevant = results.filter((id) => relevantIds.has(id)).length;
-    return results.length > 0 ? relevant / results.length : 0;
+    if (results.length === 0) return 0;
+
+    // Normalize relevant IDs for comparison
+    const normalizedRelevantIds = new Set([...relevantIds].map(normalizeChunkId));
+    const relevant = results.filter((id) => normalizedRelevantIds.has(normalizeChunkId(id))).length;
+
+    return relevant / results.length;
 }
 
 export async function calculateAllMetrics(
@@ -1084,16 +1192,26 @@ export async function calculateAllMetrics(
     // When relevantIds is undefined or empty, we can't calculate retrieval quality metrics
     const hasRetrievalGroundTruth = retrievedIds && retrievedIds.length > 0 && relevantIds && relevantIds.size > 0;
 
-    // Debug: Log the IDs being compared to understand matching issues
+    // Debug: Log the IDs being compared and detect format mismatches
     if (hasRetrievalGroundTruth) {
-        const relevantArray = Array.from(relevantIds);
-        const matchingIds = retrievedIds.filter((id) => relevantIds.has(id));
-        console.log("[calculateAllMetrics] Retrieval IDs debug:");
+        // Detect potential format issues (case, whitespace, non-UUID formats)
+        detectIdFormatMismatch(retrievedIds, relevantIds);
+
+        // Normalize both sets for comparison
+        const normalizedRetrieved = retrievedIds.map(normalizeChunkId);
+        const normalizedRelevant = new Set([...relevantIds].map(normalizeChunkId));
+
+        // Count matches using normalized comparison
+        const matchingIds = normalizedRetrieved.filter((id) => normalizedRelevant.has(id));
+
+        console.log("[calculateAllMetrics] Retrieval IDs debug (normalized comparison):");
         console.log(`  - Retrieved IDs (${retrievedIds.length}): ${retrievedIds.slice(0, 3).join(", ")}...`);
-        console.log(`  - Relevant IDs (${relevantArray.length}): ${relevantArray.slice(0, 3).join(", ")}...`);
-        console.log(`  - Matching IDs: ${matchingIds.length} matches`);
+        console.log(`  - Relevant IDs (${relevantIds.size}): ${[...relevantIds].slice(0, 3).join(", ")}...`);
+        console.log(`  - Matching IDs (normalized): ${matchingIds.length} matches`);
+
         if (matchingIds.length === 0) {
-            console.log("  - WARNING: No overlap between retrieved and relevant chunk IDs!");
+            console.log("  - WARNING: No overlap between retrieved and relevant chunk IDs even after normalization!");
+            console.log(`  - Sample comparison: "${normalizedRetrieved[0]}" vs "${[...normalizedRelevant][0]}"`);
         }
     }
 

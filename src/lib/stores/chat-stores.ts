@@ -42,7 +42,7 @@ import { immer } from "zustand/middleware/immer";
  */
 export interface AgentStep {
     stepIndex: number;
-    stepType: "reasoning" | "tool_call" | "retrieval" | "synthesis" | "reranking";
+    stepType: "reasoning" | "tool_call" | "retrieval" | "synthesis" | "reranking" | "planning";
     toolName?: string;
     toolInput?: Record<string, unknown>;
     toolOutput?: unknown;

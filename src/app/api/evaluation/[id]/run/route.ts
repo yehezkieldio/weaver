@@ -197,46 +197,36 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
                         retrievedContexts = agenticResult.retrievedChunks.map((c) => c.content);
                         retrievedChunkIds = agenticResult.retrievedChunks.map((c) => c.chunkId);
 
-                        // Calculate agentic-specific latencies from steps
+                        // Use actual tracked latencies from latencyBreakdown
                         agentStepsUsed = agenticResult.steps.length;
-                        for (const step of agenticResult.steps) {
-                            switch (step.stepType) {
-                                case "reasoning":
-                                    agentReasoningLatencyMs += step.durationMs;
-                                    break;
-                                case "tool_call":
-                                    toolCallLatencyMs += step.durationMs;
-                                    break;
-                                case "retrieval":
-                                    // Retrieval is tracked separately
-                                    break;
-                                case "synthesis":
-                                    synthesisLatencyMs += step.durationMs;
-                                    break;
-                                case "reranking":
-                                    // Reranking is part of retrieval
-                                    break;
-                                default:
-                                    // Unknown step type, ignore
-                                    break;
-                            }
-                        }
+                        const lb = agenticResult.latencyBreakdown;
 
-                        // Mark phases for latency tracker
+                        // Use directly from breakdown instead of iterating steps
+                        agentReasoningLatencyMs = lb.reasoningMs;
+                        toolCallLatencyMs = lb.toolCallMs;
+                        synthesisLatencyMs = lb.synthesisMs;
+                        planningLatencyMs = lb.planningMs;
+                        actualRetrievalMs = lb.retrievalMs;
+                        actualRerankingMs = lb.rerankingMs;
+
+                        // Generation time is total minus tracked phases
+                        actualGenerationMs = Math.max(
+                            0,
+                            agenticResult.totalLatencyMs - actualRetrievalMs - actualRerankingMs
+                        );
+
+                        // Mark phases for latency tracker (for metrics calculation)
                         latencyTracker.mark("retrieval");
                         if (useReranker) {
                             latencyTracker.mark("reranking");
                         }
                         latencyTracker.mark("generation");
 
-                        // For agentic mode, estimate breakdown from total time
-                        actualRetrievalMs = Math.round(agenticResult.totalLatencyMs * 0.3); // ~30% retrieval
-                        actualRerankingMs = useReranker ? Math.round(agenticResult.totalLatencyMs * 0.1) : 0; // ~10% reranking
-                        actualGenerationMs = agenticResult.totalLatencyMs - actualRetrievalMs - actualRerankingMs;
-                        planningLatencyMs = agentReasoningLatencyMs; // Planning is part of reasoning
-
                         console.log(
                             `[Evaluation Run] Agentic RAG completed - steps: ${agentStepsUsed}, chunks: ${retrievedChunkIds.length}, total: ${agenticResult.totalLatencyMs}ms`
+                        );
+                        console.log(
+                            `[Evaluation Run] Latency breakdown - planning: ${planningLatencyMs}ms, synthesis: ${synthesisLatencyMs}ms, toolCall: ${toolCallLatencyMs}ms, retrieval: ${actualRetrievalMs}ms`
                         );
                     } else {
                         // ==================== STANDARD RAG MODE ====================

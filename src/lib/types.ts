@@ -219,7 +219,7 @@ export interface StatisticalAnalysisResult {
  */
 export interface StreamingAgentStep {
     stepIndex: number;
-    stepType: "reasoning" | "tool_call" | "retrieval" | "synthesis" | "reranking";
+    stepType: "reasoning" | "tool_call" | "retrieval" | "synthesis" | "reranking" | "planning";
     toolName?: string;
     toolInput?: Record<string, unknown>;
     toolOutput?: unknown;
