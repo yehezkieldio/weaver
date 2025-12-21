@@ -199,8 +199,9 @@ class FigureGenerator:
 
         # Create boxplot with individual points
         colors = ["#2ecc71", "#e74c3c"]  # Green for RAG, Red for Non-RAG
-        box = sns.boxplot(x="System", y="Value", data=data, palette=colors, ax=ax, width=0.5)
-        sns.stripplot(x="System", y="Value", data=data, color="black", alpha=0.3, size=4, ax=ax)
+        box = sns.boxplot(x="System", y="Value", data=data, hue="System",
+                         palette=colors, ax=ax, width=0.5, legend=False)
+        sns.stripplot(x="System", y="Value", data=data, color="black", alpha=0.3, size=4, ax=ax, legend=False)
 
         # Add significance annotation
         if show_significance and p_value is not None:

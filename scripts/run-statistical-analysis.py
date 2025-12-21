@@ -321,15 +321,18 @@ def calculate_descriptive_stats(data: np.ndarray) -> DescriptiveStats:
     mad = np.median(np.abs(data - median))  # Median Absolute Deviation
     trimmed_mean = stats.trim_mean(data, 0.1) if len(data) > 10 else np.mean(data)  # 10% trimmed
 
-    # Standard statistics
-    kurtosis_val = stats.kurtosis(data) if len(data) > 3 else 0
-    skewness_val = stats.skew(data) if len(data) > 2 else 0
-
-    # Warn for extreme distributions
-    if abs(kurtosis_val) > 10:
-        print(f"  ⚠️  WARNING: Extreme kurtosis detected ({kurtosis_val:.2f}) - highly non-normal distribution")
-    if abs(skewness_val) > 2:
-        print(f"  ⚠️  WARNING: Extreme skewness detected ({skewness_val:.2f}) - asymmetric distribution")
+    # Standard statistics with edge case protection
+    try:
+        # Check if data has enough variance for reliable statistics
+        if np.std(data) < 1e-10:  # Nearly identical values
+            kurtosis_val = 0.0
+            skewness_val = 0.0
+        else:
+            kurtosis_val = stats.kurtosis(data) if len(data) > 3 else 0
+            skewness_val = stats.skew(data) if len(data) > 2 else 0
+    except Exception:
+        kurtosis_val = 0.0
+        skewness_val = 0.0
 
     return DescriptiveStats(
         n=len(data),
@@ -428,6 +431,10 @@ def check_normality(data: np.ndarray, alpha: float = 0.05) -> tuple[bool, float]
 
     if len(data) < 3:
         return True, 1.0  # Assume normal if too few samples
+
+    # Check for zero variance (identical data) - Shapiro-Wilk will fail
+    if np.std(data) < 1e-10:
+        return True, 1.0  # No variance means we can't test normality
 
     if len(data) > 5000:
         # Shapiro-Wilk not recommended for n > 5000
@@ -787,9 +794,10 @@ def kruskal_wallis_test(groups: list[np.ndarray], alpha: float = 0.05) -> TestRe
     stat, p_value = kruskal(*groups)
     significant = p_value < alpha
 
-    # Effect size (epsilon-squared)
+    # Effect size (epsilon-squared) with protection for negative values
     n = sum(len(g) for g in groups)
     epsilon_sq = (stat - len(groups) + 1) / (n - len(groups)) if n > len(groups) else 0
+    epsilon_sq = max(0, epsilon_sq)  # Ensure non-negative for sqrt
 
     interpretation = (
         f"Kruskal-Wallis H test shows a {'statistically significant' if significant else 'non-significant'} "

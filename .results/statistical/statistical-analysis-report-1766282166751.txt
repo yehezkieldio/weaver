@@ -1,0 +1,130 @@
+============================================================
+RAG Evaluation Statistical Analysis (Python)
+Analisis Statistik Evaluasi RAG (Python)
+============================================================
+
+📊 Figure generation enabled. Output: .results/statistical/figures-1766282166751
+Connecting to database...
+Loaded ablation study: 63c51b47-bdea-4696-b4df-7a7c6ac15bfc (9 configs)
+
+
+============================================================
+4. ONE-WAY ANOVA / ANOVA SATU ARAH (Ablation Study)
+--------------------------------------------------
+
+[ANOVA Data Validation]
+  Config "baseline_no_rag": n = 50 per-question scores
+  Config "vector_only": n = 50 per-question scores
+  Config "bm25_only": n = 50 per-question scores
+  Config "hybrid_no_rerank": n = 50 per-question scores
+  Config "hybrid_cross_encoder": n = 50 per-question scores
+  Config "hybrid_llm_rerank": n = 50 per-question scores
+  Config "hybrid_ensemble_rerank": n = 50 per-question scores
+  Config "agentic_mode": n = 50 per-question scores
+  Config "full_system": n = 50 per-question scores
+  ✓ All configurations have equal sample sizes (n = 50)
+
+[ANOVA Assumption Check]
+    Normality: ✗ Failed (p = 0.0000)
+    Homogeneity: ✗ Failed (p = 0.0152)
+    Outliers: 13 detected (2.9%)
+    Recommended Test: Kruskal-Wallis H (non-parametric)
+    ⚠️ Normality assumption violated - consider Kruskal-Wallis
+    ⚠️ Homogeneity violated - consider Welch's ANOVA
+  Assumptions Met: ✗ No
+
+[Test Used: Kruskal-Wallis H]
+
+Results for Faithfulness across configurations:
+  Statistic: 353.7274
+  p-value: 0.0000
+  Significant: Yes / Ya
+  Effect size: 0.7840
+  Effect interpretation: large
+
+  EN: Kruskal-Wallis H test shows a statistically significant difference among groups (H = 353.727, p = 0.0000).
+  ID: Uji Kruskal-Wallis H menunjukkan perbedaan yang signifikan secara statistik antar kelompok (H = 353.727, p = 0.0000).
+
+============================================================
+6. ABLATION STUDY ANALYSIS / ANALISIS STUDI ABLASI
+--------------------------------------------------
+
+Configuration Rankings (by Faithfulness):
+Peringkat Konfigurasi (berdasarkan Faithfulness):
+
+| Rank | Configuration                 | Mean   | 95% CI                |
+|------|------------------------------|--------|----------------------|
+| 1    | vector_only                  | 1.0000 | [1.000, 1.000]       |
+| 2    | hybrid_no_rerank             | 1.0000 | [1.000, 1.000]       |
+| 3    | hybrid_cross_encoder         | 1.0000 | [1.000, 1.000]       |
+| 4    | hybrid_ensemble_rerank       | 1.0000 | [1.000, 1.000]       |
+| 5    | full_system                  | 0.9800 | [0.940, 1.020]       |
+| 6    | agentic_mode                 | 0.9760 | [0.935, 1.017]       |
+| 7    | hybrid_llm_rerank            | 0.9600 | [0.904, 1.016]       |
+| 8    | bm25_only                    | 0.9340 | [0.890, 0.978]       |
+| 9    | baseline_no_rag              | 0.0000 | [0.000, 0.000]       |
+
+Best Configuration / Konfigurasi Terbaik: vector_only
+
+[Generating Comprehensive Ablation Study Figures...]
+  📊 Saved: .results/statistical/figures-1766282166751/ablation_ranking_faithfulness.png
+  📊 Saved: .results/statistical/figures-1766282166751/ablation_ranking_answer_relevancy.png
+  📊 Saved: .results/statistical/figures-1766282166751/ablation_ranking_context_precision.png
+  📊 Saved: .results/statistical/figures-1766282166751/ablation_ranking_answer_correctness.png
+  📊 Saved: .results/statistical/figures-1766282166751/ablation_multi_metric_comparison.png
+  📊 Saved: .results/statistical/figures-1766282166751/ablation_performance_heatmap.png
+  📊 Saved: .results/statistical/figures-1766282166751/ablation_detailed_comparison_table.png
+  📊 Saved: .results/statistical/figures-1766282166751/ablation_latency_comparison_table.png
+  📊 Saved: .results/statistical/figures-1766282166751/ablation_latency_boxplot.png
+  📊 Saved: .results/statistical/figures-1766282166751/ablation_radar_top2_comparison.png
+  📊 Saved: .results/statistical/figures-1766282166751/anova_results_summary_table.png
+  📊 Saved: .results/statistical/figures-1766282166751/violin_faithfulness.png
+  📊 Saved: .results/statistical/figures-1766282166751/violin_answer_relevancy.png
+  📊 Saved: .results/statistical/figures-1766282166751/violin_answer_correctness.png
+  📊 Saved: .results/statistical/figures-1766282166751/descriptive_stats_faithfulness_all_configs.png
+
+============================================================
+7. LATENCY ANALYSIS / ANALISIS LATENSI
+--------------------------------------------------
+
+Latency Statistics by Configuration (ms):
+Statistik Latensi per Konfigurasi (ms):
+
+| Configuration                 | Mean    | Median  | P95     | Std Dev |
+|------------------------------|---------|---------|---------|---------|
+| baseline_no_rag              | 103233.4 | 107517.0 | 182372.3 | 53927.7 |
+| vector_only                  | 264945.7 | 262940.0 | 499709.2 | 158489.5 |
+| bm25_only                    | 239152.0 | 240105.5 | 440186.9 | 136344.7 |
+| hybrid_no_rerank             | 265999.6 | 264923.5 | 500147.9 | 154265.4 |
+| hybrid_cross_encoder         | 276499.2 | 272567.0 | 515497.8 | 160359.8 |
+| hybrid_llm_rerank            | 309185.3 | 314317.0 | 562535.5 | 171789.8 |
+| hybrid_ensemble_rerank       | 404615.0 | 423959.5 | 683513.5 | 203909.8 |
+| agentic_mode                 | 321881.0 | 323859.5 | 573627.0 | 171706.0 |
+| full_system                  | 348197.6 | 359109.0 | 609212.6 | 178863.2 |
+
+============================================================
+Analysis Complete / Analisis Selesai
+============================================================
+
+[Generating Summary Dashboard...]
+  📊 Saved: .results/statistical/figures-1766282166751/summary_dashboard.png
+
+==================================================
+📊 Generated 16 figures in .results/statistical/figures-1766282166751
+==================================================
+  • ablation_ranking_faithfulness.png
+  • ablation_ranking_answer_relevancy.png
+  • ablation_ranking_context_precision.png
+  • ablation_ranking_answer_correctness.png
+  • ablation_multi_metric_comparison.png
+  • ablation_performance_heatmap.png
+  • ablation_detailed_comparison_table.png
+  • ablation_latency_comparison_table.png
+  • ablation_latency_boxplot.png
+  • ablation_radar_top2_comparison.png
+  • anova_results_summary_table.png
+  • violin_faithfulness.png
+  • violin_answer_relevancy.png
+  • violin_answer_correctness.png
+  • descriptive_stats_faithfulness_all_configs.png
+  • summary_dashboard.png
