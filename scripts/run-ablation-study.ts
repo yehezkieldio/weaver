@@ -1,16 +1,15 @@
-
+import { consola } from "consola";
+import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { ablationStudies } from "@/lib/db/schema";
 import { ACADEMIC_QUESTIONS } from "@/lib/evaluation-questions";
 import { ABLATION_CONFIGS, type AblationConfig, generateAblationReport, runAblationStudy } from "@/lib/rag/evaluation";
-import { eq } from "drizzle-orm";
-import { consola } from "consola";
 
 async function main() {
     const args = process.argv.slice(2);
-    const modeArg = args.find(arg => arg.startsWith("--mode="));
+    const modeArg = args.find((arg) => arg.startsWith("--mode="));
     const mode = modeArg ? modeArg.split("=")[1] : "quick";
-    
+
     if (mode !== "quick" && mode !== "production") {
         consola.error("Invalid mode. Use --mode=quick or --mode=production");
         process.exit(1);
@@ -22,7 +21,7 @@ async function main() {
     const questionCount = mode === "quick" ? 5 : 50;
     const configs: AblationConfig[] = ABLATION_CONFIGS; // Use all configs
     const selectedQuestions = ACADEMIC_QUESTIONS.slice(0, questionCount);
-    
+
     const testQuestions = selectedQuestions.map((q) => ({
         question: q.question,
         groundTruth: q.groundTruth,
@@ -57,7 +56,9 @@ async function main() {
     try {
         const ablationResults = await runAblationStudy(testQuestions, configs, {
             onProgress: (configIdx, questionIdx, totalConfigs, totalQuestions) => {
-                consola.info(`[${configIdx + 1}/${totalConfigs}] Config: ${configs[configIdx].name} - Question ${questionIdx + 1}/${totalQuestions}`);
+                consola.info(
+                    `[${configIdx + 1}/${totalConfigs}] Config: ${configs[configIdx].name} - Question ${questionIdx + 1}/${totalQuestions}`
+                );
             },
         });
 
@@ -117,15 +118,13 @@ async function main() {
             })
             .where(eq(ablationStudies.id, study.id));
 
-        consola.success(`Ablation study completed successfully!`);
-        consola.info(`Run 'python scripts/run-statistical-analysis-v2.py --ablation-id=${study.id}' to analyze results.`);
-
+        consola.success("Ablation study completed successfully!");
+        consola.info(
+            `Run 'python scripts/run-statistical-analysis-v2.py --ablation-id=${study.id}' to analyze results.`
+        );
     } catch (error) {
         consola.error("Ablation study failed:", error);
-        await db
-            .update(ablationStudies)
-            .set({ status: "failed" })
-            .where(eq(ablationStudies.id, study.id));
+        await db.update(ablationStudies).set({ status: "failed" }).where(eq(ablationStudies.id, study.id));
         process.exit(1);
     }
 }

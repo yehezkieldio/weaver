@@ -30,7 +30,22 @@ import { documents } from "@/lib/db/schema";
  */
 export async function GET() {
     try {
-        const docs = await db.select().from(documents).orderBy(desc(documents.createdAt));
+        const docs = await db
+            .select({
+                id: documents.id,
+                title: documents.title,
+                fileName: documents.fileName,
+                fileType: documents.fileType,
+                fileSize: documents.fileSize,
+                processingStatus: documents.processingStatus,
+                processingError: documents.processingError,
+                chunkingStrategy: documents.chunkingStrategy,
+                metadata: documents.metadata,
+                createdAt: documents.createdAt,
+                updatedAt: documents.updatedAt,
+            })
+            .from(documents)
+            .orderBy(desc(documents.createdAt));
 
         return Response.json({ documents: docs });
     } catch (error) {
