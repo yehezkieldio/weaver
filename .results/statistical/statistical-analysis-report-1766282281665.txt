@@ -1,0 +1,472 @@
+============================================================
+RAG Evaluation Statistical Analysis (Python)
+Analisis Statistik Evaluasi RAG (Python)
+============================================================
+
+📊 Figure generation enabled. Output: .results/statistical/figures-1766282281665
+Connecting to database...
+Loaded latest evaluation run: Production 1 (50 questions)
+Loaded latest ablation study: CLI Ablation Study 2025-12-20T23:35:28.142Z (9 configs)
+
+============================================================
+1. DESCRIPTIVE STATISTICS / STATISTIK DESKRIPTIF
+--------------------------------------------------
+
+RAG Faithfulness:
+  N: 50
+  Mean: 0.9960
+  Median: 1.0000
+  Std Dev: 0.0283
+  Min: 0.8000
+  Max: 1.0000
+  SEM: 0.0040
+  Skewness: -6.8571
+  Kurtosis: 45.0204
+
+  Robust Statistics (for non-normal distribution):
+    Trimmed Mean (10%): 1.0000
+    MAD (Median Absolute Deviation): 0.0000
+    Percentiles: P25=1.0000, P75=1.0000, P90=1.0000, P95=1.0000, P99=1.0000
+    IQR: 0.0000
+
+RAG Citation Accuracy:
+  N: 50
+  Mean: 0.7480
+  Median: 0.8000
+  Std Dev: 0.1414
+  Min: 0.2000
+  Max: 0.9000
+  SEM: 0.0200
+  Skewness: -1.5666
+  Kurtosis: 3.1540
+
+  Robust Statistics (for non-normal distribution):
+    Trimmed Mean (10%): 0.7650
+    MAD (Median Absolute Deviation): 0.1000
+    Percentiles: P25=0.7000, P75=0.8000, P90=0.9000, P95=0.9000, P99=0.9000
+    IQR: 0.1000
+
+RAG Factual Consistency:
+  N: 50
+  Mean: 0.9960
+  Median: 1.0000
+  Std Dev: 0.0283
+  Min: 0.8000
+  Max: 1.0000
+  SEM: 0.0040
+  Skewness: -6.8571
+  Kurtosis: 45.0204
+
+  Robust Statistics (for non-normal distribution):
+    Trimmed Mean (10%): 1.0000
+    MAD (Median Absolute Deviation): 0.0000
+    Percentiles: P25=1.0000, P75=1.0000, P90=1.0000, P95=1.0000, P99=1.0000
+    IQR: 0.0000
+
+RAG Source Attribution:
+  N: 50
+  Mean: 0.9674
+  Median: 1.0000
+  Std Dev: 0.1502
+  Min: 0.0000
+  Max: 1.0000
+  SEM: 0.0212
+  Skewness: -5.6863
+  Kurtosis: 33.1705
+
+  Robust Statistics (for non-normal distribution):
+    Trimmed Mean (10%): 1.0000
+    MAD (Median Absolute Deviation): 0.0000
+    Percentiles: P25=1.0000, P75=1.0000, P90=1.0000, P95=1.0000, P99=1.0000
+    IQR: 0.0000
+
+RAG Contradiction Score (lower is better):
+  N: 50
+  Mean: 0.9980
+  Median: 1.0000
+  Std Dev: 0.0141
+  Min: 0.9000
+  Max: 1.0000
+  SEM: 0.0020
+  Skewness: -6.8571
+  Kurtosis: 45.0204
+
+  Robust Statistics (for non-normal distribution):
+    Trimmed Mean (10%): 1.0000
+    MAD (Median Absolute Deviation): 0.0000
+    Percentiles: P25=1.0000, P75=1.0000, P90=1.0000, P95=1.0000, P99=1.0000
+    IQR: 0.0000
+
+Retrieval NDCG:
+  N: 50
+  Mean: 0.5530
+  Median: 0.6035
+  Std Dev: 0.2384
+  Min: 0.0946
+  Max: 1.0000
+  SEM: 0.0337
+  Skewness: -0.2881
+  Kurtosis: -0.9454
+
+Retrieval MRR (Mean Reciprocal Rank):
+  N: 50
+  Mean: 0.7908
+  Median: 1.0000
+  Std Dev: 0.3197
+  Min: 0.0909
+  Max: 1.0000
+  SEM: 0.0452
+  Skewness: -1.0001
+  Kurtosis: -0.7087
+
+  Robust Statistics (for non-normal distribution):
+    Trimmed Mean (10%): 0.8438
+    MAD (Median Absolute Deviation): 0.0000
+    Percentiles: P25=0.5000, P75=1.0000, P90=1.0000, P95=1.0000, P99=1.0000
+    IQR: 0.5000
+
+Retrieval Precision:
+  N: 50
+  Mean: 0.2165
+  Median: 0.2000
+  Std Dev: 0.1052
+  Min: 0.0476
+  Max: 0.5000
+  SEM: 0.0149
+  Skewness: 0.7972
+  Kurtosis: 0.6252
+
+RAG Answer Relevancy:
+  N: 50
+  Mean: 0.7808
+  Median: 0.7832
+  Std Dev: 0.0692
+  Min: 0.5833
+  Max: 0.9487
+  SEM: 0.0098
+  Skewness: -0.0569
+  Kurtosis: 0.5414
+
+RAG Latency (ms):
+  N: 50
+  Mean: 11560.9600
+  Median: 13029.5000
+  Std Dev: 5823.1468
+  Min: 2360.0000
+  Max: 24421.0000
+  SEM: 823.5173
+  Skewness: -0.1092
+  Kurtosis: -0.6914
+
+RAG Planning Latency (ms):
+  N: 50
+  Mean: 777.4200
+  Median: 754.5000
+  Std Dev: 615.4853
+  Min: 235.0000
+  Max: 4750.0000
+  SEM: 87.0428
+  Skewness: 5.4964
+  Kurtosis: 33.2382
+
+  Robust Statistics (for non-normal distribution):
+    Trimmed Mean (10%): 710.8000
+    MAD (Median Absolute Deviation): 93.5000
+    Percentiles: P25=578.0000, P75=821.7500, P90=879.2000, P95=954.7500, P99=3152.1100
+    IQR: 243.7500
+
+RAG Synthesis Latency (ms):
+  N: 50
+  Mean: 1119.6600
+  Median: 1165.0000
+  Std Dev: 484.3203
+  Min: 222.0000
+  Max: 2290.0000
+  SEM: 68.4932
+  Skewness: 0.0405
+  Kurtosis: -0.3717
+
+RAG Avg Step Latency (ms):
+  N: 50
+  Mean: 2420.2800
+  Median: 2373.5000
+  Std Dev: 1208.8819
+  Min: 1020.0000
+  Max: 8811.0000
+  SEM: 170.9617
+  Skewness: 2.9297
+  Kurtosis: 13.6586
+
+  Robust Statistics (for non-normal distribution):
+    Trimmed Mean (10%): 2301.6000
+    MAD (Median Absolute Deviation): 650.0000
+    Percentiles: P25=1660.0000, P75=2973.0000, P90=3266.3000, P95=3676.2000, P99=6434.5000
+    IQR: 1313.0000
+
+RAG Tool Call Latency (ms):
+  N: 50
+  Mean: 9726.3000
+  Median: 10845.5000
+  Std Dev: 5502.0637
+  Min: 941.0000
+  Max: 21555.0000
+  SEM: 778.1093
+  Skewness: -0.1192
+  Kurtosis: -0.7046
+
+RAG Tokens Per Second:
+  N: 50
+  Mean: 10.9954
+  Median: 11.1754
+  Std Dev: 5.0158
+  Min: 2.2789
+  Max: 31.3105
+  SEM: 0.7093
+  Skewness: 1.2703
+  Kurtosis: 3.6955
+
+  Robust Statistics (for non-normal distribution):
+    Trimmed Mean (10%): 10.6331
+    MAD (Median Absolute Deviation): 2.9551
+    Percentiles: P25=7.7643, P75=13.7437, P90=16.1104, P95=17.9761, P99=25.9345
+    IQR: 5.9795
+
+[Generating Descriptive Statistics Figure...]
+  📊 Saved: .results/statistical/figures-1766282281665/descriptive_stats_table.png
+  📊 Saved: .results/statistical/figures-1766282281665/latency_distribution.png
+
+============================================================
+2. PAIRED T-TESTS WITH ASSUMPTION CHECKING / UJI T BERPASANGAN DENGAN VALIDASI ASUMSI
+--------------------------------------------------
+
+2.1 Answer Relevancy: RAG vs Non-RAG
+
+  [Assumption Check]
+    Normality: ✓ Passed (p = 0.7367)
+    Homogeneity: ✓ Passed (p = 0.5930)
+    Outliers: 3 detected (3.0%)
+    Recommended Test: Independent t-test
+
+  [Test Used: Paired t-test]
+  Test: Paired t-test / Uji t Berpasangan
+  Statistic: 1.2115
+  p-value: 0.2315
+  Degrees of Freedom: 49
+  Significant (α=0.05): No / Tidak
+  Effect Size: 0.1713 (negligible)
+  95% CI: [-0.0087, 0.0352]
+
+  EN: The paired t-test shows a non-significant difference between the two conditions (t(49) = 1.212, p = 0.2315).
+  ID: Uji t berpasangan menunjukkan perbedaan yang tidak signifikan antara kedua kondisi (t(49) = 1.212, p = 0.2315).
+
+2.2 Latency: RAG vs Non-RAG
+
+  [Assumption Check]
+    Normality: ✗ Failed (p = 0.0172)
+    Homogeneity: ✗ Failed (p = 0.0000)
+    Outliers: 0 detected (0.0%)
+    Recommended Test: Welch's t-test (unequal variances)
+    ⚠️ Normality assumption violated - consider Mann-Whitney U
+    ⚠️ Homogeneity violated - Welch's t-test recommended
+
+  [Test Used: Wilcoxon Signed-Rank]
+  Test: Wilcoxon Signed-Rank / Uji Wilcoxon Signed-Rank
+  Statistic: 1.0000
+  p-value: 0.0000
+  Significant (α=0.05): Yes / Ya
+  Effect Size: 0.9984 (large)
+
+  EN: The Wilcoxon signed-rank test shows a statistically significant difference between conditions (W = 1.0, p = 0.0000).
+  ID: Uji Wilcoxon signed-rank menunjukkan perbedaan yang signifikan secara statistik antara kondisi (W = 1.0, p = 0.0000).
+
+============================================================
+3. CONFIDENCE INTERVALS / INTERVAL KEPERCAYAAN
+--------------------------------------------------
+
+95% CI for RAG Faithfulness:
+  Mean: 0.9960
+  95% CI: [0.9880, 1.0040]
+  Margin of Error: ±0.0080
+
+Bootstrap 95% CI for RAG Faithfulness:
+  Estimate: 0.9960
+  95% CI: [0.9880, 1.0000]
+
+============================================================
+4. ONE-WAY ANOVA / ANOVA SATU ARAH (Ablation Study)
+--------------------------------------------------
+
+[ANOVA Data Validation]
+  Config "baseline_no_rag": n = 50 per-question scores
+  Config "vector_only": n = 50 per-question scores
+  Config "bm25_only": n = 50 per-question scores
+  Config "hybrid_no_rerank": n = 50 per-question scores
+  Config "hybrid_cross_encoder": n = 50 per-question scores
+  Config "hybrid_llm_rerank": n = 50 per-question scores
+  Config "hybrid_ensemble_rerank": n = 50 per-question scores
+  Config "agentic_mode": n = 50 per-question scores
+  Config "full_system": n = 50 per-question scores
+  ✓ All configurations have equal sample sizes (n = 50)
+
+[ANOVA Assumption Check]
+    Normality: ✗ Failed (p = 0.0000)
+    Homogeneity: ✗ Failed (p = 0.0152)
+    Outliers: 13 detected (2.9%)
+    Recommended Test: Kruskal-Wallis H (non-parametric)
+    ⚠️ Normality assumption violated - consider Kruskal-Wallis
+    ⚠️ Homogeneity violated - consider Welch's ANOVA
+  Assumptions Met: ✗ No
+
+[Test Used: Kruskal-Wallis H]
+
+Results for Faithfulness across configurations:
+  Statistic: 353.7274
+  p-value: 0.0000
+  Significant: Yes / Ya
+  Effect size: 0.7840
+  Effect interpretation: large
+
+  EN: Kruskal-Wallis H test shows a statistically significant difference among groups (H = 353.727, p = 0.0000).
+  ID: Uji Kruskal-Wallis H menunjukkan perbedaan yang signifikan secara statistik antar kelompok (H = 353.727, p = 0.0000).
+
+============================================================
+5. COMPREHENSIVE RAG vs NON-RAG COMPARISON
+--------------------------------------------------
+
+Answer Relevancy / Relevansi Jawaban:
+  RAG Mean: 0.7808 (SD: 0.0692)
+  Non-RAG Mean: 0.7676 (SD: 0.0627)
+  Improvement: +0.0132 (1.7%)
+  Significant: No / Tidak (p = 0.2315)
+  Effect Size: 0.171 (negligible)
+
+Answer Correctness / Kebenaran Jawaban:
+  RAG Mean: 0.8037 (SD: 0.1415)
+  Non-RAG Mean: 0.6246 (SD: 0.2029)
+  Improvement: +0.1791 (28.7%)
+  Significant: Yes / Ya (p = 0.0000)
+  Effect Size: 0.804 (large)
+
+Factual Accuracy (1 - Hallucination) / Akurasi Faktual (1 - Halusinasi):
+  RAG Mean: 0.9980 (SD: 0.0141)
+  Non-RAG Mean: 0.7140 (SD: 0.1629)
+  Improvement: +0.2840 (39.8%)
+  Significant: Yes / Ya (p = 0.0000)
+  Effect Size: 1.000 (large)
+
+--------------------------------------------------
+RAG Factual Consistency (detailed metric):
+  Mean: 0.9960 (SD: 0.0283)
+  95% CI: [0.9880, 1.0040]
+
+--------------------------------------------------
+RAG Source Attribution:
+  Mean: 0.9674 (SD: 0.1502)
+  95% CI: [0.9247, 1.0101]
+
+--------------------------------------------------
+RAG Citation Accuracy:
+  Mean: 0.7480 (SD: 0.1414)
+  95% CI: [0.7078, 0.7882]
+
+[Generating Comparison Figures...]
+  📊 Saved: .results/statistical/figures-1766282281665/comparison_answer_relevancy.png
+  📊 Saved: .results/statistical/figures-1766282281665/comparison_answer_correctness.png
+  📊 Saved: .results/statistical/figures-1766282281665/comparison_factual_accuracy_1_-_hallucination.png
+  📊 Saved: .results/statistical/figures-1766282281665/statistical_test_results_table.png
+  📊 Saved: .results/statistical/figures-1766282281665/rag_vs_nonrag_comparison_summary.png
+  📊 Saved: .results/statistical/figures-1766282281665/effect_sizes_forest_plot.png
+  📊 Saved: .results/statistical/figures-1766282281665/radar_metrics_overview.png
+
+============================================================
+6. ABLATION STUDY ANALYSIS / ANALISIS STUDI ABLASI
+--------------------------------------------------
+
+Configuration Rankings (by Faithfulness):
+Peringkat Konfigurasi (berdasarkan Faithfulness):
+
+| Rank | Configuration                 | Mean   | 95% CI                |
+|------|------------------------------|--------|----------------------|
+| 1    | vector_only                  | 1.0000 | [1.000, 1.000]       |
+| 2    | hybrid_no_rerank             | 1.0000 | [1.000, 1.000]       |
+| 3    | hybrid_cross_encoder         | 1.0000 | [1.000, 1.000]       |
+| 4    | hybrid_ensemble_rerank       | 1.0000 | [1.000, 1.000]       |
+| 5    | full_system                  | 0.9800 | [0.940, 1.020]       |
+| 6    | agentic_mode                 | 0.9760 | [0.935, 1.017]       |
+| 7    | hybrid_llm_rerank            | 0.9600 | [0.904, 1.016]       |
+| 8    | bm25_only                    | 0.9340 | [0.890, 0.978]       |
+| 9    | baseline_no_rag              | 0.0000 | [0.000, 0.000]       |
+
+Best Configuration / Konfigurasi Terbaik: vector_only
+
+[Generating Comprehensive Ablation Study Figures...]
+  📊 Saved: .results/statistical/figures-1766282281665/ablation_ranking_faithfulness.png
+  📊 Saved: .results/statistical/figures-1766282281665/ablation_ranking_answer_relevancy.png
+  📊 Saved: .results/statistical/figures-1766282281665/ablation_ranking_context_precision.png
+  📊 Saved: .results/statistical/figures-1766282281665/ablation_ranking_answer_correctness.png
+  📊 Saved: .results/statistical/figures-1766282281665/ablation_multi_metric_comparison.png
+  📊 Saved: .results/statistical/figures-1766282281665/ablation_performance_heatmap.png
+  📊 Saved: .results/statistical/figures-1766282281665/ablation_detailed_comparison_table.png
+  📊 Saved: .results/statistical/figures-1766282281665/ablation_latency_comparison_table.png
+  📊 Saved: .results/statistical/figures-1766282281665/ablation_latency_boxplot.png
+  📊 Saved: .results/statistical/figures-1766282281665/ablation_radar_top2_comparison.png
+  📊 Saved: .results/statistical/figures-1766282281665/anova_results_summary_table.png
+  📊 Saved: .results/statistical/figures-1766282281665/violin_faithfulness.png
+  📊 Saved: .results/statistical/figures-1766282281665/violin_answer_relevancy.png
+  📊 Saved: .results/statistical/figures-1766282281665/violin_answer_correctness.png
+  📊 Saved: .results/statistical/figures-1766282281665/descriptive_stats_faithfulness_all_configs.png
+
+============================================================
+7. LATENCY ANALYSIS / ANALISIS LATENSI
+--------------------------------------------------
+
+Latency Statistics by Configuration (ms):
+Statistik Latensi per Konfigurasi (ms):
+
+| Configuration                 | Mean    | Median  | P95     | Std Dev |
+|------------------------------|---------|---------|---------|---------|
+| baseline_no_rag              | 103233.4 | 107517.0 | 182372.3 | 53927.7 |
+| vector_only                  | 264945.7 | 262940.0 | 499709.2 | 158489.5 |
+| bm25_only                    | 239152.0 | 240105.5 | 440186.9 | 136344.7 |
+| hybrid_no_rerank             | 265999.6 | 264923.5 | 500147.9 | 154265.4 |
+| hybrid_cross_encoder         | 276499.2 | 272567.0 | 515497.8 | 160359.8 |
+| hybrid_llm_rerank            | 309185.3 | 314317.0 | 562535.5 | 171789.8 |
+| hybrid_ensemble_rerank       | 404615.0 | 423959.5 | 683513.5 | 203909.8 |
+| agentic_mode                 | 321881.0 | 323859.5 | 573627.0 | 171706.0 |
+| full_system                  | 348197.6 | 359109.0 | 609212.6 | 178863.2 |
+
+============================================================
+Analysis Complete / Analisis Selesai
+============================================================
+
+[Generating Summary Dashboard...]
+  📊 Saved: .results/statistical/figures-1766282281665/summary_dashboard.png
+
+==================================================
+📊 Generated 25 figures in .results/statistical/figures-1766282281665
+==================================================
+  • descriptive_stats_table.png
+  • latency_distribution.png
+  • comparison_answer_relevancy.png
+  • comparison_answer_correctness.png
+  • comparison_factual_accuracy_1_-_hallucination.png
+  • statistical_test_results_table.png
+  • rag_vs_nonrag_comparison_summary.png
+  • effect_sizes_forest_plot.png
+  • radar_metrics_overview.png
+  • ablation_ranking_faithfulness.png
+  • ablation_ranking_answer_relevancy.png
+  • ablation_ranking_context_precision.png
+  • ablation_ranking_answer_correctness.png
+  • ablation_multi_metric_comparison.png
+  • ablation_performance_heatmap.png
+  • ablation_detailed_comparison_table.png
+  • ablation_latency_comparison_table.png
+  • ablation_latency_boxplot.png
+  • ablation_radar_top2_comparison.png
+  • anova_results_summary_table.png
+  • violin_faithfulness.png
+  • violin_answer_relevancy.png
+  • violin_answer_correctness.png
+  • descriptive_stats_faithfulness_all_configs.png
+  • summary_dashboard.png
