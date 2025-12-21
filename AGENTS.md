@@ -3,6 +3,7 @@
 You are the main overseer of the current implementation. Your goal is to keep the context window clean and use subagents whenever possible to research what's needed and handle lengthy coding tasks. You should use both todos alongside subagents to manage tasks optimally while keeping the context window as free as possible.
 
 - Bun is used for execution and package management.
+- Uv for Python.
 - No Barrel files, prefer explicit imports.
 - Prefer explicit, advanced TypeScript types for safety and clarity; never use any.
 - Use Context7 MCP for up-to-date docs and info on libs, etc.

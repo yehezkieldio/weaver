@@ -1,20 +1,3 @@
-#!/usr/bin/env python3
-"""
-RAG Evaluation Statistical Analysis Script
-
-A Python implementation using battle-tested libraries:
-- scipy: Statistical tests (t-tests, ANOVA, normality tests)
-- pandas: Data manipulation and aggregation
-- numpy: Numerical computations
-- matplotlib/seaborn: Publication-quality visualizations for IMRAD papers
-
-Usage:
-    python scripts/run-statistical-analysis.py --latest
-    python scripts/run-statistical-analysis.py --run-id=<uuid>
-    python scripts/run-statistical-analysis.py --ablation-id=<uuid>
-    python scripts/run-statistical-analysis.py --latest --figures
-"""
-
 import argparse
 import json
 import os
@@ -1066,9 +1049,9 @@ def run_analysis():
                 "Please run an evaluation first or provide --run-id or --ablation-id."
             )
             print("\nUsage:")
-            print("  python scripts/run-statistical-analysis.py --latest")
-            print("  python scripts/run-statistical-analysis.py --run-id=<uuid>")
-            print("  python scripts/run-statistical-analysis.py --ablation-id=<uuid>")
+            print("  uv run scripts/run-statistical-analysis.py --latest")
+            print("  uv run scripts/run-statistical-analysis.py --run-id=<uuid>")
+            print("  uv run scripts/run-statistical-analysis.py --ablation-id=<uuid>")
             return
 
     except Exception as e:
@@ -1445,6 +1428,47 @@ def run_analysis():
                     comp.test_result.p_value,
                 )
 
+            # ===== FIGURE: Statistical Test Results Table =====
+            test_results_list = []
+            for comp in comparisons:
+                test_results_list.append({
+                    "metric_id": comp.metric_id,
+                    "test_name_id": comp.test_result.test_name_id,
+                    "statistic": comp.test_result.statistic,
+                    "p_value": comp.test_result.p_value,
+                    "effect_size": comp.test_result.effect_size,
+                    "effect_size_interpretation": comp.test_result.effect_size_interpretation,
+                })
+
+            fig_gen.create_statistical_test_results_table(
+                test_results_list,
+                "statistical_test_results_table",
+                "Statistical Test Results: RAG vs Non-RAG",
+                "Hasil Uji Statistik: RAG vs Non-RAG",
+            )
+
+            # ===== FIGURE: Comparison Summary Table =====
+            comparison_summary = []
+            for comp in comparisons:
+                comparison_summary.append({
+                    "Metrik": comp.metric_id,
+                    "RAG (μ)": f"{comp.rag_stats.mean:.4f}",
+                    "Non-RAG (μ)": f"{comp.non_rag_stats.mean:.4f}",
+                    "Δ": f"{comp.improvement:.4f}",
+                    "Δ%": f"{comp.improvement_percent:.1f}%",
+                    "p-value": f"{comp.test_result.p_value:.4f}",
+                    "Cohen's d": f"{comp.test_result.effect_size:.3f}" if comp.test_result.effect_size else "N/A",
+                })
+
+            comp_df = pd.DataFrame(comparison_summary)
+            fig_gen.save_table_as_image(
+                comp_df,
+                "RAG vs Non-RAG Comparison Summary",
+                "rag_vs_nonrag_comparison_summary",
+                "Ringkasan Perbandingan RAG vs Non-RAG",
+                highlight_cols=["Δ%"],
+            )
+
             # ===== FIGURE: Forest Plot for Effect Sizes =====
             effect_sizes = [comp.test_result.effect_size or 0 for comp in comparisons]
             cis = []
@@ -1523,9 +1547,11 @@ def run_analysis():
         if rankings:
             print(f"\nBest Configuration / Konfigurasi Terbaik: {rankings[0][0]}")
 
-            # ===== FIGURE: Ablation Ranking Bar Chart =====
+            # ===== COMPREHENSIVE ABLATION FIGURES =====
             if fig_gen:
-                print("\n[Generating Ablation Study Figures...]")
+                print("\n[Generating Comprehensive Ablation Study Figures...]")
+
+                # 1. Ranking bar chart for Faithfulness
                 config_names = [r[0] for r in rankings]
                 metric_values = [r[1] for r in rankings]
                 confidence_intervals = [(r[2], r[3]) for r in rankings]
@@ -1539,6 +1565,114 @@ def run_analysis():
                     confidence_intervals=confidence_intervals,
                     highlight_best=True,
                 )
+
+                # 2. Additional rankings for other metrics
+                for metric, metric_id in [
+                    ("answer_relevancy", "Relevansi Jawaban"),
+                    ("context_precision", "Presisi Konteks"),
+                    ("answer_correctness", "Kebenaran Jawaban"),
+                ]:
+                    metric_rankings = []
+                    for config_name, df in ablation_data.items():
+                        if metric in df.columns:
+                            data = df[metric].dropna().values
+                            if len(data) > 0:
+                                mean, lower, upper, _ = confidence_interval(data, 0.95)
+                                metric_rankings.append((config_name, mean, lower, upper))
+
+                    if metric_rankings:
+                        metric_rankings.sort(key=lambda x: x[1], reverse=True)
+                        fig_gen.create_ablation_bar_chart(
+                            [r[0] for r in metric_rankings],
+                            [r[1] for r in metric_rankings],
+                            metric.replace("_", " ").title(),
+                            f"ablation_ranking_{metric}",
+                            metric_id,
+                            confidence_intervals=[(r[2], r[3]) for r in metric_rankings],
+                            highlight_best=True,
+                        )
+
+                # 3. Multi-metric comparison grouped bar chart
+                metrics = ["faithfulness", "answer_relevancy", "context_precision", "context_recall", "answer_correctness"]
+                metric_names_id = ["Kesetiaan", "Relevansi", "Presisi Konteks", "Recall Konteks", "Kebenaran"]
+                available_metrics = [m for m in metrics if any(m in df.columns for df in ablation_data.values())]
+                available_names_id = [metric_names_id[metrics.index(m)] for m in available_metrics]
+
+                if available_metrics:
+                    fig_gen.create_ablation_multi_metric_comparison(
+                        ablation_data,
+                        available_metrics,
+                        available_names_id,
+                        "ablation_multi_metric_comparison",
+                        "Multi-Metric Configuration Comparison",
+                        "Perbandingan Multi-Metrik Konfigurasi",
+                    )
+
+                # 4. Heatmap of all configurations and metrics
+                if available_metrics:
+                    fig_gen.create_ablation_heatmap(
+                        ablation_data,
+                        available_metrics,
+                        "ablation_performance_heatmap",
+                        "Ablation Configuration Performance Heatmap",
+                        "Peta Panas Performa Konfigurasi Ablasi",
+                    )
+
+                # 5. Detailed comparison table
+                fig_gen.create_ablation_comparison_table(
+                    ablation_data,
+                    available_metrics,
+                    "ablation_detailed_comparison_table",
+                    "Ablation Study: Detailed Metric Comparison",
+                    "Studi Ablasi: Perbandingan Detail Metrik",
+                )
+
+                # 6. Latency analysis
+                fig_gen.create_latency_comparison_table(
+                    ablation_data,
+                    "ablation_latency_comparison_table",
+                    "Ablation Study: Latency Analysis",
+                    "Studi Ablasi: Analisis Latensi",
+                )
+
+                # 7. Latency boxplot
+                fig_gen.create_ablation_latency_boxplot(
+                    ablation_data,
+                    "ablation_latency_boxplot",
+                    "Latency Distribution by Configuration",
+                    "Distribusi Latensi per Konfigurasi",
+                )
+
+                # 8. Radar chart for top 3 configurations
+                if len(rankings) >= 3 and available_metrics:
+                    top_3_configs = [r[0] for r in rankings[:3]]
+                    for i, config_name in enumerate(top_3_configs):
+                        if config_name in ablation_data:
+                            df = ablation_data[config_name]
+                            metrics_dict = {}
+                            for metric, metric_id in zip(available_metrics, available_names_id):
+                                if metric in df.columns:
+                                    data = df[metric].dropna().values
+                                    metrics_dict[metric_id] = np.mean(data) if len(data) > 0 else 0
+
+                            if i == 0:
+                                # For best config, compare with second best
+                                if rankings[1][0] in ablation_data:
+                                    df2 = ablation_data[rankings[1][0]]
+                                    comparison_dict = {}
+                                    for metric, metric_id in zip(available_metrics, available_names_id):
+                                        if metric in df2.columns:
+                                            data = df2[metric].dropna().values
+                                            comparison_dict[metric_id] = np.mean(data) if len(data) > 0 else 0
+
+                                    fig_gen.create_radar_chart(
+                                        metrics_dict,
+                                        f"ablation_radar_top2_comparison",
+                                        f"Top 2 Configurations Comparison",
+                                        f"Perbandingan 2 Konfigurasi Teratas",
+                                        comparison_metrics=comparison_dict,
+                                        labels=(rankings[0][0], rankings[1][0]),
+                                    )
 
         # ===== 7. LATENCY ANALYSIS =====
         print("\n" + "=" * 60)

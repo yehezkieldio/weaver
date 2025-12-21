@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
 """
 Statistical Visualization Module for IMRAD Paper Figures
 
@@ -270,16 +270,44 @@ class FigureGenerator:
         sorted_names = [config_names[i] for i in sorted_indices]
         sorted_values = [metric_values[i] for i in sorted_indices]
 
-        fig, ax = plt.subplots(figsize=(10, max(5, len(config_names) * 0.6)))
+        # Create readable labels with proper wrapping
+        def wrap_label(label: str, max_width: int = 25) -> str:
+            """Wrap long labels to prevent overlap."""
+            if len(label) <= max_width:
+                return label
+            words = label.replace('_', ' ').split()
+            lines = []
+            current_line = []
+            current_length = 0
+            for word in words:
+                if current_length + len(word) + 1 <= max_width:
+                    current_line.append(word)
+                    current_length += len(word) + 1
+                else:
+                    if current_line:
+                        lines.append(' '.join(current_line))
+                    current_line = [word]
+                    current_length = len(word)
+            if current_line:
+                lines.append(' '.join(current_line))
+            return '\n'.join(lines)
+
+        wrapped_names = [wrap_label(name) for name in sorted_names]
+
+        # Dynamically calculate figure height based on label count
+        base_height = max(6, len(config_names) * 0.8)
+        fig, ax = plt.subplots(figsize=(12, base_height))
 
         # Create color palette
         colors = ["#3498db"] * len(sorted_names)
         if highlight_best:
             colors[0] = "#27ae60"  # Green for best
+            colors[1] = "#f39c12"  # Orange for second
+            colors[2] = "#e67e22"  # Dark orange for third
 
         # Create horizontal bar chart
         y_pos = np.arange(len(sorted_names))
-        bars = ax.barh(y_pos, sorted_values, color=colors, edgecolor="black", linewidth=0.5)
+        bars = ax.barh(y_pos, sorted_values, height=0.7, color=colors, edgecolor="black", linewidth=0.8, alpha=0.9)
 
         # Add error bars if confidence intervals provided
         if confidence_intervals:
@@ -287,26 +315,38 @@ class FigureGenerator:
             xerr_lower = [sorted_values[j] - ci[0] for j, ci in enumerate(sorted_ci)]
             xerr_upper = [ci[1] - sorted_values[j] for j, ci in enumerate(sorted_ci)]
             ax.errorbar(sorted_values, y_pos, xerr=[xerr_lower, xerr_upper],
-                       fmt="none", color="black", capsize=3)
+                       fmt="none", color="black", capsize=4, linewidth=1.5, alpha=0.7)
 
-        # Add value labels
+        # Add value labels with better positioning
         for i, (bar, val) in enumerate(zip(bars, sorted_values)):
-            ax.text(val + 0.01, bar.get_y() + bar.get_height() / 2,
-                   f"{val:.3f}", va="center", fontsize=9)
+            # Position label outside bar if value is high
+            x_offset = 0.015 if val < 0.95 else -0.015
+            ha = "left" if val < 0.95 else "right"
+            ax.text(val + x_offset, bar.get_y() + bar.get_height() / 2,
+                   f"{val:.4f}", va="center", ha=ha, fontsize=10, fontweight="bold")
 
-        # Labels
+        # Labels with wrapped text
         ax.set_yticks(y_pos)
-        ax.set_yticklabels(sorted_names)
+        ax.set_yticklabels(wrapped_names, fontsize=10)
         ax.invert_yaxis()  # Best at top
 
-        full_title = f"Peringkat Konfigurasi berdasarkan {metric_name_id}" if metric_name_id else f"Configuration Ranking by {metric_name}"
-        ax.set_title(full_title, fontsize=self.config.title_fontsize, fontweight="bold")
-        ax.set_xlabel(f"Skor {metric_name_id if metric_name_id else metric_name}", fontsize=self.config.label_fontsize)
+        # Set x-axis limits with padding
+        ax.set_xlim(0, max(sorted_values) * 1.15)
 
-        # Add rank labels
-        for i, name in enumerate(sorted_names):
-            ax.text(-0.02, i, f"#{i+1}", ha="right", va="center", fontsize=9, fontweight="bold",
-                   transform=ax.get_yaxis_transform())
+        full_title = f"Peringkat Konfigurasi berdasarkan {metric_name_id}" if metric_name_id else f"Configuration Ranking by {metric_name}"
+        ax.set_title(full_title, fontsize=self.config.title_fontsize + 2, fontweight="bold", pad=20)
+        ax.set_xlabel(f"Skor {metric_name_id if metric_name_id else metric_name}", fontsize=self.config.label_fontsize, fontweight="bold")
+
+        # Add rank badges on the left
+        for i in range(min(3, len(sorted_names))):
+            rank_colors = ["#FFD700", "#C0C0C0", "#CD7F32"]  # Gold, Silver, Bronze
+            ax.text(-0.01, i, f" #{i+1} ", ha="right", va="center", fontsize=11, fontweight="bold",
+                   transform=ax.get_yaxis_transform(), bbox=dict(boxstyle="round,pad=0.3",
+                   facecolor=rank_colors[i], edgecolor="black", linewidth=1.5))
+
+        # Add grid for readability
+        ax.grid(axis='x', alpha=0.3, linestyle='--')
+        ax.set_axisbelow(True)
 
         return self._save_figure(fig, filename)
 
@@ -558,69 +598,124 @@ class FigureGenerator:
         Returns:
             Path to saved figure
         """
-        fig = plt.figure(figsize=(16, 12))
+        fig = plt.figure(figsize=(18, 14))
 
-        # Create grid
-        gs = fig.add_gridspec(2, 2, hspace=0.3, wspace=0.3)
+        # Create grid with better spacing
+        gs = fig.add_gridspec(2, 2, hspace=0.35, wspace=0.35, top=0.94, bottom=0.05, left=0.08, right=0.95)
 
         # 1. Top-left: Key metrics bar chart
         ax1 = fig.add_subplot(gs[0, 0])
-        if "key_metrics" in metrics_summary:
+        if "key_metrics" in metrics_summary and metrics_summary["key_metrics"]:
             km = metrics_summary["key_metrics"]
-            bars = ax1.bar(list(km.keys()), list(km.values()), color="#3498db", edgecolor="black")
-            ax1.set_title("Metrik RAG Utama", fontweight="bold")
-            ax1.set_ylim(0, 1)
-            ax1.axhline(0.8, color="#27ae60", linestyle="--", alpha=0.7, label="Target (0.8)")
-            ax1.legend()
-            for bar, val in zip(bars, km.values()):
-                ax1.text(bar.get_x() + bar.get_width() / 2, val + 0.02, f"{val:.2f}",
-                        ha="center", fontsize=9)
+            # Filter out zero values
+            km_filtered = {k: v for k, v in km.items() if v > 0}
+            if km_filtered:
+                bars = ax1.bar(range(len(km_filtered)), list(km_filtered.values()),
+                              color="#3498db", edgecolor="black", linewidth=1.5, alpha=0.85)
+                ax1.set_xticks(range(len(km_filtered)))
+                ax1.set_xticklabels(list(km_filtered.keys()), rotation=30, ha="right", fontsize=10)
+                ax1.set_title("Metrik RAG Utama", fontweight="bold", fontsize=14)
+                ax1.set_ylim(0, 1.05)
+                ax1.set_ylabel("Skor", fontsize=11, fontweight="bold")
+                ax1.axhline(0.8, color="#27ae60", linestyle="--", linewidth=2, alpha=0.7, label="Target (0.8)")
+                ax1.axhline(0.6, color="#f39c12", linestyle="--", linewidth=1.5, alpha=0.5, label="Ambang (0.6)")
+                ax1.legend(loc="upper right", fontsize=9)
+                ax1.grid(axis='y', alpha=0.3, linestyle=':')
+                ax1.set_axisbelow(True)
+                for i, (bar, val) in enumerate(zip(bars, km_filtered.values())):
+                    ax1.text(bar.get_x() + bar.get_width() / 2, val + 0.02, f"{val:.3f}",
+                            ha="center", fontsize=10, fontweight="bold")
+        else:
+            ax1.text(0.5, 0.5, "Tidak ada data metrik utama", ha="center", va="center",
+                    fontsize=12, transform=ax1.transAxes, style="italic", color="#95a5a6")
+            ax1.set_title("Metrik RAG Utama", fontweight="bold", fontsize=14)
+            ax1.axis('off')
 
         # 2. Top-right: Improvement comparison
         ax2 = fig.add_subplot(gs[0, 1])
-        if "improvements" in metrics_summary:
+        if "improvements" in metrics_summary and metrics_summary["improvements"]:
             imp = metrics_summary["improvements"]
-            colors = ["#27ae60" if v > 0 else "#e74c3c" for v in imp.values()]
-            ax2.barh(list(imp.keys()), list(imp.values()), color=colors, edgecolor="black")
-            ax2.axvline(0, color="black", linewidth=1)
-            ax2.set_title("Peningkatan RAG vs Non-RAG (%)", fontweight="bold")
-            ax2.set_xlabel("Peningkatan (%)")
+            if imp:
+                colors = ["#27ae60" if v > 0 else "#e74c3c" for v in imp.values()]
+                bars = ax2.barh(range(len(imp)), list(imp.values()), color=colors,
+                               edgecolor="black", linewidth=1.5, alpha=0.85)
+                ax2.set_yticks(range(len(imp)))
+                ax2.set_yticklabels(list(imp.keys()), fontsize=10)
+                ax2.axvline(0, color="black", linewidth=2)
+                ax2.set_title("Peningkatan RAG vs Non-RAG (%)", fontweight="bold", fontsize=14)
+                ax2.set_xlabel("Peningkatan (%)", fontsize=11, fontweight="bold")
+                ax2.grid(axis='x', alpha=0.3, linestyle=':')
+                ax2.set_axisbelow(True)
+                for i, (bar, val) in enumerate(zip(bars, imp.values())):
+                    x_pos = val + (3 if val > 0 else -3)
+                    ha = "left" if val > 0 else "right"
+                    ax2.text(x_pos, bar.get_y() + bar.get_height() / 2, f"{val:.1f}%",
+                            va="center", ha=ha, fontsize=10, fontweight="bold")
+        else:
+            ax2.text(0.5, 0.5, "Tidak ada data perbandingan\nRAG vs Non-RAG", ha="center", va="center",
+                    fontsize=12, transform=ax2.transAxes, style="italic", color="#95a5a6")
+            ax2.set_title("Peningkatan RAG vs Non-RAG (%)", fontweight="bold", fontsize=14)
+            ax2.axis('off')
 
         # 3. Bottom-left: Latency comparison
         ax3 = fig.add_subplot(gs[1, 0])
-        if "latency" in metrics_summary:
+        if "latency" in metrics_summary and metrics_summary["latency"]:
             lat = metrics_summary["latency"]
-            x = np.arange(len(lat))
-            ax3.bar(x, [lat[k]["mean"] for k in lat.keys()],
-                   yerr=[lat[k].get("std", 0) for k in lat.keys()],
-                   color="#9b59b6", edgecolor="black", capsize=5)
-            ax3.set_xticks(x)
-            ax3.set_xticklabels(list(lat.keys()), rotation=45, ha="right")
-            ax3.set_title("Latensi per Komponen (ms)", fontweight="bold")
-            ax3.set_ylabel("Latensi (ms)")
+            # Filter out zero values
+            lat_filtered = {k: v for k, v in lat.items() if v.get("mean", 0) > 0}
+            if lat_filtered:
+                x = np.arange(len(lat_filtered))
+                means = [lat_filtered[k]["mean"] for k in lat_filtered.keys()]
+                stds = [lat_filtered[k].get("std", 0) for k in lat_filtered.keys()]
+                bars = ax3.bar(x, means, yerr=stds, color="#9b59b6",
+                              edgecolor="black", linewidth=1.5, capsize=6, alpha=0.85)
+                ax3.set_xticks(x)
+                ax3.set_xticklabels(list(lat_filtered.keys()), rotation=30, ha="right", fontsize=10)
+                ax3.set_title("Latensi per Komponen (ms)", fontweight="bold", fontsize=14)
+                ax3.set_ylabel("Latensi (ms)", fontsize=11, fontweight="bold")
+                ax3.grid(axis='y', alpha=0.3, linestyle=':')
+                ax3.set_axisbelow(True)
+                for i, (bar, val) in enumerate(zip(bars, means)):
+                    ax3.text(bar.get_x() + bar.get_width() / 2, val + (stds[i] if stds[i] > 0 else val * 0.05),
+                            f"{val:.1f}", ha="center", fontsize=9, fontweight="bold")
+        else:
+            ax3.text(0.5, 0.5, "Tidak ada data latensi", ha="center", va="center",
+                    fontsize=12, transform=ax3.transAxes, style="italic", color="#95a5a6")
+            ax3.set_title("Latensi per Komponen (ms)", fontweight="bold", fontsize=14)
+            ax3.axis('off')
 
         # 4. Bottom-right: Summary statistics table
         ax4 = fig.add_subplot(gs[1, 1])
         ax4.axis("off")
-        if "summary_stats" in metrics_summary:
+        if "summary_stats" in metrics_summary and metrics_summary["summary_stats"]:
             ss = metrics_summary["summary_stats"]
-            table_data = [[k, f"{v:.4f}" if isinstance(v, float) else str(v)] for k, v in ss.items()]
-            table = ax4.table(
-                cellText=table_data,
-                colLabels=["Metric", "Value"],
-                loc="center",
-                cellLoc="center",
-            )
-            table.auto_set_font_size(False)
-            table.set_fontsize(10)
-            table.scale(1.2, 1.5)
-            for key, cell in table.get_celld().items():
-                if key[0] == 0:
-                    cell.set_facecolor("#4472C4")
-                    cell.set_text_props(color="white", fontweight="bold")
-            ax4.set_title("Ringkasan Statistik", fontweight="bold", pad=40)
+            if ss:
+                table_data = [[k, f"{v:.4f}" if isinstance(v, float) else str(v)] for k, v in ss.items()]
+                table = ax4.table(
+                    cellText=table_data,
+                    colLabels=["Metrik", "Nilai"],
+                    loc="center",
+                    cellLoc="left",
+                    colWidths=[0.6, 0.4],
+                )
+                table.auto_set_font_size(False)
+                table.set_fontsize(11)
+                table.scale(1.2, 2.0)
+                for key, cell in table.get_celld().items():
+                    cell.set_edgecolor("black")
+                    cell.set_linewidth(1)
+                    if key[0] == 0:  # Header row
+                        cell.set_facecolor("#4472C4")
+                        cell.set_text_props(color="white", fontweight="bold", fontsize=12)
+                    elif key[0] % 2 == 1:  # Odd rows
+                        cell.set_facecolor("#E9EDF4")
+                ax4.set_title("Ringkasan Statistik", fontweight="bold", fontsize=14, pad=30)
+        else:
+            ax4.text(0.5, 0.5, "Tidak ada ringkasan statistik", ha="center", va="center",
+                    fontsize=12, transform=ax4.transAxes, style="italic", color="#95a5a6")
+            ax4.set_title("Ringkasan Statistik", fontweight="bold", fontsize=14)
 
-        fig.suptitle("Dasbor Ringkasan Evaluasi RAG", fontsize=16, fontweight="bold", y=0.98)
+        fig.suptitle("Dasbor Ringkasan Evaluasi RAG", fontsize=18, fontweight="bold", y=0.98)
 
         return self._save_figure(fig, filename)
 
@@ -628,13 +723,199 @@ class FigureGenerator:
         """Return list of all generated figure file paths."""
         return self.generated_files.copy()
 
-    def print_summary(self):
-        """Print summary of generated figures."""
-        print(f"\n{'='*50}")
-        print(f"📊 Generated {len(self.generated_files)} figures in {self.output_dir}")
-        print(f"{'='*50}")
-        for filepath in self.generated_files:
-            print(f"  • {os.path.basename(filepath)}")
+    def create_ablation_comparison_table(
+        self,
+        ablation_data: dict[str, pd.DataFrame],
+        metrics: list[str],
+        filename: str,
+        title: str = "Ablation Study Comparison",
+        title_id: Optional[str] = None,
+    ) -> str:
+        """
+        Create detailed comparison table for ablation study configurations.
+
+        Args:
+            ablation_data: Dictionary of config names to DataFrames with metrics
+            metrics: List of metric column names to include
+            filename: Output filename (without extension)
+            title: Table title (English)
+            title_id: Indonesian title (optional)
+
+        Returns:
+            Path to saved figure
+        """
+        # Prepare data for table
+        rows = []
+        for config_name, df in ablation_data.items():
+            row = {"Konfigurasi": config_name}
+            for metric in metrics:
+                if metric in df.columns:
+                    data = df[metric].dropna().values
+                    if len(data) > 0:
+                        row[metric] = f"{np.mean(data):.4f} ± {np.std(data):.4f}"
+                    else:
+                        row[metric] = "N/A"
+                else:
+                    row[metric] = "N/A"
+            rows.append(row)
+
+        # Create DataFrame
+        table_df = pd.DataFrame(rows)
+        table_df.set_index("Konfigurasi", inplace=True)
+
+        return self.save_table_as_image(
+            table_df,
+            title,
+            filename,
+            title_id or title,
+        )
+
+    def create_ablation_heatmap(
+        self,
+        ablation_data: dict[str, pd.DataFrame],
+        metrics: list[str],
+        filename: str,
+        title: str = "Ablation Configuration Performance Heatmap",
+        title_id: Optional[str] = None,
+    ) -> str:
+        """
+        Create heatmap showing performance of each configuration across metrics.
+
+        Args:
+            ablation_data: Dictionary of config names to DataFrames
+            metrics: List of metric names
+            filename: Output filename (without extension)
+            title: Chart title (English)
+            title_id: Indonesian title (optional)
+
+        Returns:
+            Path to saved figure
+        """
+        # Prepare matrix
+        matrix_data = []
+        config_names = []
+        for config_name, df in ablation_data.items():
+            config_names.append(config_name)
+            row = []
+            for metric in metrics:
+                if metric in df.columns:
+                    data = df[metric].dropna().values
+                    row.append(np.mean(data) if len(data) > 0 else 0)
+                else:
+                    row.append(0)
+            matrix_data.append(row)\n\n        # Create DataFrame for heatmap\n        heatmap_df = pd.DataFrame(matrix_data, columns=metrics, index=config_names)\n\n        # Create figure\n        n_configs = len(config_names)\n        fig_height = max(8, n_configs * 0.6)\n        fig, ax = plt.subplots(figsize=(12, fig_height))\n\n        # Create heatmap\n        sns.heatmap(\n            heatmap_df,\n            annot=True,\n            fmt=\".3f\",\n            cmap=\"YlGnBu\",\n            center=0.7,\n            vmin=0,\n            vmax=1,\n            linewidths=1,\n            linecolor='black',\n            ax=ax,\n            cbar_kws={\"label\": \"Skor Metrik\", \"shrink\": 0.8},\n            square=False,\n        )\n\n        # Title and labels\n        full_title = title_id if title_id else title\n        ax.set_title(full_title, fontsize=self.config.title_fontsize + 2, fontweight=\"bold\", pad=20)\n        ax.set_xlabel(\"Metrik\", fontsize=self.config.label_fontsize, fontweight=\"bold\")\n        ax.set_ylabel(\"Konfigurasi\", fontsize=self.config.label_fontsize, fontweight=\"bold\")\n\n        # Rotate labels\n        plt.xticks(rotation=45, ha=\"right\")\n        plt.yticks(rotation=0)\n\n        return self._save_figure(fig, filename)\n\n    def create_ablation_multi_metric_comparison(
+        self,
+        ablation_data: dict[str, pd.DataFrame],
+        metrics: list[str],
+        metric_names_id: list[str],
+        filename: str,
+        title: str = "Multi-Metric Configuration Comparison",
+        title_id: Optional[str] = None,
+    ) -> str:
+        """
+        Create grouped bar chart comparing multiple metrics across configurations.
+
+        Args:
+            ablation_data: Dictionary of config names to DataFrames
+            metrics: List of metric column names
+            metric_names_id: Indonesian names for metrics
+            filename: Output filename (without extension)
+            title: Chart title (English)
+            title_id: Indonesian title (optional)
+
+        Returns:
+            Path to saved figure
+        """
+        # Prepare data
+        config_names = list(ablation_data.keys())
+        n_configs = len(config_names)
+        n_metrics = len(metrics)\n\n        # Calculate means for each config and metric\n        data_matrix = np.zeros((n_configs, n_metrics))\n        for i, (config_name, df) in enumerate(ablation_data.items()):\n            for j, metric in enumerate(metrics):\n                if metric in df.columns:\n                    values = df[metric].dropna().values\n                    data_matrix[i, j] = np.mean(values) if len(values) > 0 else 0\n\n        # Create figure\n        fig, ax = plt.subplots(figsize=(14, max(8, n_configs * 0.5)))\n\n        # Set up bar positions\n        x = np.arange(n_configs)\n        width = 0.8 / n_metrics\n\n        # Color palette\n        colors = sns.color_palette(\"husl\", n_metrics)\n\n        # Create grouped bars\n        for j in range(n_metrics):\n            offset = (j - n_metrics / 2) * width + width / 2\n            bars = ax.bar(x + offset, data_matrix[:, j], width, \n                         label=metric_names_id[j], color=colors[j], \n                         edgecolor=\"black\", linewidth=0.8, alpha=0.85)\n\n            # Add value labels on bars\n            for bar in bars:\n                height = bar.get_height()\n                if height > 0.05:  # Only show label if bar is visible\n                    ax.text(bar.get_x() + bar.get_width() / 2, height + 0.01,\n                           f\"{height:.2f}\", ha=\"center\", va=\"bottom\", fontsize=7, rotation=90)\n\n        # Labels and styling\n        ax.set_xticks(x)\n        ax.set_xticklabels(config_names, rotation=45, ha=\"right\", fontsize=10)\n        ax.set_ylabel(\"Skor\", fontsize=self.config.label_fontsize, fontweight=\"bold\")\n        ax.set_ylim(0, 1.05)\n\n        full_title = title_id if title_id else title\n        ax.set_title(full_title, fontsize=self.config.title_fontsize + 2, fontweight=\"bold\", pad=20)\n\n        ax.legend(loc=\"upper right\", fontsize=10, ncol=min(3, n_metrics), framealpha=0.9)\n        ax.grid(axis='y', alpha=0.3, linestyle=':')\n        ax.set_axisbelow(True)\n\n        return self._save_figure(fig, filename)\n\n    def create_latency_comparison_table(
+        self,
+        ablation_data: dict[str, pd.DataFrame],
+        filename: str,
+        title: str = "Latency Analysis by Configuration",
+        title_id: Optional[str] = None,
+    ) -> str:
+        """
+        Create detailed latency comparison table with percentiles.
+
+        Args:
+            ablation_data: Dictionary of config names to DataFrames
+            filename: Output filename (without extension)
+            title: Table title (English)
+            title_id: Indonesian title (optional)
+
+        Returns:
+            Path to saved figure
+        """
+        rows = []
+        for config_name, df in ablation_data.items():
+            if "latency_ms" in df.columns:\n                lat_data = df[\"latency_ms\"].dropna().values\n                if len(lat_data) > 0:\n                    rows.append({\n                        \"Konfigurasi\": config_name,\n                        \"Rerata (ms)\": f\"{np.mean(lat_data):.2f}\",\n                        \"Median (ms)\": f\"{np.median(lat_data):.2f}\",\n                        \"Std Dev (ms)\": f\"{np.std(lat_data):.2f}\",\n                        \"P95 (ms)\": f\"{np.percentile(lat_data, 95):.2f}\",\n                        \"P99 (ms)\": f\"{np.percentile(lat_data, 99):.2f}\",\n                        \"Min (ms)\": f\"{np.min(lat_data):.2f}\",\n                        \"Maks (ms)\": f\"{np.max(lat_data):.2f}\",\n                    })\n\n        if not rows:\n            # Create empty placeholder\n            rows.append({\n                \"Konfigurasi\": \"No data\",\n                \"Rerata (ms)\": \"N/A\",\n                \"Median (ms)\": \"N/A\",\n                \"Std Dev (ms)\": \"N/A\",\n                \"P95 (ms)\": \"N/A\",\n                \"P99 (ms)\": \"N/A\",\n                \"Min (ms)\": \"N/A\",\n                \"Maks (ms)\": \"N/A\",\n            })\n\n        table_df = pd.DataFrame(rows)\n        table_df.set_index(\"Konfigurasi\", inplace=True)\n\n        return self.save_table_as_image(\n            table_df,\n            title,\n            filename,\n            title_id or title,\n        )\n\n    def create_statistical_test_results_table(
+        self,
+        test_results: list[dict],
+        filename: str,
+        title: str = "Statistical Test Results",
+        title_id: Optional[str] = None,
+    ) -> str:
+        """
+        Create table summarizing statistical test results.
+
+        Args:
+            test_results: List of test result dictionaries
+            filename: Output filename (without extension)
+            title: Table title (English)
+            title_id: Indonesian title (optional)
+
+        Returns:
+            Path to saved figure
+        """
+        rows = []
+        for result in test_results:
+            sig_symbol = "***" if result.get("p_value", 1) < 0.001 else \
+                        "**" if result.get("p_value", 1) < 0.01 else \
+                        "*" if result.get("p_value", 1) < 0.05 else "ns"
+            rows.append({
+                "Metrik": result.get("metric_id", "N/A"),
+                "Uji": result.get("test_name_id", "N/A"),
+                "Statistik": f"{result.get('statistic', 0):.3f}",
+                "p-value": f"{result.get('p_value', 1):.4f}",
+                "Sig.": sig_symbol,
+                "Ukuran Efek": f"{result.get('effect_size', 0):.3f}" if result.get('effect_size') else "N/A",
+                "Interpretasi": result.get('effect_size_interpretation', 'N/A'),
+            })\n\n        table_df = pd.DataFrame(rows)\n\n        return self.save_table_as_image(\n            table_df,\n            title,\n            filename,\n            title_id or title,\n            highlight_cols=[\"Sig.\"],\n        )\n\n    def create_ablation_latency_boxplot(
+        self,
+        ablation_data: dict[str, pd.DataFrame],
+        filename: str,
+        title: str = "Latency Distribution by Configuration",
+        title_id: Optional[str] = None,
+    ) -> str:
+        """
+        Create boxplot comparing latency distributions across configurations.
+
+        Args:
+            ablation_data: Dictionary of config names to DataFrames
+            filename: Output filename (without extension)
+            title: Chart title (English)
+            title_id: Indonesian title (optional)
+
+        Returns:
+            Path to saved figure
+        """
+        # Prepare data
+        plot_data = []
+        for config_name, df in ablation_data.items():
+            if "latency_ms" in df.columns:
+                lat_data = df["latency_ms"].dropna().values
+                for val in lat_data:
+                    plot_data.append({"Konfigurasi": config_name, "Latensi (ms)": val})
+
+        if not plot_data:
+            # Create empty plot
+            fig, ax = plt.subplots(figsize=(10, 6))
+            ax.text(0.5, 0.5, "Tidak ada data latensi", ha="center", va="center", 
+                   transform=ax.transAxes, fontsize=14)
+            ax.axis('off')
+            return self._save_figure(fig, filename)\n\n        df_plot = pd.DataFrame(plot_data)\n\n        # Create figure\n        n_configs = len(ablation_data)\n        fig, ax = plt.subplots(figsize=(max(12, n_configs * 1.5), 8))\n\n        # Create boxplot\n        sns.boxplot(x=\"Konfigurasi\", y=\"Latensi (ms)\", data=df_plot, ax=ax, \n                   palette=\"Set2\", linewidth=1.5)\n        sns.stripplot(x=\"Konfigurasi\", y=\"Latensi (ms)\", data=df_plot, ax=ax,\n                     color=\"black\", alpha=0.3, size=3)\n\n        # Labels\n        full_title = title_id if title_id else title\n        ax.set_title(full_title, fontsize=self.config.title_fontsize + 2, fontweight=\"bold\", pad=20)\n        ax.set_xlabel(\"Konfigurasi\", fontsize=self.config.label_fontsize, fontweight=\"bold\")\n        ax.set_ylabel(\"Latensi (ms)\", fontsize=self.config.label_fontsize, fontweight=\"bold\")\n\n        # Rotate x labels\n        plt.xticks(rotation=45, ha=\"right\")\n        ax.grid(axis='y', alpha=0.3, linestyle=':')\n        ax.set_axisbelow(True)\n\n        return self._save_figure(fig, filename)\n\n    def print_summary(self):\n        \"\"\"Print summary of generated figures.\"\"\"\n        print(f\"\\n{'='*50}\")\n        print(f\"📊 Generated {len(self.generated_files)} figures in {self.output_dir}\")\n        print(f\"{'='*50}\")\n        for filepath in self.generated_files:\n            print(f\"  • {os.path.basename(filepath)}\")
 
 
 # ===== Convenience Functions =====
