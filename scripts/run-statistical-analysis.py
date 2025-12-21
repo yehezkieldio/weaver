@@ -1674,6 +1674,104 @@ def run_analysis():
                                         labels=(rankings[0][0], rankings[1][0]),
                                     )
 
+                # 9. ANOVA results table for all metrics
+                anova_results_for_table = []
+                for metric, metric_id in [
+                    ("faithfulness", "Kesetiaan"),
+                    ("answer_relevancy", "Relevansi Jawaban"),
+                    ("context_precision", "Presisi Konteks"),
+                    ("context_recall", "Recall Konteks"),
+                    ("answer_correctness", "Kebenaran Jawaban"),
+                ]:
+                    metric_groups = []
+                    for config_name, df in ablation_data.items():
+                        if metric in df.columns:
+                            data = df[metric].dropna().values
+                            if len(data) > 0:
+                                metric_groups.append(data)
+
+                    if len(metric_groups) >= 3:
+                        test_name, test_result = smart_statistical_test(metric_groups, paired=False)
+                        anova_results_for_table.append({
+                            "metric": metric,
+                            "metric_id": metric_id,
+                            "test_name": test_name,
+                            "test_name_id": test_result.test_name_id,
+                            "statistic": test_result.statistic,
+                            "p_value": test_result.p_value,
+                            "degrees_of_freedom": test_result.degrees_of_freedom,
+                            "effect_size": test_result.effect_size,
+                        })
+
+                if anova_results_for_table:
+                    fig_gen.create_anova_results_table(
+                        anova_results_for_table,
+                        "anova_results_summary_table",
+                        "Hasil Analisis ANOVA/Kruskal-Wallis Semua Metrik",
+                    )
+
+                # 10. Violin plots for key metrics distribution
+                for metric, metric_id in [
+                    ("faithfulness", "Kesetiaan"),
+                    ("answer_relevancy", "Relevansi Jawaban"),
+                    ("answer_correctness", "Kebenaran Jawaban"),
+                ]:
+                    if any(metric in df.columns for df in ablation_data.values()):
+                        fig_gen.create_metric_violin_plot(
+                            ablation_data,
+                            metric,
+                            f"violin_{metric}",
+                            metric_id,
+                            f"Distribusi {metric_id} per Konfigurasi",
+                        )
+
+                # 11. Descriptive stats table for all configurations
+                all_config_stats = {}
+                for config_name, df in ablation_data.items():
+                    config_stats = {}
+                    for metric in ["faithfulness", "answer_relevancy", "answer_correctness", "latency_ms"]:
+                        if metric in df.columns:
+                            data = df[metric].dropna().values
+                            if len(data) > 0:
+                                stats = calculate_descriptive_stats(data)
+                                config_stats[metric] = {
+                                    "n": stats.n,
+                                    "mean": stats.mean,
+                                    "median": stats.median,
+                                    "std_dev": stats.std_dev,
+                                    "min_val": stats.min_val,
+                                    "max_val": stats.max_val,
+                                    "q1": stats.q1,
+                                    "q3": stats.q3,
+                                }
+                    if config_stats:
+                        all_config_stats[config_name] = config_stats
+
+                if all_config_stats:
+                    # Create summary table for faithfulness across all configs
+                    faith_summary_rows = []
+                    for config_name, metrics in all_config_stats.items():
+                        if "faithfulness" in metrics:
+                            s = metrics["faithfulness"]
+                            faith_summary_rows.append({
+                                "Konfigurasi": config_name,
+                                "N": s["n"],
+                                "Rerata": f"{s['mean']:.4f}",
+                                "Median": f"{s['median']:.4f}",
+                                "Std Dev": f"{s['std_dev']:.4f}",
+                                "Min": f"{s['min_val']:.4f}",
+                                "Maks": f"{s['max_val']:.4f}",
+                            })
+
+                    if faith_summary_rows:
+                        faith_df = pd.DataFrame(faith_summary_rows)
+                        fig_gen.save_table_as_image(
+                            faith_df,
+                            "Descriptive Statistics: Faithfulness by Configuration",
+                            "descriptive_stats_faithfulness_all_configs",
+                            "Statistik Deskriptif: Kesetiaan per Konfigurasi",
+                        )
+
         # ===== 7. LATENCY ANALYSIS =====
         print("\n" + "=" * 60)
         print("7. LATENCY ANALYSIS / ANALISIS LATENSI")

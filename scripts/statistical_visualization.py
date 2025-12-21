@@ -803,7 +803,45 @@ class FigureGenerator:
                     row.append(np.mean(data) if len(data) > 0 else 0)
                 else:
                     row.append(0)
-            matrix_data.append(row)\n\n        # Create DataFrame for heatmap\n        heatmap_df = pd.DataFrame(matrix_data, columns=metrics, index=config_names)\n\n        # Create figure\n        n_configs = len(config_names)\n        fig_height = max(8, n_configs * 0.6)\n        fig, ax = plt.subplots(figsize=(12, fig_height))\n\n        # Create heatmap\n        sns.heatmap(\n            heatmap_df,\n            annot=True,\n            fmt=\".3f\",\n            cmap=\"YlGnBu\",\n            center=0.7,\n            vmin=0,\n            vmax=1,\n            linewidths=1,\n            linecolor='black',\n            ax=ax,\n            cbar_kws={\"label\": \"Skor Metrik\", \"shrink\": 0.8},\n            square=False,\n        )\n\n        # Title and labels\n        full_title = title_id if title_id else title\n        ax.set_title(full_title, fontsize=self.config.title_fontsize + 2, fontweight=\"bold\", pad=20)\n        ax.set_xlabel(\"Metrik\", fontsize=self.config.label_fontsize, fontweight=\"bold\")\n        ax.set_ylabel(\"Konfigurasi\", fontsize=self.config.label_fontsize, fontweight=\"bold\")\n\n        # Rotate labels\n        plt.xticks(rotation=45, ha=\"right\")\n        plt.yticks(rotation=0)\n\n        return self._save_figure(fig, filename)\n\n    def create_ablation_multi_metric_comparison(
+            matrix_data.append(row)
+
+        # Create DataFrame for heatmap
+        heatmap_df = pd.DataFrame(matrix_data, columns=metrics, index=config_names)
+
+        # Create figure
+        n_configs = len(config_names)
+        fig_height = max(8, n_configs * 0.6)
+        fig, ax = plt.subplots(figsize=(12, fig_height))
+
+        # Create heatmap
+        sns.heatmap(
+            heatmap_df,
+            annot=True,
+            fmt=".3f",
+            cmap="YlGnBu",
+            center=0.7,
+            vmin=0,
+            vmax=1,
+            linewidths=1,
+            linecolor='black',
+            ax=ax,
+            cbar_kws={"label": "Skor Metrik", "shrink": 0.8},
+            square=False,
+        )
+
+        # Title and labels
+        full_title = title_id if title_id else title
+        ax.set_title(full_title, fontsize=self.config.title_fontsize + 2, fontweight="bold", pad=20)
+        ax.set_xlabel("Metrik", fontsize=self.config.label_fontsize, fontweight="bold")
+        ax.set_ylabel("Konfigurasi", fontsize=self.config.label_fontsize, fontweight="bold")
+
+        # Rotate labels
+        plt.xticks(rotation=45, ha="right")
+        plt.yticks(rotation=0)
+
+        return self._save_figure(fig, filename)
+
+    def create_ablation_multi_metric_comparison(
         self,
         ablation_data: dict[str, pd.DataFrame],
         metrics: list[str],
@@ -826,10 +864,58 @@ class FigureGenerator:
         Returns:
             Path to saved figure
         """
-        # Prepare data
         config_names = list(ablation_data.keys())
         n_configs = len(config_names)
-        n_metrics = len(metrics)\n\n        # Calculate means for each config and metric\n        data_matrix = np.zeros((n_configs, n_metrics))\n        for i, (config_name, df) in enumerate(ablation_data.items()):\n            for j, metric in enumerate(metrics):\n                if metric in df.columns:\n                    values = df[metric].dropna().values\n                    data_matrix[i, j] = np.mean(values) if len(values) > 0 else 0\n\n        # Create figure\n        fig, ax = plt.subplots(figsize=(14, max(8, n_configs * 0.5)))\n\n        # Set up bar positions\n        x = np.arange(n_configs)\n        width = 0.8 / n_metrics\n\n        # Color palette\n        colors = sns.color_palette(\"husl\", n_metrics)\n\n        # Create grouped bars\n        for j in range(n_metrics):\n            offset = (j - n_metrics / 2) * width + width / 2\n            bars = ax.bar(x + offset, data_matrix[:, j], width, \n                         label=metric_names_id[j], color=colors[j], \n                         edgecolor=\"black\", linewidth=0.8, alpha=0.85)\n\n            # Add value labels on bars\n            for bar in bars:\n                height = bar.get_height()\n                if height > 0.05:  # Only show label if bar is visible\n                    ax.text(bar.get_x() + bar.get_width() / 2, height + 0.01,\n                           f\"{height:.2f}\", ha=\"center\", va=\"bottom\", fontsize=7, rotation=90)\n\n        # Labels and styling\n        ax.set_xticks(x)\n        ax.set_xticklabels(config_names, rotation=45, ha=\"right\", fontsize=10)\n        ax.set_ylabel(\"Skor\", fontsize=self.config.label_fontsize, fontweight=\"bold\")\n        ax.set_ylim(0, 1.05)\n\n        full_title = title_id if title_id else title\n        ax.set_title(full_title, fontsize=self.config.title_fontsize + 2, fontweight=\"bold\", pad=20)\n\n        ax.legend(loc=\"upper right\", fontsize=10, ncol=min(3, n_metrics), framealpha=0.9)\n        ax.grid(axis='y', alpha=0.3, linestyle=':')\n        ax.set_axisbelow(True)\n\n        return self._save_figure(fig, filename)\n\n    def create_latency_comparison_table(
+        n_metrics = len(metrics)
+
+        # Calculate means for each config and metric
+        data_matrix = np.zeros((n_configs, n_metrics))
+        for i, (config_name, df) in enumerate(ablation_data.items()):
+            for j, metric in enumerate(metrics):
+                if metric in df.columns:
+                    values = df[metric].dropna().values
+                    data_matrix[i, j] = np.mean(values) if len(values) > 0 else 0
+
+        # Create figure
+        fig, ax = plt.subplots(figsize=(14, max(8, n_configs * 0.5)))
+
+        # Set up bar positions
+        x = np.arange(n_configs)
+        width = 0.8 / n_metrics
+
+        # Color palette
+        colors = sns.color_palette("husl", n_metrics)
+
+        # Create grouped bars
+        for j in range(n_metrics):
+            offset = (j - n_metrics / 2) * width + width / 2
+            bars = ax.bar(x + offset, data_matrix[:, j], width,
+                         label=metric_names_id[j], color=colors[j],
+                         edgecolor="black", linewidth=0.8, alpha=0.85)
+
+            # Add value labels on bars
+            for bar in bars:
+                height = bar.get_height()
+                if height > 0.05:
+                    ax.text(bar.get_x() + bar.get_width() / 2, height + 0.01,
+                           f"{height:.2f}", ha="center", va="bottom", fontsize=7, rotation=90)
+
+        # Labels and styling
+        ax.set_xticks(x)
+        ax.set_xticklabels(config_names, rotation=45, ha="right", fontsize=10)
+        ax.set_ylabel("Skor", fontsize=self.config.label_fontsize, fontweight="bold")
+        ax.set_ylim(0, 1.05)
+
+        full_title = title_id if title_id else title
+        ax.set_title(full_title, fontsize=self.config.title_fontsize + 2, fontweight="bold", pad=20)
+
+        ax.legend(loc="upper right", fontsize=10, ncol=min(3, n_metrics), framealpha=0.9)
+        ax.grid(axis='y', alpha=0.3, linestyle=':')
+        ax.set_axisbelow(True)
+
+        return self._save_figure(fig, filename)
+
+    def create_latency_comparison_table(
         self,
         ablation_data: dict[str, pd.DataFrame],
         filename: str,
@@ -850,7 +936,43 @@ class FigureGenerator:
         """
         rows = []
         for config_name, df in ablation_data.items():
-            if "latency_ms" in df.columns:\n                lat_data = df[\"latency_ms\"].dropna().values\n                if len(lat_data) > 0:\n                    rows.append({\n                        \"Konfigurasi\": config_name,\n                        \"Rerata (ms)\": f\"{np.mean(lat_data):.2f}\",\n                        \"Median (ms)\": f\"{np.median(lat_data):.2f}\",\n                        \"Std Dev (ms)\": f\"{np.std(lat_data):.2f}\",\n                        \"P95 (ms)\": f\"{np.percentile(lat_data, 95):.2f}\",\n                        \"P99 (ms)\": f\"{np.percentile(lat_data, 99):.2f}\",\n                        \"Min (ms)\": f\"{np.min(lat_data):.2f}\",\n                        \"Maks (ms)\": f\"{np.max(lat_data):.2f}\",\n                    })\n\n        if not rows:\n            # Create empty placeholder\n            rows.append({\n                \"Konfigurasi\": \"No data\",\n                \"Rerata (ms)\": \"N/A\",\n                \"Median (ms)\": \"N/A\",\n                \"Std Dev (ms)\": \"N/A\",\n                \"P95 (ms)\": \"N/A\",\n                \"P99 (ms)\": \"N/A\",\n                \"Min (ms)\": \"N/A\",\n                \"Maks (ms)\": \"N/A\",\n            })\n\n        table_df = pd.DataFrame(rows)\n        table_df.set_index(\"Konfigurasi\", inplace=True)\n\n        return self.save_table_as_image(\n            table_df,\n            title,\n            filename,\n            title_id or title,\n        )\n\n    def create_statistical_test_results_table(
+            if "latency_ms" in df.columns:
+                lat_data = df["latency_ms"].dropna().values
+                if len(lat_data) > 0:
+                    rows.append({
+                        "Konfigurasi": config_name,
+                        "Rerata (ms)": f"{np.mean(lat_data):.2f}",
+                        "Median (ms)": f"{np.median(lat_data):.2f}",
+                        "Std Dev (ms)": f"{np.std(lat_data):.2f}",
+                        "P95 (ms)": f"{np.percentile(lat_data, 95):.2f}",
+                        "P99 (ms)": f"{np.percentile(lat_data, 99):.2f}",
+                        "Min (ms)": f"{np.min(lat_data):.2f}",
+                        "Maks (ms)": f"{np.max(lat_data):.2f}",
+                    })
+
+        if not rows:
+            rows.append({
+                "Konfigurasi": "No data",
+                "Rerata (ms)": "N/A",
+                "Median (ms)": "N/A",
+                "Std Dev (ms)": "N/A",
+                "P95 (ms)": "N/A",
+                "P99 (ms)": "N/A",
+                "Min (ms)": "N/A",
+                "Maks (ms)": "N/A",
+            })
+
+        table_df = pd.DataFrame(rows)
+        table_df.set_index("Konfigurasi", inplace=True)
+
+        return self.save_table_as_image(
+            table_df,
+            title,
+            filename,
+            title_id or title,
+        )
+
+    def create_statistical_test_results_table(
         self,
         test_results: list[dict],
         filename: str,
@@ -882,7 +1004,19 @@ class FigureGenerator:
                 "Sig.": sig_symbol,
                 "Ukuran Efek": f"{result.get('effect_size', 0):.3f}" if result.get('effect_size') else "N/A",
                 "Interpretasi": result.get('effect_size_interpretation', 'N/A'),
-            })\n\n        table_df = pd.DataFrame(rows)\n\n        return self.save_table_as_image(\n            table_df,\n            title,\n            filename,\n            title_id or title,\n            highlight_cols=[\"Sig.\"],\n        )\n\n    def create_ablation_latency_boxplot(
+            })
+
+        table_df = pd.DataFrame(rows)
+
+        return self.save_table_as_image(
+            table_df,
+            title,
+            filename,
+            title_id or title,
+            highlight_cols=["Sig."],
+        )
+
+    def create_ablation_latency_boxplot(
         self,
         ablation_data: dict[str, pd.DataFrame],
         filename: str,
@@ -901,7 +1035,6 @@ class FigureGenerator:
         Returns:
             Path to saved figure
         """
-        # Prepare data
         plot_data = []
         for config_name, df in ablation_data.items():
             if "latency_ms" in df.columns:
@@ -910,12 +1043,190 @@ class FigureGenerator:
                     plot_data.append({"Konfigurasi": config_name, "Latensi (ms)": val})
 
         if not plot_data:
-            # Create empty plot
             fig, ax = plt.subplots(figsize=(10, 6))
-            ax.text(0.5, 0.5, "Tidak ada data latensi", ha="center", va="center", 
+            ax.text(0.5, 0.5, "Tidak ada data latensi", ha="center", va="center",
                    transform=ax.transAxes, fontsize=14)
             ax.axis('off')
-            return self._save_figure(fig, filename)\n\n        df_plot = pd.DataFrame(plot_data)\n\n        # Create figure\n        n_configs = len(ablation_data)\n        fig, ax = plt.subplots(figsize=(max(12, n_configs * 1.5), 8))\n\n        # Create boxplot\n        sns.boxplot(x=\"Konfigurasi\", y=\"Latensi (ms)\", data=df_plot, ax=ax, \n                   palette=\"Set2\", linewidth=1.5)\n        sns.stripplot(x=\"Konfigurasi\", y=\"Latensi (ms)\", data=df_plot, ax=ax,\n                     color=\"black\", alpha=0.3, size=3)\n\n        # Labels\n        full_title = title_id if title_id else title\n        ax.set_title(full_title, fontsize=self.config.title_fontsize + 2, fontweight=\"bold\", pad=20)\n        ax.set_xlabel(\"Konfigurasi\", fontsize=self.config.label_fontsize, fontweight=\"bold\")\n        ax.set_ylabel(\"Latensi (ms)\", fontsize=self.config.label_fontsize, fontweight=\"bold\")\n\n        # Rotate x labels\n        plt.xticks(rotation=45, ha=\"right\")\n        ax.grid(axis='y', alpha=0.3, linestyle=':')\n        ax.set_axisbelow(True)\n\n        return self._save_figure(fig, filename)\n\n    def print_summary(self):\n        \"\"\"Print summary of generated figures.\"\"\"\n        print(f\"\\n{'='*50}\")\n        print(f\"📊 Generated {len(self.generated_files)} figures in {self.output_dir}\")\n        print(f\"{'='*50}\")\n        for filepath in self.generated_files:\n            print(f\"  • {os.path.basename(filepath)}\")
+            return self._save_figure(fig, filename)
+
+        df_plot = pd.DataFrame(plot_data)
+
+        n_configs = len(ablation_data)
+        fig, ax = plt.subplots(figsize=(max(12, n_configs * 1.5), 8))
+
+        sns.boxplot(x="Konfigurasi", y="Latensi (ms)", data=df_plot, ax=ax,
+                   hue="Konfigurasi", palette="Set2", linewidth=1.5, legend=False)
+        sns.stripplot(x="Konfigurasi", y="Latensi (ms)", data=df_plot, ax=ax,
+                     color="black", alpha=0.3, size=3, legend=False)
+
+        full_title = title_id if title_id else title
+        ax.set_title(full_title, fontsize=self.config.title_fontsize + 2, fontweight="bold", pad=20)
+        ax.set_xlabel("Konfigurasi", fontsize=self.config.label_fontsize, fontweight="bold")
+        ax.set_ylabel("Latensi (ms)", fontsize=self.config.label_fontsize, fontweight="bold")
+
+        plt.xticks(rotation=45, ha="right")
+        ax.grid(axis='y', alpha=0.3, linestyle=':')
+        ax.set_axisbelow(True)
+
+        return self._save_figure(fig, filename)
+
+    def create_descriptive_stats_table(
+        self,
+        stats_data: dict[str, dict],
+        filename: str,
+        title_id: str = "Statistik Deskriptif Metrik Evaluasi",
+    ) -> str:
+        """Create comprehensive descriptive statistics table."""
+        rows = []
+        for metric, stats in stats_data.items():
+            rows.append({
+                "Metrik": metric,
+                "N": stats.get("n", 0),
+                "Rerata": f"{stats.get('mean', 0):.4f}",
+                "Median": f"{stats.get('median', 0):.4f}",
+                "Std Dev": f"{stats.get('std_dev', 0):.4f}",
+                "Min": f"{stats.get('min_val', 0):.4f}",
+                "Maks": f"{stats.get('max_val', 0):.4f}",
+                "Q1": f"{stats.get('q1', 0):.4f}",
+                "Q3": f"{stats.get('q3', 0):.4f}",
+            })
+
+        table_df = pd.DataFrame(rows)
+        return self.save_table_as_image(table_df, "Descriptive Statistics", filename, title_id)
+
+    def create_effect_size_comparison(
+        self,
+        comparisons: list[dict],
+        filename: str,
+        title_id: str = "Perbandingan Ukuran Efek RAG vs Non-RAG",
+    ) -> str:
+        """Create effect size comparison chart."""
+        metrics = [c.get("metric_id", c.get("metric", "")) for c in comparisons]
+        effect_sizes = [c.get("test_result", {}).get("effect_size", 0) or 0 for c in comparisons]
+
+        fig, ax = plt.subplots(figsize=(12, max(6, len(metrics) * 0.6)))
+
+        colors = ["#27ae60" if es > 0.5 else "#f39c12" if es > 0.2 else "#95a5a6" for es in effect_sizes]
+        y_pos = np.arange(len(metrics))
+
+        bars = ax.barh(y_pos, effect_sizes, color=colors, edgecolor="black", linewidth=1, alpha=0.85)
+        ax.set_yticks(y_pos)
+        ax.set_yticklabels(metrics, fontsize=10)
+        ax.invert_yaxis()
+
+        ax.axvline(0.2, color="#f39c12", linestyle="--", linewidth=1.5, alpha=0.7, label="Efek Kecil (0.2)")
+        ax.axvline(0.5, color="#3498db", linestyle="--", linewidth=1.5, alpha=0.7, label="Efek Sedang (0.5)")
+        ax.axvline(0.8, color="#27ae60", linestyle="--", linewidth=1.5, alpha=0.7, label="Efek Besar (0.8)")
+
+        for bar, val in zip(bars, effect_sizes):
+            ax.text(val + 0.02, bar.get_y() + bar.get_height() / 2,
+                   f"{val:.3f}", va="center", fontsize=9, fontweight="bold")
+
+        ax.set_title(title_id, fontsize=self.config.title_fontsize + 2, fontweight="bold", pad=20)
+        ax.set_xlabel("Cohen's d", fontsize=self.config.label_fontsize, fontweight="bold")
+        ax.legend(loc="lower right", fontsize=9)
+        ax.grid(axis='x', alpha=0.3, linestyle=':')
+
+        return self._save_figure(fig, filename)
+
+    def create_metric_violin_plot(
+        self,
+        ablation_data: dict[str, pd.DataFrame],
+        metric: str,
+        filename: str,
+        metric_id: str = None,
+        title_id: str = None,
+    ) -> str:
+        """Create violin plot for metric distribution across configs."""
+        plot_data = []
+        for config_name, df in ablation_data.items():
+            if metric in df.columns:
+                for val in df[metric].dropna().values:
+                    plot_data.append({"Konfigurasi": config_name, "Nilai": val})
+
+        if not plot_data:
+            fig, ax = plt.subplots(figsize=(10, 6))
+            ax.text(0.5, 0.5, "Tidak ada data", ha="center", va="center", transform=ax.transAxes)
+            ax.axis('off')
+            return self._save_figure(fig, filename)
+
+        df_plot = pd.DataFrame(plot_data)
+        fig, ax = plt.subplots(figsize=(max(10, len(ablation_data) * 1.2), 7))
+
+        sns.violinplot(x="Konfigurasi", y="Nilai", data=df_plot, ax=ax,
+                      hue="Konfigurasi", palette="Set3", inner="box", legend=False)
+
+        title = title_id or f"Distribusi {metric_id or metric}"
+        ax.set_title(title, fontsize=self.config.title_fontsize + 2, fontweight="bold", pad=20)
+        ax.set_xlabel("Konfigurasi", fontsize=self.config.label_fontsize, fontweight="bold")
+        ax.set_ylabel(metric_id or metric, fontsize=self.config.label_fontsize, fontweight="bold")
+
+        plt.xticks(rotation=45, ha="right")
+        ax.grid(axis='y', alpha=0.3, linestyle=':')
+
+        return self._save_figure(fig, filename)
+
+    def create_anova_results_table(
+        self,
+        anova_results: list[dict],
+        filename: str,
+        title_id: str = "Hasil Analisis ANOVA Studi Ablasi",
+    ) -> str:
+        """Create ANOVA results summary table."""
+        rows = []
+        for result in anova_results:
+            sig = "***" if result.get("p_value", 1) < 0.001 else \
+                  "**" if result.get("p_value", 1) < 0.01 else \
+                  "*" if result.get("p_value", 1) < 0.05 else "ns"
+            rows.append({
+                "Metrik": result.get("metric_id", result.get("metric", "N/A")),
+                "Uji": result.get("test_name_id", result.get("test_name", "N/A")),
+                "F/H": f"{result.get('statistic', 0):.3f}",
+                "df": result.get("degrees_of_freedom", "N/A"),
+                "p-value": f"{result.get('p_value', 1):.4f}",
+                "Sig.": sig,
+                "η²": f"{result.get('effect_size', 0):.3f}" if result.get('effect_size') else "N/A",
+            })
+
+        table_df = pd.DataFrame(rows)
+        return self.save_table_as_image(table_df, "ANOVA Results", filename, title_id, highlight_cols=["Sig."])
+
+    def create_pairwise_comparison_heatmap(
+        self,
+        pairwise_results: dict[str, dict[str, float]],
+        filename: str,
+        title_id: str = "Matriks Perbandingan Berpasangan (p-value)",
+    ) -> str:
+        """Create heatmap for pairwise comparison p-values."""
+        configs = list(pairwise_results.keys())
+        n = len(configs)
+        matrix = np.ones((n, n))
+
+        for i, c1 in enumerate(configs):
+            for j, c2 in enumerate(configs):
+                if c2 in pairwise_results.get(c1, {}):
+                    matrix[i, j] = pairwise_results[c1][c2]
+
+        df_matrix = pd.DataFrame(matrix, index=configs, columns=configs)
+
+        fig, ax = plt.subplots(figsize=(max(8, n * 0.8), max(8, n * 0.8)))
+        sns.heatmap(df_matrix, annot=True, fmt=".3f", cmap="RdYlGn_r",
+                   center=0.05, vmin=0, vmax=0.1, ax=ax, linewidths=0.5,
+                   cbar_kws={"label": "p-value"})
+
+        ax.set_title(title_id, fontsize=self.config.title_fontsize + 2, fontweight="bold", pad=20)
+        plt.xticks(rotation=45, ha="right")
+        plt.yticks(rotation=0)
+
+        return self._save_figure(fig, filename)
+
+    def print_summary(self):
+        """Print summary of generated figures."""
+        print(f"\n{'='*50}")
+        print(f"📊 Generated {len(self.generated_files)} figures in {self.output_dir}")
+        print(f"{'='*50}")
+        for filepath in self.generated_files:
+            print(f"  • {os.path.basename(filepath)}")
 
 
 # ===== Convenience Functions =====
@@ -965,8 +1276,6 @@ def generate_all_figures_from_analysis(
         non_rag_stats = comp.get("non_rag_stats", {})
         test_result = comp.get("test_result", {})
 
-        # Generate mock data for visualization if only stats available
-        # In real usage, pass actual data arrays
         if "mean" in rag_stats and "std_dev" in rag_stats:
             n = rag_stats.get("n", 50)
             rag_data = np.random.normal(rag_stats["mean"], rag_stats.get("std_dev", 0.1), n)
@@ -1002,7 +1311,6 @@ def generate_all_figures_from_analysis(
 
 
 if __name__ == "__main__":
-    # Demo usage
     print("Statistical Visualization Module")
     print("=" * 50)
     print("Import this module to generate publication-quality figures.")

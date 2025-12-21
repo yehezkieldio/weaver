@@ -23,8 +23,8 @@ def main():
 
     # Generate timestamp
     timestamp = int(datetime.now().timestamp() * 1000)
-    output_file = f".results/ablation-study/statistical-analysis-report-{timestamp}.txt"
-    figures_dir = f".results/ablation-study/figures-{timestamp}"
+    output_file = f".results/statistical-analysis-report-{timestamp}.txt"
+    figures_dir = f".results/figures-{timestamp}"
 
     # Get command line arguments (everything after script name)
     args = sys.argv[1:]
