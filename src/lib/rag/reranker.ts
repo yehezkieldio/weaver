@@ -145,7 +145,7 @@ export interface RerankedResult extends RetrievalResult {
  * Agentic mode recommendation: Use "llm_listwise" or "ensemble" for better relevance.
  */
 const DEFAULT_OPTIONS: RerankerOptions = {
-    strategy: "cross_encoder", // Changed from "ensemble" for production performance
+    strategy: "cross_encoder",
     topK: 5,
     minScore: 0.3,
     language: "auto",
@@ -157,14 +157,18 @@ const DEFAULT_OPTIONS: RerankerOptions = {
     },
 };
 
+type TextClassificationPipeline = Awaited<ReturnType<typeof pipeline>>;
+
 interface PipelineStore {
-    instance: unknown | null;
-    promise: Promise<unknown> | null;
+    instance: TextClassificationPipeline | null;
+    promise: Promise<TextClassificationPipeline> | null;
 }
 
 const globalForPipeline = globalThis as unknown as { __MY_PIPELINE__?: PipelineStore };
 
-export function getPipeline(progressCallback?: (progressInfo: unknown) => void) {
+export function getPipeline(
+    progressCallback?: (progressInfo: unknown) => void
+): TextClassificationPipeline | Promise<TextClassificationPipeline> {
     const store = globalForPipeline.__MY_PIPELINE__ ?? { instance: null, promise: null };
     globalForPipeline.__MY_PIPELINE__ = store;
     if (store.instance) return store.instance;
@@ -187,8 +191,7 @@ async function crossEncoderScore(
     passages: string[],
     progressCallback?: (progressInfo: unknown) => void
 ): Promise<number[]> {
-    // @ts-ignore
-    const pipe = (await getPipeline(progressCallback)) as Awaited<ReturnType<typeof pipeline>>;
+    const pipe = await getPipeline(progressCallback);
     const scores: number[] = [];
 
     for (const passage of passages) {

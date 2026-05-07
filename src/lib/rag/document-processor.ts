@@ -494,7 +494,6 @@ export async function processDocument(documentId: string, options: ProcessingOpt
                 chunkingStrategy: effectiveStrategy,
                 metadata: {
                     ...doc.metadata,
-                    // @ts-expect-error doc.content is possibly null
                     wordCount: doc.content.split(" ").filter((w: string) => w.trim().length > 0).length,
                     chunksCount: chunks.length,
                     documentType: universityMetadata.documentType as

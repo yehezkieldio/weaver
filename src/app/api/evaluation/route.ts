@@ -170,9 +170,17 @@ export async function POST(request: Request) {
 
         // Insert questions if provided
         if (questions?.length > 0) {
-            await db.insert(evaluationQuestions).values(
-                // @ts-expect-error FIXME: type will be fixed later
-                questions.map((q) => ({
+            interface EvaluationQuestionInput {
+                question: string;
+                groundTruth: string;
+                relevantChunkIds?: string[] | null;
+                category?: string | null;
+                difficulty?: string | null;
+                language?: string | null;
+            }
+
+            const questionRows: (typeof evaluationQuestions.$inferInsert)[] = questions.map(
+                (q: EvaluationQuestionInput) => ({
                     runId: run.id,
                     question: q.question,
                     groundTruth: q.groundTruth,
@@ -180,8 +188,10 @@ export async function POST(request: Request) {
                     category: q.category || null,
                     difficulty: q.difficulty || null,
                     questionLanguage: q.language || null,
-                }))
+                })
             );
+
+            await db.insert(evaluationQuestions).values(questionRows);
             console.log(`Inserted ${questions.length} questions`);
         }
 

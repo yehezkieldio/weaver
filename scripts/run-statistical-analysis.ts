@@ -178,8 +178,6 @@ async function fetchAblationStudyData(studyId: string): Promise<AblationData[]> 
 
         const config = configMap.get(result.configName);
         if (config) {
-            // FIXED: Extract per-question metrics (arrays) for valid ANOVA testing
-            // The perQuestionMetrics array contains individual scores for each question
             if (result.perQuestionMetrics && result.perQuestionMetrics.length > 0) {
                 consola.info(
                     `[fetchAblationStudyData] Config "${result.configName}": Found ${result.perQuestionMetrics.length} per-question metrics`
@@ -234,7 +232,7 @@ async function fetchAblationStudyData(studyId: string): Promise<AblationData[]> 
     return Array.from(configMap.values());
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: wip
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: CLI orchestration branches across evaluation and ablation modes
 async function runAnalysis() {
     consola.info("=".repeat(60));
     consola.info("RAG Evaluation Statistical Analysis");
