@@ -167,9 +167,6 @@ type ChatMetadata = AgenticMetadata | StandardRagMetadata | DirectMetadata;
  */
 export async function POST(request: Request) {
     const startTime = Date.now();
-    console.log("[POST] Starting chat request processing");
-
-    consola.level = 999;
 
     try {
         const {
@@ -192,9 +189,15 @@ export async function POST(request: Request) {
             rerankerStrategy?: "cross_encoder" | "llm" | "llm_listwise" | "cohere" | "ensemble" | "none";
         } = await request.json();
 
-        console.log(
-            `[POST] Parsed request - sessionId: ${sessionId}, useRag: ${useRag}, useAgenticMode: ${useAgenticMode}, retrievalStrategy: ${retrievalStrategy}, enableGuardrails: ${enableGuardrails}, useReranker: ${useReranker}, rerankerStrategy: ${rerankerStrategy}`
-        );
+        consola.debug("[POST] Parsed chat request", {
+            hasSession: Boolean(sessionId),
+            useRag,
+            useAgenticMode,
+            retrievalStrategy,
+            enableGuardrails,
+            useReranker,
+            rerankerStrategy,
+        });
 
         const lastMessage = messages.at(-1);
 
@@ -210,12 +213,12 @@ export async function POST(request: Request) {
             userMessage = String(lastMessage.content || "");
         }
 
-        console.log(`[POST] User message: "${userMessage.substring(0, 100)}...", length: ${userMessage.length}`);
+        consola.debug("[POST] User message received", { length: userMessage.length });
 
         const language = detectQueryLanguage(userMessage);
         const triggeredGuardrails: string[] = [];
 
-        console.log(`[POST] Detected language: ${language}`);
+        consola.debug("[POST] Detected language", { language });
 
         if (enableGuardrails) {
             const [inputValidation, negativeReaction] = await Promise.all([
@@ -223,9 +226,10 @@ export async function POST(request: Request) {
                 detectNegativeReaction(userMessage),
             ]);
 
-            console.log(
-                `[POST] Guardrails - input passed: ${inputValidation.passed}, negative reaction: ${negativeReaction.detected}`
-            );
+            consola.debug("[POST] Guardrails evaluated", {
+                inputPassed: inputValidation.passed,
+                negativeReactionDetected: negativeReaction.detected,
+            });
 
             // Log guardrail checks
             if (sessionId) {
@@ -252,7 +256,7 @@ export async function POST(request: Request) {
 
             // Handle negative reactions with empathetic response (streamed)
             if (negativeReaction.detected && negativeReaction.severity === "high") {
-                console.log("[POST] High severity negative reaction detected - responding empathetically");
+                consola.info("[POST] High severity negative reaction detected");
 
                 const empathyResponse =
                     language === "id"
@@ -282,7 +286,7 @@ export async function POST(request: Request) {
             }
 
             if (!inputValidation.passed) {
-                console.log("[POST] Input validation failed - blocking request");
+                consola.info("[POST] Input validation failed");
 
                 return new Response(
                     JSON.stringify({
@@ -301,7 +305,7 @@ export async function POST(request: Request) {
         }
 
         if (useRag && useAgenticMode) {
-            console.log("[POST] Using agentic RAG mode (streaming with real-time steps)");
+            consola.debug("[POST] Using agentic RAG mode");
 
             // Track accumulated data for final metadata
             const accumulatedSteps: AgentStep[] = [];
@@ -454,9 +458,11 @@ export async function POST(request: Request) {
                 onFinish: async () => {
                     const latencyMs = Date.now() - startTime;
 
-                    console.log(
-                        `[POST] Agentic RAG stream finished - latency: ${latencyMs}ms, steps: ${accumulatedSteps.length}, chunks: ${accumulatedChunks.length}`
-                    );
+                    consola.debug("[POST] Agentic RAG stream finished", {
+                        latencyMs,
+                        steps: accumulatedSteps.length,
+                        chunks: accumulatedChunks.length,
+                    });
 
                     // Output validation
                     if (enableGuardrails && responseText) {
@@ -567,7 +573,7 @@ export async function POST(request: Request) {
         }
 
         if (useRag) {
-            console.log("[POST] Using standard RAG mode (streaming)");
+            consola.debug("[POST] Using standard RAG mode");
 
             let systemPrompt = SYSTEM_PROMPTS.rag;
             let retrievedChunks: Array<{
@@ -591,7 +597,7 @@ export async function POST(request: Request) {
 
             retrievedChunks = contextResult.chunks;
 
-            console.log(`[POST] Retrieved ${retrievedChunks.length} chunks for context`);
+            consola.debug("[POST] Retrieved chunks for context", { chunks: retrievedChunks.length });
 
             if (contextResult.context) {
                 systemPrompt = buildRagPrompt(SYSTEM_PROMPTS.rag, contextResult.context, userMessage);
@@ -647,7 +653,7 @@ export async function POST(request: Request) {
                             ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
                             .map((p) => p.text)
                             .join("") || "";
-                    console.log(`[POST] Standard RAG response finished - latency: ${latencyMs}ms`);
+                    consola.debug("[POST] Standard RAG response finished", { latencyMs });
 
                     // Output validation
                     if (enableGuardrails) {
@@ -703,7 +709,7 @@ export async function POST(request: Request) {
             });
         }
 
-        console.log("[POST] Using direct mode (no RAG, streaming)");
+        consola.debug("[POST] Using direct mode");
 
         const directMetadata: DirectMetadata = {
             type: "direct",
@@ -753,7 +759,7 @@ export async function POST(request: Request) {
                         .map((p) => p.text)
                         .join("") || "";
 
-                console.log(`[POST] Direct mode response finished - latency: ${latencyMs}ms`);
+                consola.debug("[POST] Direct mode response finished", { latencyMs });
 
                 // Save messages to database
                 if (sessionId) {
