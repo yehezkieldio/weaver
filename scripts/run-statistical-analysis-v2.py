@@ -7,9 +7,9 @@ and a structured report to the research/results directory with timestamps.
 Figures are automatically generated and saved to timestamped subdirectories.
 
 Usage:
-    python scripts/run-statistical-analysis-v2.py --latest
-    python scripts/run-statistical-analysis-v2.py --run-id=<uuid>
-    python scripts/run-statistical-analysis-v2.py --latest --no-figures
+    uv run scripts/run-statistical-analysis-v2.py --latest
+    uv run scripts/run-statistical-analysis-v2.py --run-id=<uuid>
+    uv run scripts/run-statistical-analysis-v2.py --latest --no-figures
 """
 
 import subprocess
@@ -33,15 +33,15 @@ def main():
     enable_figures = "--no-figures" not in args
     args = [a for a in args if a != "--no-figures"]
 
-    # Build command with default arguments
-    cmd = ["uv", "run",  "scripts/run-statistical-analysis.py"] + args
+    # Build command with default arguments.
+    cmd = ["uv", "run", "scripts/run-statistical-analysis.py"] + args
 
     # Add figures flag if not disabled
     if enable_figures:
         cmd.extend(["--figures", f"--output-dir={figures_dir}"])
 
     print(f"Running statistical analysis...")
-    print(f"Arguments: {' '.join(args) if args else '--latest'}")
+    print(f"Arguments: {' '.join(args) if args else 'default latest behavior'}")
     print(f"Output will be saved to: {output_file}")
     if enable_figures:
         print(f"Figures will be saved to: {figures_dir}/")

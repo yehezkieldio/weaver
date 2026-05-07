@@ -165,7 +165,7 @@ Command-line interface for running tests:
 
 **Usage**:
 ```bash
-# Quick test (first 3 scenarios)
+# Quick test (small scenario subset)
 npm run test:simulated-user:quick
 
 # All scenarios

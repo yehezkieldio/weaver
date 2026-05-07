@@ -219,8 +219,8 @@ const VERBOSE = values.verbose;
 interface TestCase {
     id: string;
     query: string;
-    expectedKeywords: string[]; // At least one of these should be present, or all? Let's say ALL for now to be strict, or maybe a flexible check.
-    // Let's use a function for validation for more flexibility
+    expectedKeywords: string[];
+    // Custom validators keep each case explicit when keyword matching is too coarse.
     validate: (response: string) => boolean;
     description: string;
 }
@@ -285,7 +285,7 @@ async function runTest(testCase: TestCase): Promise<boolean> {
                 ],
                 useRag: true,
                 useAgenticMode: false, // Standard RAG is enough for fact checking
-                stream: false, // Turn off streaming for easier text parsing if supported, actually API always streams
+                stream: false, // Requested for non-streaming-compatible servers; this endpoint may still stream.
             }),
         });
 

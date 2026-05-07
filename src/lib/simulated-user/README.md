@@ -5,7 +5,7 @@
 ## Quick Start
 
 ```bash
-# Run quick test (first 3 scenarios)
+# Run quick test (small scenario subset)
 npm run test:simulated-user:quick
 
 # Run all scenarios
@@ -168,7 +168,7 @@ Similar to **LLM-as-a-Judge** (used in RAGAS):
 --scenario <scenario-id>
   Example: --scenario krs-registration
 
-# Quick mode (first 3 scenarios)
+# Quick mode (small scenario subset)
 --quick
 
 # Run all scenarios

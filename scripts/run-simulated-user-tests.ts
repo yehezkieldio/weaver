@@ -137,7 +137,8 @@ function parseArgs(): {
     return parsed;
 }
 
-/** * Generate markdown report from results
+/**
+ * Generate markdown report from results.
  */
 function generateMarkdownReport(metrics: SystemLevelMetrics, startTime: Date, endTime: Date): string {
     const duration = ((endTime.getTime() - startTime.getTime()) / 1000).toFixed(1);
@@ -438,21 +439,14 @@ Component-Level (RAGAS Evaluation)
 Architecture (Agentic RAG Design)
 \`\`\`
 
-### 4.3 Current Results Comparison
+### 4.3 System-Level Results
 
-#### Component-Level Results (from RAGAS Evaluation)
-- Faithfulness: ${(0.85).toFixed(2)} (example - update with actual)
-- Answer Relevancy: ${(0.82).toFixed(2)} (example - update with actual)
-- Context Precision: ${(0.79).toFixed(2)} (example - update with actual)
-- Context Recall: ${(0.88).toFixed(2)} (example - update with actual)
-
-#### System-Level Results (This Report)
 - Task Completion: ${(successRate * 100).toFixed(1)}%
 - Conversation Coherence: ${metrics.averageCoherenceScore.toFixed(2)}
 - Context Retention: ${(metrics.averageContextRetentionRate * 100).toFixed(1)}%
 - Information Coverage: ${(metrics.averageInformationCoverageRate * 100).toFixed(1)}%
 
-**Synthesis**: ${successRate >= 0.8 && metrics.averageCoherenceScore >= 0.8 ? "Both component and system-level metrics show strong performance, validating the complete implementation." : "Discrepancy between component and system-level metrics suggests integration issues requiring investigation."}
+**Synthesis**: ${successRate >= 0.8 && metrics.averageCoherenceScore >= 0.8 ? "System-level metrics show strong performance across task completion and conversation quality." : "System-level metrics suggest integration issues requiring investigation."}
 
 ---
 
@@ -699,7 +693,7 @@ async function main() {
         scenarios = [scenario];
         consola.info(`Running single scenario: ${scenario.name}\n`);
     } else if (args.quick) {
-        // Quick mode: run first 3 scenarios
+        // Quick mode: run a small scenario subset.
         scenarios = ALL_SCENARIOS.slice(0, 2);
         consola.info(`Quick mode: Running ${scenarios.length} scenarios\n`);
     } else {

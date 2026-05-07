@@ -119,5 +119,5 @@ Di sini Anda menempelkan output dari script dan dashboard.
 
 ## Cara Mengekspor Data untuk Paper
 1.  **Data Mentah (CSV):** Buka `/evaluation/manage` -> "Export Data" untuk mendapatkan CSV mentah bagi Lampiran (Appendix) atau analisis eksternal (SPSS/Python).
-2.  **Laporan Statistik:** Jalankan `bun run scripts/run-statistical-analysis.ts --latest` dan salin tabel ASCII secara langsung.
+2.  **Laporan Statistik:** Jalankan `uv run scripts/run-statistical-analysis.py --latest` atau `bun run scripts/run-statistical-analysis.ts --latest`, lalu salin tabel ASCII secara langsung.
 3.  **Grafik:** Ambil tangkapan layar resolusi tinggi dari dashboard `/evaluation`.

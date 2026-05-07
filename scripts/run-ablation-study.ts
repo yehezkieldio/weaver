@@ -120,7 +120,7 @@ async function main() {
 
         consola.success("Ablation study completed successfully!");
         consola.info(
-            `Run 'python scripts/run-statistical-analysis-v2.py --ablation-id=${study.id}' to analyze results.`
+            `Run 'uv run scripts/run-statistical-analysis-v2.py --ablation-id=${study.id}' to analyze results.`
         );
     } catch (error) {
         consola.error("Ablation study failed:", error);

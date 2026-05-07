@@ -1648,7 +1648,7 @@ async function executeRagPipeline(
     // Step 2: Mark re-ranking completion
     // NOTE: Re-ranking already happened inside hybridRetrieve when config.useReranker=true.
     // This marker captures the point after retrieval+reranking is complete.
-    // TODO: Pass latencyTracker to hybridRetrieve for granular reranking latency tracking.
+    // Future improvement: pass latencyTracker to hybridRetrieve for granular reranking latency tracking.
     if (config.useReranker) {
         latencyTracker.mark("reranking", { documentsProcessed: retrievalResults.length });
     }

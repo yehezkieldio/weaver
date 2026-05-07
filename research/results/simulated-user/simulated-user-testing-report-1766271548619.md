@@ -293,15 +293,8 @@ Component-Level (RAGAS Evaluation)
 Architecture (Agentic RAG Design)
 ```
 
-### 4.3 Current Results Comparison
+### 4.3 System-Level Results
 
-#### Component-Level Results (from RAGAS Evaluation)
-- Faithfulness: 0.85 (example - update with actual)
-- Answer Relevancy: 0.82 (example - update with actual)
-- Context Precision: 0.79 (example - update with actual)
-- Context Recall: 0.88 (example - update with actual)
-
-#### System-Level Results (This Report)
 - Task Completion: 100.0%
 - Conversation Coherence: 0.95
 - Context Retention: 100.0%
