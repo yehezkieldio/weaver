@@ -890,7 +890,7 @@ const MessageList = memo(function MessageListComponent({
     );
 });
 
-function generateDummyMessage(
+function generatePreviewMessage(
     type: "user" | "assistant" | "agentic-streaming" | "rag" | "error",
     messages: MessageWithMetadata[],
     callbacks: {
@@ -903,7 +903,7 @@ function generateDummyMessage(
         setError: (error: string | null) => void;
     }
 ) {
-    const messageId = `debug-${Date.now()}-${Math.random()}`;
+    const messageId = `preview-${Date.now()}-${Math.random()}`;
 
     switch (type) {
         case "user": {
@@ -912,7 +912,7 @@ function generateDummyMessage(
                 {
                     id: messageId,
                     role: "user",
-                    parts: [{ type: "text", text: "This is a debug user message for testing UI." }],
+                    parts: [{ type: "text", text: "This is a preview user message for checking the chat UI." }],
                 },
             ]);
             break;
@@ -927,7 +927,7 @@ function generateDummyMessage(
                     parts: [
                         {
                             type: "text",
-                            text: "This is a **debug assistant message** with *markdown* formatting.\n\n- Bullet point 1\n- Bullet point 2\n\nAnd a code block:\n\n```typescript\nconst x = 42;\n```",
+                            text: "This is a **preview assistant message** with *markdown* formatting.\n\n- Bullet point 1\n- Bullet point 2\n\nAnd a code block:\n\n```typescript\nconst x = 42;\n```",
                         },
                     ],
                 },
@@ -938,18 +938,18 @@ function generateDummyMessage(
         case "rag": {
             const ragChunks: RetrievedChunk[] = [
                 {
-                    chunkId: "debug-chunk-1",
-                    documentTitle: "Debug Document A.pdf",
-                    content: "This is debug content from document A for testing RAG display.",
+                    chunkId: "preview-chunk-1",
+                    documentTitle: "Preview Document A.pdf",
+                    content: "This is preview content from document A for checking the RAG display.",
                     similarity: 0.92,
                     retrievalMethod: "hybrid",
                     vectorScore: 0.89,
                     bm25Score: 0.95,
                 },
                 {
-                    chunkId: "debug-chunk-2",
-                    documentTitle: "Debug Document B.pdf",
-                    content: "This is debug content from document B with medium relevance.",
+                    chunkId: "preview-chunk-2",
+                    documentTitle: "Preview Document B.pdf",
+                    content: "This is preview content from document B with medium relevance.",
                     similarity: 0.67,
                     retrievalMethod: "vector",
                     vectorScore: 0.67,
@@ -963,7 +963,7 @@ function generateDummyMessage(
                     parts: [
                         {
                             type: "text",
-                            text: "This is a debug RAG response that includes retrieved chunks from documents.",
+                            text: "This is a preview RAG response that includes retrieved chunks from documents.",
                         },
                     ],
                 },
@@ -973,12 +973,12 @@ function generateDummyMessage(
         }
 
         case "agentic-streaming": {
-            const dummySteps: AgentStep[] = [
+            const previewSteps: AgentStep[] = [
                 {
                     stepIndex: 0,
                     stepType: "retrieval",
                     toolName: "search_documents",
-                    toolInput: { query: "debug query" },
+                    toolInput: { query: "preview query" },
                     durationMs: 234,
                     timestamp: Date.now() - 3000,
                 },
@@ -986,7 +986,7 @@ function generateDummyMessage(
                     stepIndex: 1,
                     stepType: "tool_call",
                     toolName: "analyze_context",
-                    toolInput: { context: "debug context" },
+                    toolInput: { context: "preview context" },
                     toolOutput: "Analysis complete",
                     durationMs: 456,
                     timestamp: Date.now() - 2000,
@@ -999,26 +999,25 @@ function generateDummyMessage(
                     timestamp: Date.now() - 1000,
                 },
             ];
-            const dummyChunks: RetrievedChunk[] = [
+            const previewChunks: RetrievedChunk[] = [
                 {
-                    chunkId: "debug-stream-chunk-1",
-                    documentTitle: "Streaming Debug Doc.pdf",
-                    content: "Debug streaming chunk content.",
+                    chunkId: "preview-stream-chunk-1",
+                    documentTitle: "Streaming Preview Doc.pdf",
+                    content: "Preview streaming chunk content.",
                     similarity: 0.85,
                     retrievalMethod: "hybrid",
                     vectorScore: 0.82,
                     bm25Score: 0.88,
                 },
             ];
-            callbacks.setLiveAgentSteps(dummySteps);
-            callbacks.setLiveRetrievedChunks(dummyChunks);
+            callbacks.setLiveAgentSteps(previewSteps);
+            callbacks.setLiveRetrievedChunks(previewChunks);
             callbacks.setAgentProgress({
                 status: "reasoning",
                 currentStep: 2,
                 maxSteps: 3,
-                message: "Debug: Processing agent reasoning...",
+                message: "Preview: Processing agent reasoning...",
             });
-            // Simulate streaming state
             setTimeout(() => {
                 callbacks.setMessages([
                     ...messages,
@@ -1028,13 +1027,13 @@ function generateDummyMessage(
                         parts: [
                             {
                                 type: "text",
-                                text: "This is a debug agentic response after simulated streaming.",
+                                text: "This is a preview agentic response after simulated streaming.",
                             },
                         ],
                     },
                 ]);
-                callbacks.setAgentSteps(dummySteps);
-                callbacks.setRetrievedChunks(dummyChunks);
+                callbacks.setAgentSteps(previewSteps);
+                callbacks.setRetrievedChunks(previewChunks);
                 callbacks.setLiveAgentSteps([]);
                 callbacks.setLiveRetrievedChunks([]);
                 callbacks.setAgentProgress(null);
@@ -1043,7 +1042,7 @@ function generateDummyMessage(
         }
 
         case "error": {
-            callbacks.setError("Debug error: This is a simulated error message for testing error display.");
+            callbacks.setError("Preview error: This is a simulated error message for checking error display.");
             setTimeout(() => callbacks.setError(null), 5000);
             break;
         }
@@ -1054,9 +1053,9 @@ function generateDummyMessage(
 }
 
 const DebugPanel = memo(function DebugPanelComponent({
-    onAddDummyMessage,
+    onAddPreviewMessage,
 }: {
-    onAddDummyMessage: (type: "user" | "assistant" | "agentic-streaming" | "rag" | "error") => void;
+    onAddPreviewMessage: (type: "user" | "assistant" | "agentic-streaming" | "rag" | "error") => void;
 }) {
     return (
         <Card className="border-amber-500/50 bg-amber-500/5 p-3">
@@ -1065,19 +1064,19 @@ const DebugPanel = memo(function DebugPanelComponent({
                 <span className="font-medium text-amber-700 text-sm dark:text-amber-400">Mode Debug</span>
             </div>
             <div className="flex flex-wrap gap-2">
-                <Button onClick={() => onAddDummyMessage("user")} size="sm" variant="outline">
+                <Button onClick={() => onAddPreviewMessage("user")} size="sm" variant="outline">
                     Tambahkan Pesan Pengguna
                 </Button>
-                <Button onClick={() => onAddDummyMessage("assistant")} size="sm" variant="outline">
+                <Button onClick={() => onAddPreviewMessage("assistant")} size="sm" variant="outline">
                     Tambahkan Pesan Asisten
                 </Button>
-                <Button onClick={() => onAddDummyMessage("rag")} size="sm" variant="outline">
+                <Button onClick={() => onAddPreviewMessage("rag")} size="sm" variant="outline">
                     Tambahkan Pesan RAG
                 </Button>
-                <Button onClick={() => onAddDummyMessage("agentic-streaming")} size="sm" variant="outline">
+                <Button onClick={() => onAddPreviewMessage("agentic-streaming")} size="sm" variant="outline">
                     Simulasikan Agentic Streaming
                 </Button>
-                <Button onClick={() => onAddDummyMessage("error")} size="sm" variant="outline">
+                <Button onClick={() => onAddPreviewMessage("error")} size="sm" variant="outline">
                     Pemicu Kondisi Error
                 </Button>
             </div>
