@@ -44,7 +44,7 @@ src/app/api/evaluation/route.ts    # Evaluation run management
 
 #### What Gets Evaluated
 ```typescript
-// From evaluation pipeline (docs/07_evaluation_pipeline.md)
+// From evaluation pipeline (research/docs/07_evaluation_pipeline.md)
 async function executeRagPipeline(
     question: string,
     groundTruth: string,
@@ -351,12 +351,12 @@ Untuk mengatasi keterbatasan ini:
 
 **Current (Problematic):**
 ```markdown
-Gambar 4.1: Antarmuka chatbot sistem MuliaChat yang dikembangkan
+Gambar 4.1: Antarmuka chatbot sistem Weaver yang dikembangkan
 ```
 
 **Revised (Clear):**
 ```markdown
-Gambar 4.1: Antarmuka demonstrator aplikasi MuliaChat. Aplikasi ini menunjukkan 
+Gambar 4.1: Antarmuka demonstrator aplikasi Weaver. Aplikasi ini menunjukkan 
 integrasi komponen RAG dalam konteks chatbot, namun evaluasi penelitian difokuskan 
 pada kualitas retrieval dan generation components (lihat Bagian 4.2-4.5), bukan pada 
 aspek UI/UX atau conversation management.
@@ -512,13 +512,13 @@ const MULTI_TURN_SCENARIOS: MultiTurnScenario[] = [
 
 #### 2.2 Implement User Testing Protocol
 
-**Create:** `docs/user_testing_protocol.md`
+**Create:** `research/docs/user_testing_protocol.md`
 
 ```markdown
 # User Testing Protocol
 
 ## Objective
-Evaluate real-world usability and effectiveness of MuliaChat application
+Evaluate real-world usability and effectiveness of Weaver application
 
 ## Participants
 - N=20-30 students from Universitas Mulia
@@ -632,7 +632,7 @@ async function runCompleteEvaluation() {
     await runIntegrationTests();
     
     console.log("\n=== Phase 4: User Testing ===");
-    console.log("Manual user testing required - see docs/user_testing_protocol.md");
+    console.log("Manual user testing required - see research/docs/user_testing_protocol.md");
     
     console.log("\n=== Phase 5: Statistical Analysis ===");
     await runStatisticalAnalysis({

@@ -274,7 +274,7 @@ console.log(`Coherence: ${result.metrics.averageCoherenceScore}`);
 - Suggest **future work** (real user studies)
 
 **Defense Script**:
-> "Kami menggunakan dua level evaluasi: (1) Component-level dengan RAGAS untuk memvalidasi komponen RAG bekerja dengan baik, dan (2) System-level dengan simulated user testing untuk memvalidasi bahwa komponen-komponen ini terintegrasi menjadi sistem yang fungsional. Kombinasi keduanya memberikan validasi menyeluruh terhadap implementasi MuliaChat."
+> "Kami menggunakan dua level evaluasi: (1) Component-level dengan RAGAS untuk memvalidasi komponen RAG bekerja dengan baik, dan (2) System-level dengan simulated user testing untuk memvalidasi bahwa komponen-komponen ini terintegrasi menjadi sistem yang fungsional. Kombinasi keduanya memberikan validasi menyeluruh terhadap implementasi Weaver."
 
 ### Paper Integration
 

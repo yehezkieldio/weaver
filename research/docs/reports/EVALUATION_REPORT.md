@@ -1,4 +1,4 @@
-# Academic Research RAG Chatbot: Evaluation & Testing Framework
+# Weaver: Evaluation & Testing Framework
 
 ## Executive Summary: Evaluation Architecture
 
@@ -70,7 +70,7 @@ The project includes robust tooling to automate this process.
 
 - **Output Artifacts**:
     - **Console Output**: Real-time progress and summary statistics.
-    - **Markdown Reports**: Detailed files saved to `.results/` containing:
+    - **Markdown Reports**: Detailed files saved to `research/results/` containing:
         - Executive summary of the run.
         - Per-scenario breakdown.
         - Error analysis.

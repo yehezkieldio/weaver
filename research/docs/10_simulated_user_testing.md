@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Simulated User Testing Framework provides **system-level evaluation** of the MuliaChat RAG chatbot, complementing existing component-level RAGAS metrics. This addresses the methodology gap between the paper title ("Implementasi") and the evaluation scope.
+The Simulated User Testing Framework provides **system-level evaluation** of the Weaver RAG chatbot, complementing existing component-level RAGAS metrics. This addresses the methodology gap between the paper title ("Implementasi") and the evaluation scope.
 
 ## Why Simulated User Testing?
 
@@ -492,7 +492,7 @@ Hasil simulated user testing menunjukkan:
 ### 5.X Evaluasi Komprehensif: Komponen vs Sistem
 
 Kombinasi evaluasi komponen-level dan sistem-level memberikan
-validasi menyeluruh terhadap implementasi MuliaChat...
+validasi menyeluruh terhadap implementasi Weaver...
 ```
 
 ## References

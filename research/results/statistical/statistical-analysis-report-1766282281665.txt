@@ -3,7 +3,7 @@ RAG Evaluation Statistical Analysis (Python)
 Analisis Statistik Evaluasi RAG (Python)
 ============================================================
 
-📊 Figure generation enabled. Output: .results/statistical/figures-1766282281665
+📊 Figure generation enabled. Output: research/results/statistical/figures-1766282281665
 Connecting to database...
 Loaded latest evaluation run: Production 1 (50 questions)
 Loaded latest ablation study: CLI Ablation Study 2025-12-20T23:35:28.142Z (9 configs)
@@ -232,8 +232,8 @@ RAG Tokens Per Second:
     IQR: 5.9795
 
 [Generating Descriptive Statistics Figure...]
-  📊 Saved: .results/statistical/figures-1766282281665/descriptive_stats_table.png
-  📊 Saved: .results/statistical/figures-1766282281665/latency_distribution.png
+  📊 Saved: research/results/statistical/figures-1766282281665/descriptive_stats_table.png
+  📊 Saved: research/results/statistical/figures-1766282281665/latency_distribution.png
 
 ============================================================
 2. PAIRED T-TESTS WITH ASSUMPTION CHECKING / UJI T BERPASANGAN DENGAN VALIDASI ASUMSI
@@ -370,13 +370,13 @@ RAG Citation Accuracy:
   95% CI: [0.7078, 0.7882]
 
 [Generating Comparison Figures...]
-  📊 Saved: .results/statistical/figures-1766282281665/comparison_answer_relevancy.png
-  📊 Saved: .results/statistical/figures-1766282281665/comparison_answer_correctness.png
-  📊 Saved: .results/statistical/figures-1766282281665/comparison_factual_accuracy_1_-_hallucination.png
-  📊 Saved: .results/statistical/figures-1766282281665/statistical_test_results_table.png
-  📊 Saved: .results/statistical/figures-1766282281665/rag_vs_nonrag_comparison_summary.png
-  📊 Saved: .results/statistical/figures-1766282281665/effect_sizes_forest_plot.png
-  📊 Saved: .results/statistical/figures-1766282281665/radar_metrics_overview.png
+  📊 Saved: research/results/statistical/figures-1766282281665/comparison_answer_relevancy.png
+  📊 Saved: research/results/statistical/figures-1766282281665/comparison_answer_correctness.png
+  📊 Saved: research/results/statistical/figures-1766282281665/comparison_factual_accuracy_1_-_hallucination.png
+  📊 Saved: research/results/statistical/figures-1766282281665/statistical_test_results_table.png
+  📊 Saved: research/results/statistical/figures-1766282281665/rag_vs_nonrag_comparison_summary.png
+  📊 Saved: research/results/statistical/figures-1766282281665/effect_sizes_forest_plot.png
+  📊 Saved: research/results/statistical/figures-1766282281665/radar_metrics_overview.png
 
 ============================================================
 6. ABLATION STUDY ANALYSIS / ANALISIS STUDI ABLASI
@@ -400,21 +400,21 @@ Peringkat Konfigurasi (berdasarkan Faithfulness):
 Best Configuration / Konfigurasi Terbaik: vector_only
 
 [Generating Comprehensive Ablation Study Figures...]
-  📊 Saved: .results/statistical/figures-1766282281665/ablation_ranking_faithfulness.png
-  📊 Saved: .results/statistical/figures-1766282281665/ablation_ranking_answer_relevancy.png
-  📊 Saved: .results/statistical/figures-1766282281665/ablation_ranking_context_precision.png
-  📊 Saved: .results/statistical/figures-1766282281665/ablation_ranking_answer_correctness.png
-  📊 Saved: .results/statistical/figures-1766282281665/ablation_multi_metric_comparison.png
-  📊 Saved: .results/statistical/figures-1766282281665/ablation_performance_heatmap.png
-  📊 Saved: .results/statistical/figures-1766282281665/ablation_detailed_comparison_table.png
-  📊 Saved: .results/statistical/figures-1766282281665/ablation_latency_comparison_table.png
-  📊 Saved: .results/statistical/figures-1766282281665/ablation_latency_boxplot.png
-  📊 Saved: .results/statistical/figures-1766282281665/ablation_radar_top2_comparison.png
-  📊 Saved: .results/statistical/figures-1766282281665/anova_results_summary_table.png
-  📊 Saved: .results/statistical/figures-1766282281665/violin_faithfulness.png
-  📊 Saved: .results/statistical/figures-1766282281665/violin_answer_relevancy.png
-  📊 Saved: .results/statistical/figures-1766282281665/violin_answer_correctness.png
-  📊 Saved: .results/statistical/figures-1766282281665/descriptive_stats_faithfulness_all_configs.png
+  📊 Saved: research/results/statistical/figures-1766282281665/ablation_ranking_faithfulness.png
+  📊 Saved: research/results/statistical/figures-1766282281665/ablation_ranking_answer_relevancy.png
+  📊 Saved: research/results/statistical/figures-1766282281665/ablation_ranking_context_precision.png
+  📊 Saved: research/results/statistical/figures-1766282281665/ablation_ranking_answer_correctness.png
+  📊 Saved: research/results/statistical/figures-1766282281665/ablation_multi_metric_comparison.png
+  📊 Saved: research/results/statistical/figures-1766282281665/ablation_performance_heatmap.png
+  📊 Saved: research/results/statistical/figures-1766282281665/ablation_detailed_comparison_table.png
+  📊 Saved: research/results/statistical/figures-1766282281665/ablation_latency_comparison_table.png
+  📊 Saved: research/results/statistical/figures-1766282281665/ablation_latency_boxplot.png
+  📊 Saved: research/results/statistical/figures-1766282281665/ablation_radar_top2_comparison.png
+  📊 Saved: research/results/statistical/figures-1766282281665/anova_results_summary_table.png
+  📊 Saved: research/results/statistical/figures-1766282281665/violin_faithfulness.png
+  📊 Saved: research/results/statistical/figures-1766282281665/violin_answer_relevancy.png
+  📊 Saved: research/results/statistical/figures-1766282281665/violin_answer_correctness.png
+  📊 Saved: research/results/statistical/figures-1766282281665/descriptive_stats_faithfulness_all_configs.png
 
 ============================================================
 7. LATENCY ANALYSIS / ANALISIS LATENSI
@@ -440,10 +440,10 @@ Analysis Complete / Analisis Selesai
 ============================================================
 
 [Generating Summary Dashboard...]
-  📊 Saved: .results/statistical/figures-1766282281665/summary_dashboard.png
+  📊 Saved: research/results/statistical/figures-1766282281665/summary_dashboard.png
 
 ==================================================
-📊 Generated 25 figures in .results/statistical/figures-1766282281665
+📊 Generated 25 figures in research/results/statistical/figures-1766282281665
 ==================================================
   • descriptive_stats_table.png
   • latency_distribution.png

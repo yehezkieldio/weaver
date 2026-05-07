@@ -16,7 +16,7 @@
  *   bun scripts/run-simulated-user-tests.ts --all-scenarios
  */
 
-import { writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import consola from "consola";
 import { runSimulatedUserTests } from "@/lib/simulated-user/conversation-runner";
 import { ALL_SCENARIOS } from "@/lib/simulated-user/scenarios";
@@ -679,7 +679,7 @@ function calculateMedian(values: number[]): number {
  * Main execution
  */
 async function main() {
-    consola.start("Simulated User Testing for MuliaChat RAG System\n");
+    consola.start("Simulated User Testing for Weaver RAG System\n");
 
     const args = parseArgs();
 
@@ -740,7 +740,9 @@ async function main() {
         const report = generateMarkdownReport(metrics, startTime, endTime);
 
         // Save report
-        const reportPath = `.results/simulated-user-testing-report-${Date.now()}.md`;
+        const reportDir = "research/results/simulated-user";
+        mkdirSync(reportDir, { recursive: true });
+        const reportPath = `${reportDir}/simulated-user-testing-report-${Date.now()}.md`;
         writeFileSync(reportPath, report, "utf-8");
 
         consola.info(`\n${"=".repeat(80)}`);

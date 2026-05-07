@@ -41,13 +41,13 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-corpus/Booklet.txt
-corpus/Rencana_Strategis_Universitas_Mulia_2019_2025.txt
-corpus/Panduan_Pembayaran.txt
-corpus/Study_In_Mulia_University.txt
-corpus/Panduan_Skripsi.txt
-corpus/Tata_Tertib_Kehidupan_Kampus_Bagi_Mahasiswa.txt
-corpus/Peraturan_Akademik.txt
+research/corpus/Booklet.txt
+research/corpus/Rencana_Strategis_Universitas_Mulia_2019_2025.txt
+research/corpus/Panduan_Pembayaran.txt
+research/corpus/Study_In_Mulia_University.txt
+research/corpus/Panduan_Skripsi.txt
+research/corpus/Tata_Tertib_Kehidupan_Kampus_Bagi_Mahasiswa.txt
+research/corpus/Peraturan_Akademik.txt
 
 old-docs
 

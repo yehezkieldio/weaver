@@ -1,8 +1,8 @@
-# Ringkasan Eksekutif: Academic Research RAG Chatbot
+# Ringkasan Eksekutif: Weaver
 
 ## 1. Identitas Proyek
 
-**Nama Sistem**: Academic Research RAG Chatbot
+**Nama Sistem**: Weaver
 **Domain**: Sistem Informasi Akademik Universitas Indonesia
 **Tipe Sistem**: Retrieval-Augmented Generation (RAG) dengan Kapabilitas Agentic
 **Bahasa Target**: Bahasa Indonesia
@@ -11,7 +11,7 @@
 
 ## 2. Tujuan Sistem
 
-Academic Research RAG Chatbot adalah sistem kecerdasan buatan yang dirancang untuk menyediakan layanan informasi akademik kepada civitas akademika universitas di Indonesia. Sistem ini mengintegrasikan teknologi Large Language Model (LLM) dengan mekanisme retrieval berbasis dokumen untuk menghasilkan jawaban yang akurat, faktual, dan dapat dipertanggungjawabkan.
+Weaver adalah sistem kecerdasan buatan yang dirancang untuk menyediakan layanan informasi akademik kepada civitas akademika universitas di Indonesia. Sistem ini mengintegrasikan teknologi Large Language Model (LLM) dengan mekanisme retrieval berbasis dokumen untuk menghasilkan jawaban yang akurat, faktual, dan dapat dipertanggungjawabkan.
 
 ### 2.1 Pernyataan Masalah
 
@@ -202,4 +202,4 @@ Untuk detail lebih lanjut, lihat dokumen berikut:
 
 ---
 
-*Dokumen ini dihasilkan sebagai bagian dari dokumentasi teknis Academic Research RAG Chatbot.*
+*Dokumen ini dihasilkan sebagai bagian dari dokumentasi teknis Weaver.*

@@ -1,5 +1,5 @@
 # IMRAD Writing Guide: Introduction & Methods
-**Project:** Academic Research RAG Chatbot (MuliaChat)
+**Project:** Weaver (Weaver)
 **Date:** December 21, 2025
 
 This guide provides a structured approach to writing the **Introduction** and **Methods** sections of your research paper. It is tailored specifically to your project's architecture (Hybrid RAG, Agentic, Indonesian Academic Domain).
@@ -18,7 +18,7 @@ This guide provides a structured approach to writing the **Introduction** and **
 *   **Drafting Tip:** "Information seeking in academic environments is characterized by high precision requirements and complex, domain-specific terminology..."
 
 #### Paragraph 2: The Problem (Specific to Indonesia/Universities)
-*   **Source Material:** `docs/01_overview.md`
+*   **Source Material:** `../01_overview.md`
 *   **Pain Points:**
     1.  **Fragmentation:** Data scattered across PDFs, websites, and booklets.
     2.  **Terminology:** Specific Indonesian academic terms (KRS, SKS, Cuti Akademik) are often misunderstood by general LLMs.
@@ -26,18 +26,18 @@ This guide provides a structured approach to writing the **Introduction** and **
 *   **Drafting Tip:** "However, deploying generic LLMs in Indonesian universities faces unique challenges, particularly regarding local administrative terminology and the hallucination of critical academic policies."
 
 #### Paragraph 3: The Gap (What is missing?)
-*   **Source Material:** `METHODOLOGY_GAP_ANALYSIS.md` & `docs/02_research_context.md`
+*   **Source Material:** `../reports/METHODOLOGY_GAP_ANALYSIS.md` & `../02_research_context.md`
 *   **The Gap:** Most RAG research focuses on English. There is a lack of rigorous evaluation for **Agentic** vs **Standard** RAG in the context of **Indonesian** academic queries.
 *   **Drafting Tip:** "While RAG has been extensively studied, its application to structurally complex, non-English academic domains remains under-explored, particularly regarding the efficacy of agentic reasoning for query decomposition."
 
 #### Paragraph 4: The Solution & Objectives (Your Contribution)
-*   **Source Material:** `docs/02_research_context.md`
+*   **Source Material:** `../02_research_context.md`
 *   **The Proposed System:** An **Agentic RAG** system using **Hybrid Retrieval** (Vector + BM25) and **Ensemble Reranking**.
 *   **Research Questions (RQs):**
     1.  Does hybrid retrieval outperform vector-only in this domain?
     2.  Does agentic reasoning improve accuracy for complex questions?
     3.  What is the optimal chunking strategy for academic documents?
-*   **Drafting Tip:** "This study proposes 'MuliaChat', an agentic RAG system optimized for Indonesian academic data. We evaluate the system using a rigorous component-level framework to isolate the impact of hybrid retrieval and reranking strategies."
+*   **Drafting Tip:** "This study proposes 'Weaver', an agentic RAG system optimized for Indonesian academic data. We evaluate the system using a rigorous component-level framework to isolate the impact of hybrid retrieval and reranking strategies."
 
 ---
 
@@ -50,10 +50,10 @@ This guide provides a structured approach to writing the **Introduction** and **
     *   **Orchestration:** Next.js / LangChain / Vercel AI SDK.
     *   **LLM:** GPT-4o-mini (reasoning & generation).
     *   **Database:** PostgreSQL with `pgvector`.
-*   **Figure Reference:** "The overall system architecture is illustrated in Figure 1..." (Use the diagram from `docs/04_system_architecture.md`).
+*   **Figure Reference:** "The overall system architecture is illustrated in Figure 1..." (Use the diagram from `../04_system_architecture.md`).
 
 ### 2.2 Subsection: Data Processing (The "Corpus")
-*   **Source Material:** `docs/05_rag_pipeline.md` (Section 3)
+*   **Source Material:** `../05_rag_pipeline.md` (Section 3)
 *   **Documents:** Describe the dataset (Student Handbook, Academic Regulations, etc.).
 *   **Chunking Strategy (Crucial):**
     *   Mention **Recursive Character Chunking** vs **Semantic Chunking**.
@@ -62,7 +62,7 @@ This guide provides a structured approach to writing the **Introduction** and **
         $$ S_{quality} = 0.25 I_{den} + 0.25 S_{imp} + 0.15 C_{pres} + 0.15 K_{conc} + 0.20 C_{omp} $$
 
 ### 2.3 Subsection: Retrieval & Reranking (The Core Algorithm)
-*   **Source Material:** `docs/05_rag_pipeline.md` (Section 4 & 5)
+*   **Source Material:** `../05_rag_pipeline.md` (Section 4 & 5)
 *   **Hybrid Retrieval:**
     *   Explain the combination of **Dense Vector** (Cosine) and **Sparse Keyword** (BM25+).
     *   Mention **Reciprocal Rank Fusion (RRF)** with $k=60$.
@@ -73,13 +73,13 @@ This guide provides a structured approach to writing the **Introduction** and **
         $$ S_{ensemble} = \frac{0.4 S_{ce} + 0.4 S_{llm} + 0.2 S_{orig}}{1.0} $$
 
 ### 2.4 Subsection: Agentic Reasoning
-*   **Source Material:** `docs/05_rag_pipeline.md` (Section 6)
+*   **Source Material:** `../05_rag_pipeline.md` (Section 6)
 *   **Mechanism:** Explain how the agent decomposes queries.
 *   **Tools:** List the specific tools (e.g., `search_documents`, `verify_claim`).
 *   **Latency Decomposition:** Briefly mention how you measure "Planning" vs "Execution" time.
 
 ### 2.5 Subsection: Evaluation Framework
-*   **Source Material:** `docs/06_evaluation_framework.md` & `docs/10_simulated_user_testing.md`
+*   **Source Material:** `../06_evaluation_framework.md` & `../10_simulated_user_testing.md`
 *   **Important:** Explicitly state you are using **Component-Level Evaluation** (RAGAS) and **System-Level Evaluation** (Simulated User).
 *   **Metric 1: RAGAS:** Faithfulness, Answer Relevancy.
     *   *Note:* Mention the Laplace smoothing if you used it.

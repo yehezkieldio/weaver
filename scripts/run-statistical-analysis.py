@@ -999,7 +999,7 @@ def run_analysis():
         "--figures", action="store_true", help="Generate publication-quality figures (PNG)"
     )
     parser.add_argument(
-        "--output-dir", default=".results/figures", help="Output directory for figures"
+        "--output-dir", default="research/results/figures", help="Output directory for figures"
     )
     args = parser.parse_args()
 

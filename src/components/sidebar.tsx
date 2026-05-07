@@ -43,7 +43,7 @@ export function Sidebar() {
                 {!collapsed && (
                     <div className="flex items-center gap-2">
                         <BookOpen className="h-6 w-6 text-sidebar-primary" />
-                        <span className="font-semibold text-sidebar-foreground">MuliaChat</span>
+                        <span className="font-semibold text-sidebar-foreground">Weaver</span>
                     </div>
                 )}
                 <button

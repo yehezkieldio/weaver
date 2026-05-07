@@ -8,7 +8,7 @@ Generates PNG/JPG figures suitable for academic papers at 300 DPI.
 Usage:
     from statistical_visualization import FigureGenerator
 
-    fig_gen = FigureGenerator(output_dir=".results/figures")
+    fig_gen = FigureGenerator(output_dir="research/results/figures")
     fig_gen.create_comparison_boxplot(rag_data, non_rag_data, "Metric Name")
 """
 
@@ -51,7 +51,7 @@ class FigureGenerator:
 
     def __init__(
         self,
-        output_dir: str = ".results/figures",
+        output_dir: str = "research/results/figures",
         config: Optional[FigureConfig] = None,
         bilingual: bool = True,
     ):
@@ -1235,7 +1235,7 @@ def generate_all_figures_from_analysis(
     descriptive_stats: dict,
     rag_comparisons: list,
     ablation_data: Optional[dict] = None,
-    output_dir: str = ".results/figures",
+    output_dir: str = "research/results/figures",
 ) -> list[str]:
     """
     Generate all standard figures from statistical analysis results.

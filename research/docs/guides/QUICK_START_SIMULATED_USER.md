@@ -146,7 +146,7 @@ Penelitian ini menggunakan dua level evaluasi:
    conversation coherence 0.87.
 
 Kombinasi keduanya memberikan validasi menyeluruh terhadap 
-implementasi MuliaChat.
+implementasi Weaver.
 ```
 
 ## Common Issues
@@ -219,10 +219,10 @@ See `src/lib/simulated-user/examples.ts` for code examples
 
 ## Need Help?
 
-- **Full Documentation**: `docs/10_simulated_user_testing.md`
+- **Full Documentation**: `../10_simulated_user_testing.md`
 - **Code Examples**: `src/lib/simulated-user/examples.ts`
 - **Technical Details**: `src/lib/simulated-user/README.md`
-- **Implementation**: `IMPLEMENTATION_SUMMARY.md`
+- **Implementation**: `../reports/IMPLEMENTATION_SUMMARY.md`
 
 ## Summary
 

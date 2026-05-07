@@ -2,7 +2,7 @@
 
 ## 1. Pendahuluan
 
-Dokumen ini menjelaskan struktur database yang digunakan oleh Academic Research RAG Chatbot.
+Dokumen ini menjelaskan struktur database yang digunakan oleh Weaver.
 
 **Lokasi**: `src/lib/db/schema.ts`
 **ORM**: Drizzle
@@ -363,4 +363,4 @@ Menyimpan anotasi manusia untuk validasi metrik otomatis.
 
 ---
 
-*Dokumen ini merupakan bagian dari dokumentasi teknis Academic Research RAG Chatbot.*
+*Dokumen ini merupakan bagian dari dokumentasi teknis Weaver.*

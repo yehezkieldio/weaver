@@ -653,7 +653,7 @@ $$TokensPerSecond = \frac{|Tokens_{output}|}{Latency_{ms}} \times 1000$$
 
 Evaluasi tingkat sistem menggunakan **Simulated User Testing** untuk memvalidasi implementasi chatbot secara menyeluruh (End-to-End), melengkapi metrik komponen RAGAS.
 
-**Lokasi Dokumen Detail**: `docs/10_simulated_user_testing.md`
+**Lokasi Dokumen Detail**: `10_simulated_user_testing.md`
 
 ### 8.1 Tujuan
 Tujuan utama dari evaluasi ini adalah menyediakan validasi tingkat sistem yang **ilmiah, terukur, dan bebas bias**. Berbeda dengan *human user testing* konvensional yang seringkali subjektif dan sulit direplikasi, Simulated User Testing memungkinkan:
@@ -682,4 +682,4 @@ Evaluasi ini menggunakan LLM sebagai proxy pengguna. Meskipun valid secara metod
 
 ---
 
-*Dokumen ini merupakan bagian dari dokumentasi teknis Academic Research RAG Chatbot.*
+*Dokumen ini merupakan bagian dari dokumentasi teknis Weaver.*

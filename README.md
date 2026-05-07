@@ -1,10 +1,10 @@
-# MuliaChat: Sistem Agentic RAG untuk Informasi Akademik Universitas Mulia
+# Weaver: Sistem Agentic RAG untuk Informasi Akademik Universitas Mulia
 
-**MuliaChat** adalah platform *Question Answering* (QA) berbasis *Large Language Model* (LLM) yang dirancang khusus untuk domain akademik Universitas Mulia. Sistem ini mengimplementasikan arsitektur **Agentic Retrieval-Augmented Generation (RAG)** untuk mengatasi keterbatasan *hallucination* pada LLM standar dan memberikan jawaban yang akurat, terverifikasi, serta memiliki sitasi yang dapat dilacak ke dokumen resmi universitas.
+**Weaver** adalah platform *Question Answering* (QA) berbasis *Large Language Model* (LLM) yang dirancang khusus untuk domain akademik Universitas Mulia. Sistem ini mengimplementasikan arsitektur **Agentic Retrieval-Augmented Generation (RAG)** untuk mengatasi keterbatasan *hallucination* pada LLM standar dan memberikan jawaban yang akurat, terverifikasi, serta memiliki sitasi yang dapat dilacak ke dokumen resmi universitas.
 
 Proyek ini dikembangkan sebagai objek penelitian untuk Skripsi/Tugas Akhir mahasiswa Program Studi Informatika, Fakultas Ilmu Komputer, Universitas Mulia.
 
-Lihat folder `.results` untuk hasils.
+Lihat folder `research/results` untuk hasil evaluasi.
 
 ---
 
@@ -120,7 +120,15 @@ Evaluasi ini mencakup:
 
 ```
 /
-├── corpus/                 # Dokumen sumber (PDF/TXT) Universitas Mulia
+├── research/
+│   ├── corpus/             # Dokumen sumber (PDF/TXT) Universitas Mulia
+│   ├── docs/               # Dokumentasi teknis berurutan
+│   │   ├── guides/         # Panduan evaluasi, penulisan, dan quickstart
+│   │   └── reports/        # Laporan implementasi, metodologi, dan testing
+│   ├── paper/              # Materi dan bagian penulisan akademik
+│   ├── results/            # Output evaluasi dan analisis statistik
+│   └── data.txt            # Dump data sumber mentah
+├── scripts/                # Utilitas evaluasi, analisis, dan ingestion
 ├── src/
 │   ├── app/                # Next.js App Router (Frontend + API)
 │   ├── components/         # Komponen UI (Chat, Evaluation, Upload)
@@ -149,8 +157,8 @@ Evaluasi ini mencakup:
 ### Langkah Instalasi
 1. **Clone Repository**
    ```bash
-   git clone https://github.com/username/academic-research-rag-chatbot.git
-   cd academic-research-rag-chatbot
+   git clone https://github.com/username/weaver.git
+   cd weaver
    ```
 
 2. **Install Dependencies**
@@ -161,7 +169,7 @@ Evaluasi ini mencakup:
 3. **Konfigurasi Environment**
    Salin `.env.example` ke `.env` dan isi kredensial:
    ```env
-   DATABASE_URL="postgresql://user:pass@localhost:5432/muliachat"
+   DATABASE_URL="postgresql://user:pass@localhost:5432/weaver"
    AZURE_OPENAI_API_KEY="..."
    AZURE_OPENAI_RESOURCE_NAME="..."
    AZURE_OPENAI_CHAT_DEPLOYMENT="gpt-4.1-mini"

@@ -19,7 +19,7 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-    title: "MuliaChat",
+    title: "Weaver",
 };
 
 export default function RootLayout({

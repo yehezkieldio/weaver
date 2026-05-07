@@ -281,14 +281,14 @@ src/lib/simulated-user/
 scripts/
 └── run-simulated-user-tests.ts  # CLI script
 
-docs/
+research/docs/
 └── 10_simulated_user_testing.md # Full documentation
 ```
 
 ## Support
 
 For issues or questions:
-1. Check `docs/10_simulated_user_testing.md` for detailed docs
+1. Check `research/docs/10_simulated_user_testing.md` for detailed docs
 2. Review example scenarios in `src/lib/simulated-user/scenarios.ts`
 3. Check logs in generated report
 

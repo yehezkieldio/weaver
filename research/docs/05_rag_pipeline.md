@@ -987,4 +987,4 @@ async function directModePipeline(
 
 ---
 
-*Dokumen ini merupakan bagian dari dokumentasi teknis Academic Research RAG Chatbot.*
+*Dokumen ini merupakan bagian dari dokumentasi teknis Weaver.*

@@ -1,11 +1,11 @@
 services:
   postgres:
-    container_name: academic-paper-rag-postgres
+    container_name: weaver-postgres
     image: pgvector/pgvector:pg18
     environment:
       POSTGRES_USER: elizielx
       POSTGRES_PASSWORD: elizielx
-      POSTGRES_DB: academic-paper-rag
+      POSTGRES_DB: weaver
     ports:
       - "5432:5432"
     deploy:
@@ -16,9 +16,9 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql
     networks:
-      - academic-paper-rag-network
+      - weaver-network
 networks:
-  academic-paper-rag-network:
+  weaver-network:
     driver: bridge
 volumes:
   postgres_data:

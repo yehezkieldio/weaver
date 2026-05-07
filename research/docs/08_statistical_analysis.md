@@ -158,4 +158,4 @@ Laporan dihasilkan dalam Bahasa Indonesia dan Inggris dengan interpretasi effect
 
 ---
 
-*Dokumen ini merupakan bagian dari dokumentasi teknis Academic Research RAG Chatbot.*
+*Dokumen ini merupakan bagian dari dokumentasi teknis Weaver.*

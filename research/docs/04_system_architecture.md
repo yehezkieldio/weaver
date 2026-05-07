@@ -2,7 +2,7 @@
 
 ## 1. Pendahuluan
 
-Dokumen ini menjelaskan arsitektur keseluruhan Academic Research RAG Chatbot, mencakup komponen-komponen utama, hubungan antar komponen, alur data, dan prinsip-prinsip desain yang mendasari.
+Dokumen ini menjelaskan arsitektur keseluruhan Weaver, mencakup komponen-komponen utama, hubungan antar komponen, alur data, dan prinsip-prinsip desain yang mendasari.
 
 ---
 
@@ -572,4 +572,4 @@ Layer 4: Logging & Audit
 
 ---
 
-*Dokumen ini merupakan bagian dari dokumentasi teknis Academic Research RAG Chatbot.*
+*Dokumen ini merupakan bagian dari dokumentasi teknis Weaver.*

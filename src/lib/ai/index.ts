@@ -89,9 +89,9 @@ export const EMBEDDING_MODEL = AZURE_EMBEDDING_MODEL;
 
 export const telemetryConfig = {
     isEnabled: env.NODE_ENV === "production",
-    functionId: "muliachat-academic-research-rag",
+    functionId: "weaver-academic-research-rag",
     metadata: {
-        application: "muliachat",
+        application: "weaver",
         version: "1.0.0",
     },
 };

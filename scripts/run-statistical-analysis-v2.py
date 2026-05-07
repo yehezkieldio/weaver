@@ -3,7 +3,7 @@
 Simple wrapper around run-statistical-analysis.py that saves output to files.
 
 This script runs the statistical analysis and saves both console output
-and a structured report to the .results/ directory with timestamps.
+and a structured report to the research/results directory with timestamps.
 Figures are automatically generated and saved to timestamped subdirectories.
 
 Usage:
@@ -18,13 +18,13 @@ import os
 from datetime import datetime
 
 def main():
-    # Create .results directory
-    os.makedirs(".results", exist_ok=True)
+    # Create research/results directory
+    os.makedirs("research/results/statistical", exist_ok=True)
 
     # Generate timestamp
     timestamp = int(datetime.now().timestamp() * 1000)
-    output_file = f".results/statistical/statistical-analysis-report-{timestamp}.txt"
-    figures_dir = f".results/statistical/figures-{timestamp}"
+    output_file = f"research/results/statistical/statistical-analysis-report-{timestamp}.txt"
+    figures_dir = f"research/results/statistical/figures-{timestamp}"
 
     # Get command line arguments (everything after script name)
     args = sys.argv[1:]
@@ -92,4 +92,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

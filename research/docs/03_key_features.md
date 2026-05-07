@@ -2,7 +2,7 @@
 
 ## 1. Pendahuluan
 
-Dokumen ini menjelaskan fitur-fitur utama Academic Research RAG Chatbot secara komprehensif. Setiap fitur dijelaskan dalam konteks fungsionalitas, relevansi terhadap tujuan penelitian, dan detail implementasi teknis.
+Dokumen ini menjelaskan fitur-fitur utama Weaver secara komprehensif. Setiap fitur dijelaskan dalam konteks fungsionalitas, relevansi terhadap tujuan penelitian, dan detail implementasi teknis.
 
 ---
 
@@ -455,4 +455,4 @@ Detail lengkap tersedia di [08_statistical_analysis.md](./08_statistical_analysi
 
 ---
 
-*Dokumen ini merupakan bagian dari dokumentasi teknis Academic Research RAG Chatbot.*
+*Dokumen ini merupakan bagian dari dokumentasi teknis Weaver.*
