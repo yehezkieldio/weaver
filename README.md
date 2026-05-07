@@ -1,140 +1,144 @@
 # Weaver
 
-Weaver adalah sistem *Question Answering* berbasis *Large Language Model* untuk informasi akademik Universitas Mulia. Sistem ini menggunakan arsitektur *Agentic Retrieval-Augmented Generation* (RAG) agar jawaban tetap terhubung ke dokumen sumber dan dapat disertai sitasi.
+Weaver is a Large Language Model-based Question Answering system for academic information at Universitas Mulia. It uses an Agentic Retrieval-Augmented Generation (RAG) architecture so answers stay connected to source documents and can include citations.
 
-Proyek ini dikembangkan sebagai objek penelitian Skripsi/Tugas Akhir mahasiswa Program Studi Informatika, Fakultas Ilmu Komputer, Universitas Mulia. Hasil evaluasi tersedia di `research/results`.
+> **Language and audience disclaimer**
+>
+> Weaver is an Indonesian academic project. This README is written in English for repository orientation, but most project documents, source corpora, evaluation materials, user-facing copy, and operational notes are intended for an Indonesian audience and are commonly written in Bahasa Indonesia.
 
-## Informasi Penelitian
+The project is developed for the Penulisan dan Publikasi Ilmiah course in Semester 5 by students of the Informatics Study Program, Faculty of Computer Science, Universitas Mulia. Evaluation outputs are available in `research/results`.
 
-- **Judul:** Implementasi Agentic Retrieval-Augmented Generation (RAG) Untuk Sistem Layanan Informasi Perguruan Tinggi: Studi Kasus pada Universitas Mulia Balikpapan
-- **Peneliti:** Yehezkiel Dio Sinolungan, Adryo Faresy Devera, Andre Marthinus Lumempouw
-- **Institusi:** Universitas Mulia, Balikpapan
-- **Fokus:** Perbandingan RAG standar dan Agentic RAG menggunakan metrik RAGAS serta uji signifikansi statistik.
+## Project Information
 
-## Fitur Utama
+- **Title:** Implementasi Agentic Retrieval-Augmented Generation (RAG) Untuk Sistem Layanan Informasi Perguruan Tinggi: Studi Kasus pada Universitas Mulia Balikpapan
+- **Researchers:** Yehezkiel Dio Sinolungan, Adryo Faresy Devera, Andre Marthinus Lumempouw
+- **Institution:** Universitas Mulia, Balikpapan
+- **Focus:** Comparing standard RAG and Agentic RAG using RAGAS metrics and statistical significance testing.
+
+## Main Features
 
 ### Agentic RAG
 
-Weaver tidak langsung menjawab setiap pertanyaan dari satu pencarian. Sistem dapat merencanakan langkah pencarian, memecah pertanyaan kompleks, menjalankan beberapa tool retrieval, lalu menyusun jawaban dari beberapa dokumen.
+Weaver does not answer every question from a single retrieval pass. The system can plan retrieval steps, break complex questions into sub-questions, run multiple retrieval tools, and synthesize answers from several documents.
 
-Kemampuan utama:
+Core capabilities:
 
-- Dekomposisi kueri menjadi sub-pertanyaan.
-- Pencarian paralel untuk menurunkan latensi.
-- Sintesis jawaban dari PDF, DOCX, TXT, Markdown, dan sumber web.
-- Verifikasi klaim sebelum jawaban dikirim ke pengguna.
-- Sitasi sumber dalam format `[1]`, `[2]`, dan seterusnya.
+- Query decomposition into sub-questions.
+- Parallel retrieval to reduce latency.
+- Answer synthesis from PDF, DOCX, TXT, Markdown, and web sources.
+- Claim verification before the final answer is sent to the user.
+- Source citations in `[1]`, `[2]`, and similar formats.
 
 ### Hybrid Retrieval
 
-Retrieval menggabungkan pencarian semantik dan leksikal:
+Retrieval combines semantic and lexical search:
 
-- **Vector search:** Embedding `text-embedding-3-small` dengan PostgreSQL dan `pgvector`.
-- **Keyword search:** Okapi BM25 untuk menangkap istilah spesifik seperti nama dosen, kode mata kuliah, dan istilah administratif.
-- **Reciprocal Rank Fusion:** Penggabungan hasil vector dan keyword search tanpa normalisasi skor manual.
+- **Vector search:** `text-embedding-3-small` embeddings with PostgreSQL and `pgvector`.
+- **Keyword search:** Okapi BM25 for specific terms such as lecturer names, course codes, and administrative terminology.
+- **Reciprocal Rank Fusion:** Combines vector and keyword results without manual score normalization.
 
-### Pemrosesan Dokumen
+### Document Processing
 
-Pipeline dokumen mendukung:
+The document pipeline supports:
 
-- PDF melalui `unpdf`.
-- DOCX melalui `mammoth`.
-- TXT dan Markdown.
-- Strategi chunking adaptif, termasuk recursive, semantic, sentence window, dan hierarchical chunking.
-- Ekstraksi metadata seperti kode mata kuliah, nama dosen, bab, pasal, dan tipe dokumen.
-- Stemming dan stopword removal Bahasa Indonesia untuk BM25.
+- PDF through `unpdf`.
+- DOCX through `mammoth`.
+- TXT and Markdown.
+- Adaptive chunking strategies, including recursive, semantic, sentence-window, and hierarchical chunking.
+- Metadata extraction for course codes, lecturer names, chapters, articles, and document types.
+- Indonesian stemming and stopword removal for BM25.
 
 ### Reranking
 
-Dokumen kandidat dapat dinilai ulang sebelum digunakan sebagai konteks jawaban:
+Candidate documents can be reranked before they are used as answer context:
 
 - Cross-encoder `ms-marco-MiniLM-L2-v2`.
-- LLM-based reranking menggunakan GPT-4o-mini.
-- Ensemble reranking dari beberapa metode.
+- LLM-based reranking with GPT-4o-mini.
+- Ensemble reranking across multiple methods.
 
-### Evaluasi
+### Evaluation
 
-Modul evaluasi tersedia untuk kebutuhan penelitian:
+Evaluation modules are available for research use:
 
-- RAGAS: faithfulness, answer relevancy, context precision, context recall, dan answer correctness.
-- Deteksi halusinasi berbasis *Natural Language Inference*.
-- Studi ablasi untuk mengukur kontribusi retrieval, chunking, reranking, dan komponen lain.
-- Analisis statistik dengan paired t-test, ANOVA, effect size, dan bootstrap confidence interval.
+- RAGAS: faithfulness, answer relevancy, context precision, context recall, and answer correctness.
+- Hallucination detection based on Natural Language Inference.
+- Ablation studies to measure the contribution of retrieval, chunking, reranking, and other components.
+- Statistical analysis with paired t-test, ANOVA, effect size, and bootstrap confidence interval.
 
 ## Stack
 
-- **Framework:** Next.js 15 App Router
-- **Runtime dan package manager:** Bun
-- **Database:** PostgreSQL dengan ekstensi `pgvector`
+- **Framework:** Next.js 16 App Router
+- **Runtime and package manager:** Bun
+- **Database:** PostgreSQL with the `pgvector` extension
 - **ORM:** Drizzle ORM
 - **AI provider:** Azure OpenAI
-- **Model chat:** GPT-4.1-mini, GPT-4o-mini
-- **Model embedding:** `text-embedding-3-small`
-- **Styling:** Tailwind CSS dan shadcn/ui
+- **Chat models:** GPT-4.1-mini, GPT-4o-mini
+- **Embedding model:** `text-embedding-3-small`
+- **Styling:** Tailwind CSS and shadcn/ui-style components
 
 ## Pipeline
 
-1. Pengguna mengirim pertanyaan.
-2. Guardrails memvalidasi input.
-3. Agen menyusun rencana retrieval.
-4. Sistem menjalankan hybrid retrieval dengan vector search, BM25, dan RRF.
-5. Kandidat dokumen diproses oleh reranker.
-6. LLM menyusun jawaban dengan sitasi.
-7. Guardrails output memeriksa jawaban akhir.
+1. The user submits a question.
+2. Guardrails validate the input.
+3. The agent creates a retrieval plan.
+4. The system runs hybrid retrieval with vector search, BM25, and RRF.
+5. Candidate documents are processed by the reranker.
+6. The LLM generates an answer with citations.
+7. Output guardrails check the final answer.
 
-## Evaluasi Penelitian
+## Research Evaluation
 
-Dashboard evaluasi tersedia di `/evaluation`. Dataset pertanyaan akademik mencakup regulasi, prosedur, biaya, program studi, dan informasi kampus.
+The evaluation dashboard is available at `/evaluation`. The academic question dataset covers regulations, procedures, fees, study programs, and campus information.
 
-Evaluasi dilakukan dalam dua tingkat:
+Evaluation is performed at two levels:
 
-- **Component-level evaluation:** Mengukur kualitas retrieval dan generation per pertanyaan menggunakan RAGAS.
-- **System-level evaluation:** Menggunakan simulasi pengguna berbasis LLM dengan persona seperti mahasiswa baru, mahasiswa tingkat akhir, dan dosen.
+- **Component-level evaluation:** Measures retrieval and generation quality per question using RAGAS.
+- **System-level evaluation:** Uses LLM-based user simulation with personas such as new students, final-year students, and lecturers.
 
-Metrik system-level mencakup:
+System-level metrics include:
 
 - Task completion rate.
 - Conversation coherence.
 - Context retention.
 
-Analisis statistik mencakup:
+Statistical analysis includes:
 
-- Paired t-test untuk membandingkan konfigurasi pada pertanyaan yang sama.
-- One-way ANOVA untuk membandingkan strategi retrieval atau chunking.
-- Bootstrap confidence interval untuk estimasi metrik rata-rata.
+- Paired t-test to compare configurations on the same questions.
+- One-way ANOVA to compare retrieval or chunking strategies.
+- Bootstrap confidence interval for average metric estimates.
 
-## Struktur Folder
+## Folder Structure
 
 ```text
 /
 ├── research/
-│   ├── corpus/             # Dokumen sumber Universitas Mulia
-│   ├── docs/               # Dokumentasi teknis dan laporan
+│   ├── corpus/             # Universitas Mulia source documents
+│   ├── docs/               # Technical documentation and reports
 │   │   ├── guides/
 │   │   └── reports/
-│   ├── paper/              # Materi penulisan akademik
-│   ├── results/            # Output evaluasi dan analisis statistik
-│   └── data.txt            # Dump data sumber mentah
-├── scripts/                # Utilitas evaluasi, analisis, dan ingestion
+│   ├── paper/              # Academic writing materials
+│   ├── results/            # Evaluation and statistical analysis outputs
+│   └── data.txt            # Raw source-data dump
+├── scripts/                # Evaluation, analysis, and ingestion utilities
 ├── src/
 │   ├── app/                # Next.js App Router
-│   ├── components/         # Komponen UI
+│   ├── components/         # UI components
 │   └── lib/
-│       ├── ai/             # Konfigurasi Azure OpenAI
-│       ├── db/             # Schema database dan koneksi
+│       ├── ai/             # Azure OpenAI configuration
+│       ├── db/             # Database schema and connection
 │       ├── rag/            # Core RAG logic
-│       └── statistics/     # Analisis statistik
+│       └── statistics/     # Statistical analysis
 ```
 
-## Menjalankan Proyek
+## Running the Project
 
-### Prasyarat
+### Prerequisites
 
 - Bun
-- PostgreSQL dengan ekstensi `vector`
-- Akun Azure OpenAI
+- PostgreSQL with the `vector` extension
+- Azure OpenAI account and deployments
 
-### Instalasi
+### Installation
 
 ```bash
 git clone https://github.com/username/weaver.git
@@ -144,7 +148,7 @@ bun install
 
 ### Environment
 
-Salin `.env.example` ke `.env`, lalu isi kredensial yang diperlukan.
+Copy `.env.example` to `.env`, then fill in the required credentials.
 
 ```env
 DATABASE_URL="postgresql://user:pass@localhost:5432/weaver"
@@ -166,18 +170,18 @@ bun run db:push
 bun dev
 ```
 
-Rute utama:
+Primary routes:
 
 - Chat: `http://localhost:3000`
 - Knowledge base: `http://localhost:3000/manage`
 - Evaluation dashboard: `http://localhost:3000/evaluation`
 
-## Batasan
+## Limitations
 
-- Sistem dioptimalkan untuk Bahasa Indonesia.
-- Struktur tabel kompleks dalam PDF dapat berubah saat ekstraksi.
-- Mode agentic memiliki latensi lebih tinggi daripada RAG standar karena ada tahap perencanaan dan verifikasi tambahan.
+- The system is optimized for Bahasa Indonesia.
+- Complex table structures in PDFs may change during extraction.
+- Agentic mode has higher latency than standard RAG because it includes additional planning and verification steps.
 
-## Lisensi
+## License
 
-MIT License, copyright 2025-2026 Yehezkiel Dio Sinolungan, Adryo Faresy Devera, and Andre Marthinus Lumempouw. Lihat `LICENSE`.
+MIT License, copyright 2025-2026 Yehezkiel Dio Sinolungan, Adryo Faresy Devera, and Andre Marthinus Lumempouw. See `LICENSE`.
