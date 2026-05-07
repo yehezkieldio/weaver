@@ -1837,7 +1837,7 @@ function useChatLogic() {
 
     const handleAddDummyMessage = useCallback(
         (type: "user" | "assistant" | "agentic-streaming" | "rag" | "error") => {
-            generateDummyMessage(type, messages, {
+            generatePreviewMessage(type, messages, {
                 setMessages,
                 setRetrievedChunks,
                 setLiveAgentSteps,
@@ -1940,7 +1940,7 @@ export function ChatInterface() {
                     </Button> */}
                 </div>
                 <SettingsPanel setSettings={setSettings} settings={settings} />
-                {debugMode && <DebugPanel onAddDummyMessage={handleAddDummyMessage} />}
+                {debugMode && <DebugPanel onAddPreviewMessage={handleAddDummyMessage} />}
             </div>
 
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
