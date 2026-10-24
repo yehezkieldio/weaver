@@ -1,0 +1,32 @@
+
+cff-version: 1.2.0
+message: "If you use this software, please cite the associated paper."
+title: "MuliaChat"
+url: "https://github.com/yehezkieldio/weaver"
+
+authors:
+  - family-names: "Sinolungan"
+    given-names: "Yehezkiel Dio"
+    orcid: "https://orcid.org/0009-0007-2335-0459"
+
+preferred-citation:
+  type: article
+  title: "Agentic Retrieval-Augmented Generation for University Information Services: A Case Study with an Audit of Reported Evaluation Results"
+  authors:
+    - family-names: "Sinolungan"
+      given-names: "Yehezkiel Dio"
+      orcid: "https://orcid.org/0009-0007-2335-0459"
+    - family-names: "Devara"
+      given-names: "Adryo Faresy"
+    - family-names: "Lumempouw"
+      given-names: "Andre Marthinus"
+    - family-names: "Wibisono"
+      given-names: "Yusuf"
+  journal: "Multica Science and Technology"
+  volume: 5
+  issue: 2
+  start: 66
+  end: 73
+  year: 2025
+  month: 10
+  doi: "10.47002/zrk6rc88"
